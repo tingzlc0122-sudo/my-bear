@@ -501,42 +501,101 @@
     function openRecordEdit(idx) { editingRecordIndex = idx; const r = db[idx]; document.getElementById('editRemark').value = r.remark || r.id; document.getElementById('editAmt').value = r.amt || r.profit || r.buy; document.getElementById('editDate').value = r.date || getTodayString(); document.getElementById('editTime').value = r.timeStr || getTimeString(); document.getElementById('editDiary').value = r.diaryText || ''; const imgEl = document.getElementById('displayImage'); if (r.imageBase64) { imgEl.src = r.imageBase64; imgEl.style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; } else { imgEl.style.display = 'none'; document.getElementById('uploadPrompt').style.display = 'block'; } document.getElementById('overlay-top').style.display = 'block'; document.getElementById('record-edit-modal').style.display = 'flex'; }
     function handleImageUpload(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(e) { const img = new Image(); img.onload = function() { const canvas = document.getElementById('compressCanvas'); const MAX_WIDTH = 400; let width = img.width, height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height); db[editingRecordIndex].imageBase64 = canvas.toDataURL('image/jpeg', 0.6); saveAll(); document.getElementById('displayImage').src = db[editingRecordIndex].imageBase64; document.getElementById('displayImage').style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; }; img.src = e.target.result; }; reader.readAsDataURL(file); }
     function saveRecordEdit() { if(editingRecordIndex === -1) return; const r = db[editingRecordIndex]; const oldAmt = parseFloat(r.amt || 0); const newAmt = parseFloat(document.getElementById('editAmt').value || 0); r.remark = document.getElementById('editRemark').value; r.date = document.getElementById('editDate').value; r.timeStr = document.getElementById('editTime').value; r.diaryText = document.getElementById('editDiary').value; if(r.type === '日常') { if(r.detail === '收入') curSav = curSav - oldAmt + newAmt; else if(r.detail === '支出') curSav = curSav + oldAmt - newAmt; r.amt = newAmt; localStorage.setItem('evan_sav_val', curSav); } else if(r.type === '转单') { r.id = r.remark; r.profit = newAmt; } saveAll(); closeTopModals(); }
+    
+// 🎨 界面皮肤编辑器逻辑 
+const cssInput = document.getElementById('css-code-input');
+const customStyleTag = document.getElementById('custom-theme');
+const searchInput = document.getElementById('css-search-input');
+let cssSnapshot = ""; // 撤回快照
 
-    const cssInput = document.getElementById('css-code-input'), customStyleTag = document.getElementById('custom-theme'), searchInput = document.getElementById('css-search-input'); let savedCSS = localStorage.getItem('evan_custom_css') || customStyleTag.innerHTML; cssInput.value = savedCSS.trim(); customStyleTag.innerHTML = savedCSS; cssInput.addEventListener('input', () => { customStyleTag.innerHTML = cssInput.value; });     // 1. 声明后悔药快照
-    let cssSnapshot = ""; 
+// 1. 页面初始化：加载存好的皮肤
+let savedCSS = localStorage.getItem('evan_custom_css') || customStyleTag.innerHTML;
+cssInput.value = savedCSS.trim();
+customStyleTag.innerHTML = savedCSS;
 
-    // 2. 这里的逻辑升级了：点开标题时会先拍张照
-    document.getElementById('mainTitle').onclick = function() {
-        const editor = document.getElementById('css-code-input');
-        const currentCSS = document.getElementById('custom-theme').innerHTML;
-        
-        editor.value = currentCSS;
-        cssSnapshot = currentCSS; // 拍张照存起来，这就是你的“撤回”备份
-        
-        document.getElementById('overlay-top').style.display = 'block';
-        document.getElementById('css-editor-modal').style.display = 'flex';
-    };
+// 2. 实时预览：边写边看效果
+cssInput.addEventListener('input', () => {
+    customStyleTag.innerHTML = cssInput.value;
+});
 
-    // 3. 把这个撤回函数也贴在它下面（这样 339 行的按钮就有点火了）
-    function undoCSS() {
-        if (confirm("确定要撤回本次修改，回到刚打开时的样子吗？🐻")) {
-            document.getElementById('css-code-input').value = cssSnapshot;
-            document.getElementById('custom-theme').innerHTML = cssSnapshot;
-            alert("已成功撤回！✨");
-        }
+// 3. 点击标题：打开编辑器并记录初始状态
+document.getElementById('mainTitle').onclick = function() {
+    const currentStyle = localStorage.getItem('evan_custom_css') || customStyleTag.innerHTML;
+    cssInput.value = currentStyle.trim();
+    cssSnapshot = currentStyle.trim(); // 拍张照，点“撤回”时用
+    
+    document.getElementById('overlay-top').style.display = 'block';
+    document.getElementById('css-editor-modal').style.display = 'flex';
+};
+
+// 4. 撤回修改：回到刚点开时的样子
+function undoCSS() {
+    if (confirm("确定要撤回本次修改，回到刚打开时的样子吗？🐻")) {
+        cssInput.value = cssSnapshot;
+        customStyleTag.innerHTML = cssSnapshot;
+        alert("已成功撤回！✨");
     }
- function saveCSS() { localStorage.setItem('evan_custom_css', cssInput.value); alert('✨ 新皮肤已保存！'); closeTopModals(); } function resetCSS() { if(confirm("重置为默认？")) { localStorage.removeItem('evan_custom_css'); location.reload(); } } let lastSearchTerm = '', lastSearchIndex = -1; function findInCSS() { const searchTerm = searchInput.value.trim(); if (!searchTerm) return alert('请输入关键词'); if (searchTerm !== lastSearchTerm) { lastSearchTerm = searchTerm; lastSearchIndex = -1; } const text = cssInput.value, nextIndex = text.toLowerCase().indexOf(searchTerm.toLowerCase(), lastSearchIndex + 1); if (nextIndex !== -1) { cssInput.focus(); cssInput.setSelectionRange(nextIndex, nextIndex + searchTerm.length); lastSearchIndex = nextIndex; cssInput.scrollTop = (nextIndex / 35) * 18 - 50; } else { alert('没找到了🐰'); lastSearchIndex = -1; } }
- function copyCSS() {
-    const cssContent = document.getElementById('css-code-input');
-    cssContent.select();
-    cssContent.setSelectionRange(0, 99999); // 选中全部内容
+}
+
+// 5. 保存并关闭
+function saveCSS() {
+    localStorage.setItem('evan_custom_css', cssInput.value);
+    alert('✨ 新皮肤已保存！');
+    closeTopModals();
+}
+
+// 6. 恢复默认
+function resetCSS() {
+    if (confirm("重置为默认皮肤吗？🐰")) {
+        localStorage.removeItem('evan_custom_css');
+        location.reload();
+    }
+}
+
+// 7. 搜索代码功能
+let lastSearchTerm = '', lastSearchIndex = -1;
+function findInCSS() {
+    const searchTerm = searchInput.value.trim();
+    if (!searchTerm) return alert('请输入关键词');
+    
+    if (searchTerm !== lastSearchTerm) {
+        lastSearchTerm = searchTerm;
+        lastSearchIndex = -1;
+    }
+    
+    const text = cssInput.value;
+    const nextIndex = text.toLowerCase().indexOf(searchTerm.toLowerCase(), lastSearchIndex + 1);
+    
+    if (nextIndex !== -1) {
+        cssInput.focus();
+        cssInput.setSelectionRange(nextIndex, nextIndex + searchTerm.length);
+        lastSearchIndex = nextIndex;
+        // 自动滚动到找到的位置
+        cssInput.scrollTop = (nextIndex / text.length) * cssInput.scrollHeight - 50;
+    } else {
+        alert('没找到了🐰');
+        lastSearchIndex = -1;
+    }
+}
+
+// 8. 一键复制 (解决太长选不中的问题)
+function copyCSS() {
+    if (!cssInput.value.trim()) return alert('内容是空的哦 🐰');
+
+    cssInput.select();
+    cssInput.setSelectionRange(0, 99999); // 适配手机全选
 
     try {
-        navigator.clipboard.writeText(cssContent.value).then(() => {
+        // 尝试现代复制方式
+        navigator.clipboard.writeText(cssInput.value).then(() => {
             alert('📋 代码已成功复制！');
+        }).catch(() => {
+            // 如果现代方式失败，用传统方式
+            document.execCommand('copy');
+            alert('📋 已复制！');
         });
     } catch (err) {
-        document.execCommand('copy'); // 备用方案
+        document.execCommand('copy');
         alert('📋 已复制！');
     }
 }
