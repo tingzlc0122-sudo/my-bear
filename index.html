@@ -328,21 +328,24 @@
     </div>
     
         <div id="css-editor-modal" class="novel-modal glass-panel" style="display: none; height: 85vh; top: 7%; z-index: 400;">
-        <div class="cal-modal-header"><h3 class="cal-modal-title">🎨 界面皮肤编辑器</h3><div class="cal-modal-close" onclick="closeTopModals()">✕</div></div>
-        <input type="text" id="css-search-input" placeholder="🔍 搜索 (如: theme-gradient)">
-        <textarea id="css-code-input" spellcheck="false"></textarea>
-        
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            <button onclick="findInCSS()" style="background: #A8D5BA; color: #2C3E50; border: none; padding: 14px; border-radius: 30px; font-weight: bold;">🔍 查找下一个</button>
-            
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-light" style="flex:1; border-radius:30px; margin:0;" onclick="undoCSS()">🔙 撤回修改</button>
-                <button class="btn-light" style="flex:1; border-radius:30px; margin:0;" onclick="resetCSS()">🧹 重置默认</button>
-            </div>
-            
-            <button class="btn-main" style="width:100%; border-radius:30px;" onclick="saveCSS()">✨ 确认并永久保存外观</button>
+    <div class="cal-modal-header"><h3 class="cal-modal-title">🎨 界面皮肤编辑器</h3><div class="cal-modal-close" onclick="closeTopModals()">✕</div></div>
+    <input type="text" id="css-search-input" placeholder="🔍 搜索 (如: theme-gradient)">
+    <textarea id="css-code-input" spellcheck="false"></textarea>
+    
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; gap: 10px;">
+            <button onclick="findInCSS()" style="flex: 2; background: #A8D5BA; color: #2C3E50; border: none; padding: 14px; border-radius: 30px; font-weight: bold;">🔍 查找下一个</button>
+            <button onclick="copyCSS()" style="flex: 1; background: #DDA77B; color: white; border: none; padding: 14px; border-radius: 30px; font-weight: bold;">📋 复制</button>
         </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-light" style="flex:1; border-radius:30px; margin:0;" onclick="undoCSS()">🔙 撤回修改</button>
+            <button class="btn-light" style="flex:1; border-radius:30px; margin:0;" onclick="resetCSS()">🧹 重置默认</button>
+        </div>
+        
+        <button class="btn-main" style="width:100%; border-radius:30px;" onclick="saveCSS()">✨ 确认并永久保存外观</button>
     </div>
+</div>
 
     <canvas id="compressCanvas" style="display: none;"></canvas>
 
@@ -523,14 +526,27 @@
         }
     }
  function saveCSS() { localStorage.setItem('evan_custom_css', cssInput.value); alert('✨ 新皮肤已保存！'); closeTopModals(); } function resetCSS() { if(confirm("重置为默认？")) { localStorage.removeItem('evan_custom_css'); location.reload(); } } let lastSearchTerm = '', lastSearchIndex = -1; function findInCSS() { const searchTerm = searchInput.value.trim(); if (!searchTerm) return alert('请输入关键词'); if (searchTerm !== lastSearchTerm) { lastSearchTerm = searchTerm; lastSearchIndex = -1; } const text = cssInput.value, nextIndex = text.toLowerCase().indexOf(searchTerm.toLowerCase(), lastSearchIndex + 1); if (nextIndex !== -1) { cssInput.focus(); cssInput.setSelectionRange(nextIndex, nextIndex + searchTerm.length); lastSearchIndex = nextIndex; cssInput.scrollTop = (nextIndex / 35) * 18 - 50; } else { alert('没找到了🐰'); lastSearchIndex = -1; } }
+ function copyCSS() {
+    const cssContent = document.getElementById('css-code-input');
+    cssContent.select();
+    cssContent.setSelectionRange(0, 99999); // 选中全部内容
 
+    try {
+        navigator.clipboard.writeText(cssContent.value).then(() => {
+            alert('📋 代码已成功复制！');
+        });
+    } catch (err) {
+        document.execCommand('copy'); // 备用方案
+        alert('📋 已复制！');
+    }
+}
     // --- ✨ 灵感一键导出功能 ---
     function exportNovels() {
         if(novels.length === 0) {
             alert('🐰 你的灵感库还是空的哦，先去记录一点吧！');
             return;
         }
-
+        
         let content = "====== Evan.小兔 专属灵感备份 ======\n\n";
         content += "导出时间: " + getTodayString() + " " + getTimeString() + "\n";
         content += "共计 " + novels.length + " 条记录\n";
