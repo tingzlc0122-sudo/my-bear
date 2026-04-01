@@ -353,7 +353,7 @@
     // ==========================================
     // ✨✨✨✨ 终极贴图配置区 ✨✨✨✨
     // ==========================================
-    const STICKER_MAP = {
+        const STICKER_MAP = {
         'topDeposit': '', 
         'topProfit':  '', 
         'topCapital': '', 
@@ -369,7 +369,8 @@
         'casual':   '',  
         'job':      '',  
         'allowance':'',  
-        'otherInc': ''   
+        'otherInc': '',
+        'living':   ''   // ✨ 新增这一行：生活开支的专属贴图坑位
     };
 
     function getStickerHtml(type, emojiFallback, isMini = false) {
@@ -435,7 +436,7 @@
     function saveNovelRecord() { const title = document.getElementById('novelTitle').value.trim(); const content = document.getElementById('novelContent').value.trim(); if(!title && !content) { closeTopModals(); return; } if (editingNovelIndex === -1) { novels.unshift({ title, content, time: getTodayString() }); } else { novels[editingNovelIndex].title = title; novels[editingNovelIndex].content = content; } localStorage.setItem('evan_novel_v1', JSON.stringify(novels)); renderNovels(); closeTopModals(); }
     function triggerDeleteSwipe(idx, isNovel, event) { event.stopPropagation(); const msg = isNovel ? "抹除这个灵感？" : "删除这条记录？本金会计入。"; if(!confirm("⚠️ " + msg)) return; if(isNovel) { novels.splice(idx, 1); localStorage.setItem('evan_novel_v1', JSON.stringify(novels)); renderNovels(); } else { const r = db[idx]; if(r.type === '日常') { if(r.detail === '收入') curSav -= r.amt; else if(r.detail === '支出') curSav += r.amt; localStorage.setItem('evan_sav_val', curSav); } db.splice(idx, 1); saveAll(); } }
 
-    const CATEGORY_STICKER_MAP = { '吃饭': ['meal', '🍔'], '购物': ['shopping', '🛒'], '交通': ['traffic', '🚗'], '其他支出': ['casual', '🐰'], '兼职': ['job', '💰'], '生活费': ['allowance','🧧'], '其他收入': ['otherInc', '🐻'] };
+    const CATEGORY_STICKER_MAP = { '吃饭': ['meal', '🍔'], '购物': ['shopping', '🛒'], '交通': ['traffic', '🚗'], '生活开支': ['living', '🏠'], '其他支出': ['casual', '🐰'], '兼职': ['job', '💰'], '生活费': ['allowance','🧧'], '其他收入': ['otherInc', '🐻'] };
 
     function rdr() {
         let pS = 0, cS = 0; const dl = document.getElementById('dailyList'), gl = document.getElementById('guList'); dl.innerHTML = ''; gl.innerHTML = '';
