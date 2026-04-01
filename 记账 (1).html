@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Evan.小兔 🐻🐰 (云端备份版)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style id="custom-theme">
+        :root {
+            /* ✨ 默认主皮肤：高级奶油奶咖色 */
+            --theme-gradient: linear-gradient(135deg, #FFF9F0 0%, #FFF0E6 100%);
+            --glass-bg: rgba(255, 255, 255, 0.5);
+            --glass-card: rgba(255, 255, 255, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.8);
+            --glass-shadow: 0 8px 32px rgba(139, 90, 43, 0.06); 
+            
+            --text-main: #5D4037;      
+            --text-light: #8D6E63;     
+            
+            --accent-main: #DDA77B;    
+            --accent-dark: #8B5A2B;    
+            --accent-pill: #FDEBD0;    
+            
+            --inc-color: #A8D5BA;      
+            --exp-color: #F4B8B8;      
+        }
+
+        /* ✨ 灵感页专属皮肤：清透青绿 */
+        body.theme-green {
+            --theme-gradient: linear-gradient(135deg, #E0F8F5 0%, #F1F8E9 100%);
+            --glass-shadow: 0 8px 32px rgba(0, 105, 92, 0.06);
+            --text-main: #2C3E50;      
+            --text-light: #78909C;     
+            --accent-main: #26A69A;    
+            --accent-dark: #00695C;    
+            --accent-pill: #A7FFEB;    
+            --inc-color: #4DB6AC;      
+            --exp-color: #FF8A65;      
+        }
+        
+        body { background: var(--theme-gradient); background-attachment: fixed; font-family: -apple-system, sans-serif; color: var(--text-main); margin: 0; padding-bottom: 110px; transition: background 0.4s ease; }
+        
+        .glass-panel { background: var(--glass-card); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); transition: all 0.4s ease; }
+
+        .header { padding: 25px 15px; border-radius: 0 0 30px 30px; border-bottom: 2px solid rgba(255,255,255,0.6); text-align: center; position: relative; z-index: 10; }
+        .header h2 { margin: 0 0 15px 0; font-size: 20px; letter-spacing: 1px; color: var(--accent-dark); font-weight: 800; cursor: pointer; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; align-items: end; position: relative; }
+        
+        .stat-icon-wrapper { position: relative; z-index: 1; background: rgba(255,255,255,0.8); border-radius: 50%; width: 46px; height: 46px; line-height: 46px; margin: 0 auto 6px auto; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); border: 1px solid white; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+
+        .stat-val { font-size: 16px; font-weight: bold; color: var(--accent-dark); display: block; margin-top: 3px; }
+        .stat-label { font-size: 11px; color: var(--text-light); font-weight: bold; }
+
+        .page { display: none; padding: 15px; animation: fadeIn 0.3s; min-height: calc(100vh - 250px); position: relative; z-index: 1; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .three-col-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .col-btn { border-radius: 20px; padding: 15px 5px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+        .col-top-area { cursor: pointer; transition: 0.1s; padding-bottom: 10px; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .col-top-area:active { transform: scale(0.95); opacity: 0.8; }
+        .col-title { font-size: 14px; font-weight: bold; color: var(--accent-dark); margin-top: 5px;}
+        .col-plus { background: var(--glass-card); color: var(--accent-dark); width: 32px; height: 32px; line-height: 32px; border-radius: 50%; margin: 0 auto; font-size: 20px; font-weight: bold; cursor: pointer; border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .col-plus:active { transform: scale(0.9) rotate(90deg); background: var(--accent-pill); }
+
+        .card { border-radius: 22px; padding: 18px; margin-bottom: 15px; }
+        .big-bubble { border-radius: 28px; padding: 22px 15px; }
+        .card-title { font-size: 15px; font-weight: bold; color: var(--accent-dark); margin: 0 0 15px 5px; display: flex; align-items: center; justify-content: space-between; }
+        
+        input, select { width: 100%; padding: 12px; border: 1px solid rgba(255,255,255,0.6); border-radius: 14px; background: rgba(255,255,255,0.5); outline: none; font-size: 14px; box-sizing: border-box; margin-bottom: 10px; color: var(--text-main); font-weight: bold; }
+        input:focus, select:focus { background: rgba(255,255,255,0.9); border-color: var(--accent-main); }
+        
+        .btn-main { width: 100%; background: var(--accent-main); color: white; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.3); font-weight: bold; font-size: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); cursor: pointer; opacity: 0.95; }
+        .btn-main:active { transform: scale(0.98); opacity: 1; }
+        .btn-light { width: 100%; background: rgba(255,255,255,0.7); color: var(--accent-dark); padding: 15px; border-radius: 16px; border: 1px solid var(--glass-border); font-weight: bold; font-size: 15px; margin-bottom: 12px; cursor: pointer; }
+
+        .swipe-container-x { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 18px; margin-bottom: 12px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.9); position: relative; }
+        .swipe-container-x::-webkit-scrollbar { display: none; }
+        .swipe-content { flex: 0 0 100%; scroll-snap-align: start; padding: 15px; box-sizing: border-box; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .swipe-delete { flex: 0 0 75px; scroll-snap-align: end; background: #FF5252; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 0 18px 18px 0; }
+
+        .glass-bubble { padding: 18px; margin-bottom: 15px; cursor: pointer; display: flex; flex-direction: column; }
+        .bubble-title { font-size: 16px; font-weight: 900; color: var(--accent-dark); margin-bottom: 6px; }
+        .bubble-preview { font-size: 13px; color: var(--text-main); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.8; }
+        .bubble-time { font-size: 10px; color: var(--accent-main); text-align: right; margin-top: 8px; font-weight: bold; }
+
+        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 95px; display: flex; border-top: 1px solid rgba(255,255,255,0.4); padding-bottom: env(safe-area-inset-bottom); z-index: 50; border-radius: 30px 30px 0 0; }
+        .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; color: #A1887F; transition: 0.2s; }
+        body.theme-green .tab-item { color: #90A4AE; }
+        .tab-item.active { color: var(--accent-dark); font-weight: bold; }
+        .tab-icon-wrapper { filter: grayscale(100%) opacity(0.4); transition: 0.2s; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; }
+        .tab-item.active .tab-icon-wrapper { filter: grayscale(0%) opacity(1); transform: translateY(-2px); }
+
+        .novel-fab { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; background: var(--accent-main); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.5); color: white; font-size: 36px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 40; cursor: pointer; display: none; opacity: 0.9; }
+
+        .novel-modal { display: none; position: fixed; top: 8%; left: 5%; right: 5%; bottom: 8%; border-radius: 30px; z-index: 305; padding: 25px 20px; overflow: hidden; flex-direction: column; animation: popIn 0.3s cubic-bezier(0.1, 0.9, 0.2, 1); }
+        .novel-input-title { width: 100%; border: none; background: transparent; font-size: 22px; font-weight: 900; color: var(--accent-dark); outline: none; padding: 0 0 10px 0; margin-bottom: 15px; border-bottom: 2px dashed rgba(255,255,255,0.6); border-radius: 0; }
+        .novel-input-title:focus { background: transparent; border-bottom: 2px dashed var(--accent-main); }
+        .novel-input-content { flex: 1; width: 100%; border: none; background: transparent; font-size: 15px; line-height: 1.8; color: var(--text-main); outline: none; resize: none; font-family: inherit; }
+        .novel-read-title { font-size: 22px; font-weight: 900; color: var(--accent-dark); padding: 0 0 10px 0; margin-bottom: 15px; border-bottom: 2px dashed rgba(255,255,255,0.6); }
+        .novel-read-content { flex: 1; font-size: 15px; line-height: 1.8; color: var(--text-main); overflow-y: auto; white-space: pre-wrap; user-select: none; }
+        .btn-pill-edit { background: var(--accent-pill); color: var(--accent-dark); border-radius: 30px; padding: 15px 0; width: 100%; text-align: center; font-weight: bold; font-size: 16px; margin-top: 15px; border: none; cursor: pointer; }
+
+        #overlay, #overlay-top { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.1); z-index: 100; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+        #overlay-top { z-index: 300; background: rgba(0,0,0,0.25); }
+        
+        #bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; border-radius: 30px 30px 0 0; padding: 25px 20px 40px 20px; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1); z-index: 101; }
+        .sheet-title { font-size: 18px; font-weight: bold; color: var(--accent-dark); margin: 0 0 15px 0; text-align: center; }
+        
+        #calendar-modal { display: none; position: fixed; top: 8%; left: 5%; right: 5%; bottom: 8%; border-radius: 30px; z-index: 200; padding: 20px 15px; overflow-y: auto; animation: popIn 0.3s; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+        .cal-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px dashed rgba(255,255,255,0.6); padding-bottom: 10px; }
+        .cal-modal-title { font-size: 18px; font-weight: bold; color: var(--accent-dark); margin: 0; }
+        .cal-modal-close { background: rgba(255,255,255,0.8); border: 1px solid var(--glass-border); color: var(--accent-dark); width: 30px; height: 30px; border-radius: 50%; font-weight: bold; text-align: center; line-height: 28px; cursor: pointer; }
+        
+        .cal-week-row { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; font-size: 12px; color: var(--accent-dark); margin-bottom: 8px; }
+        .cal-modal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .cal-modal-cell { background: rgba(255,255,255,0.6); border-radius: 12px; min-height: 65px; padding: 4px; border: 1px solid rgba(255,255,255,0.8); display: flex; flex-direction: column; overflow: hidden; cursor: pointer; }
+        .cal-modal-cell:active { transform: scale(0.92); border-color: var(--accent-main); }
+        .cal-modal-date { font-size: 12px; font-weight: bold; color: var(--text-light); margin-bottom: 2px; text-align: right; padding-right: 2px; }
+        .cal-item { font-size: 11px; padding: 2px 0; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; text-decoration: underline dashed; text-underline-offset: 3px; cursor: pointer; }
+        .cal-item-inc { color: var(--inc-color); }
+        .cal-item-exp { color: var(--exp-color); }
+
+        #day-detail-modal { display: none; position: fixed; top: 20%; left: 8%; right: 8%; max-height: 60%; border-radius: 25px; z-index: 301; padding: 20px; overflow-y: auto; animation: popIn 0.2s; }
+        .day-detail-header { font-size: 16px; font-weight: bold; color: var(--accent-dark); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.6); padding-bottom: 10px; display: flex; justify-content: space-between;}
+        #remark-modal { display: none; position: fixed; top: 40%; left: 20%; right: 20%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); color: var(--accent-dark); border-radius: 18px; z-index: 302; padding: 18px; text-align: center; font-weight: bold; animation: popIn 0.2s; }
+
+        #record-edit-modal { display: none; position: fixed; top: 8%; left: 5%; right: 5%; bottom: 8%; border-radius: 30px; z-index: 305; padding: 15px 20px; overflow: hidden; animation: popIn 0.2s; flex-direction: column; }
+        .swipe-container { flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; scrollbar-width: none; }
+        .swipe-item { flex: 0 0 100%; scroll-snap-align: start; padding: 5px; box-sizing: border-box; display: flex; flex-direction: column; }
+        .media-box { flex: 1; background: rgba(255,255,255,0.4); border: 2px dashed rgba(255,255,255,0.9); border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .media-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        input[type="file"] { display: none; }
+        
+        .diary-container { flex: 1; border-radius: 20px; border-left: 12px solid var(--accent-main); background: rgba(255,255,255,0.8); box-shadow: inset 0 0 10px rgba(0,0,0,0.02); position: relative; display: flex; flex-direction: column; }
+        .diary-paper { flex: 1; background-image: linear-gradient(transparent 95%, rgba(255,255,255,0.6) 100%); background-size: 100% 28px; line-height: 28px; border: none; padding: 15px 15px 15px 20px; box-sizing: border-box; resize: none; font-family: 'Kaiti', 'STKaiti', sans-serif; font-size: 16px; color: var(--accent-dark); outline: none; }
+
+        .stats-segment { display: flex; background: rgba(255,255,255,0.5); border-radius: 14px; padding: 4px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.6); }
+        .stats-seg-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 13px; color: var(--text-light); border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .stats-seg-btn.active { background: rgba(255,255,255,0.9); color: var(--accent-dark); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .stats-box { background: rgba(255,255,255,0.6); border: 1px solid var(--glass-border); border-radius: 20px; padding: 15px; text-align: center; margin-bottom: 10px; }
+        .view-toggle { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
+        .view-toggle span { font-size: 14px; color: var(--text-light); font-weight: bold; cursor: pointer; padding-bottom: 3px; }
+        .view-toggle span.active { color: var(--accent-dark); border-bottom: 3px solid var(--accent-dark); }
+        #chartContainer { position: relative; height: 250px; width: 100%; }
+        
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .cal-cell { background: rgba(255,255,255,0.5); border-radius: 10px; min-height: 45px; padding: 3px; border: 1px solid rgba(255,255,255,0.6); display: flex; flex-direction: column; align-items: center; }
+        .cal-date { font-size: 11px; color: var(--text-light); font-weight: bold; margin-bottom: 2px; }
+        .cal-dot { width: 6px; height: 6px; border-radius: 50%; margin: 1px 0; }
+        .dot-inc { background: var(--inc-color); }
+        .dot-exp { background: var(--exp-color); }
+        .dot-pro { background: var(--accent-dark); }
+        
+        .pie-sub-toggle { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; display: none; }
+        .pie-sub-btn { font-size: 12px; padding: 4px 12px; border-radius: 12px; border: 1px solid var(--accent-main); color: var(--accent-main); cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.5); }
+        .pie-sub-btn.active { background: var(--accent-main); color: white; }
+
+        .sticker-img { width: 100%; height: 100%; object-fit: contain; flex-shrink: 0; }
+        .mini-sticker { width: 18px !important; height: 18px !important; margin-right: 4px; object-fit: contain; display: inline-block; vertical-align: sub; }
+
+        #css-search-input { width: 100%; margin-bottom: 12px; border-radius: 25px; background: rgba(255,255,255,0.7); box-shadow: inset 0 2px 5px rgba(0,0,0,0.02); border: none; padding: 12px; font-weight: bold; outline: none; box-sizing: border-box; color: var(--text-main); }
+        #css-code-input { width: 100%; background: rgba(255,255,255,0.4); border-radius: 20px; padding: 15px; font-family: monospace; font-size: 13px; border: 2px dashed rgba(255,255,255,0.8); flex: 1; margin-bottom: 15px; box-sizing: border-box; outline: none; }
+    </style>
+</head>
+<body>
+
+    <div class="header glass-panel" id="mainHeader">
+        <h2 id="mainTitle">Evan.小兔</h2>
+        <div class="stat-grid" id="mainStatGrid">
+            <div style="z-index: 1;">
+                <div class="stat-icon-wrapper" id="sticker-deposit"></div>
+                <span class="stat-label">账户存款</span>
+                <span class="stat-val" id="topSaving">￥0</span>
+            </div>
+            <div style="z-index: 1;">
+                <div class="stat-icon-wrapper" id="sticker-profit"></div>
+                <span class="stat-label">转单利润</span>
+                <span class="stat-val" id="topProfit">￥0</span>
+            </div>
+            <div style="z-index: 1;">
+                <div class="stat-icon-wrapper" id="sticker-capital"></div>
+                <span class="stat-label">在途本金</span>
+                <span class="stat-val" id="topCapital">￥0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="pageBear" class="page active">
+        <div class="three-col-grid">
+            <div class="col-btn glass-panel">
+                <div class="col-top-area" onclick="openInteractiveCalendar('支出')">
+                    <div class="col-icon-wrapper" id="col-sticker-exp"></div>
+                    <div class="col-title">支出</div>
+                </div>
+                <div class="col-plus" onclick="openSheet('支出')">＋</div>
+            </div>
+            <div class="col-btn glass-panel">
+                <div class="col-top-area" onclick="openInteractiveCalendar('收入')">
+                    <div class="col-icon-wrapper" id="col-sticker-inc"></div>
+                    <div class="col-title">收入</div>
+                </div>
+                <div class="col-plus" onclick="openSheet('收入')">＋</div>
+            </div>
+            <div class="col-btn glass-panel">
+                <div class="col-top-area" onclick="openInteractiveCalendar('存款')">
+                    <div class="col-icon-wrapper" id="col-sticker-dep"></div>
+                    <div class="col-title">存款</div>
+                </div>
+                <div class="col-plus" style="font-size: 12px;" onclick="openSheet('存款')">校准</div>
+            </div>
+        </div>
+        <div class="card glass-panel big-bubble">
+            <div class="card-title">📝 近期日常明细 <span style="font-size: 11px; color:var(--text-light);">左滑删除 / 点击修改</span></div>
+            <div id="dailyList" style="max-height: 350px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <div id="pageRabbit" class="page">
+        <div class="card glass-panel">
+            <div class="card-title">📦 淘宝闲鱼转单录入</div>
+            <button class="btn-light" onclick="parseClipPrompt()">✨ 智能提取订单剪切板</button>
+            <input type="text" id="oId" placeholder="订单号/宝贝名称">
+            <div style="display: flex; gap: 10px;"><input type="number" id="bP" placeholder="买入实付"><input type="number" id="sP" placeholder="闲鱼售价"></div>
+            <select id="gS">
+                <option value="预售中">⏳ 预售中 (占用本金)</option>
+                <option value="已转单">✅ 已转单 (核算利润)</option>
+            </select>
+            <button class="btn-main" onclick="addGu()">保存转单记录</button>
+        </div>
+        <div class="card glass-panel big-bubble">
+            <div class="card-title">🧾 转单流水 <span style="font-size: 11px; color:var(--text-light);">左滑删除 / 点击修改</span></div>
+            <div id="guList" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <div id="pageStats" class="page">
+        <div class="card glass-panel">
+            <div class="stats-segment"><div class="stats-seg-btn active" onclick="switchDateRange('month')">本月</div><div class="stats-seg-btn" onclick="switchDateRange('year')">本年</div></div>
+            <div style="text-align: center; color: var(--text-light); font-size: 12px; margin-bottom: 10px;" id="statsDateLabel">当前周期</div>
+            <div style="display: flex; gap: 10px;">
+                <div class="stats-box" style="flex:1;"><div style="font-size: 11px;">总收入</div><div style="font-size: 16px; font-weight: bold; color: var(--inc-color);" id="statInc">￥0</div></div>
+                <div class="stats-box" style="flex:1;"><div style="font-size: 11px;">总支出</div><div style="font-size: 16px; font-weight: bold; color: var(--exp-color);" id="statExp">￥0</div></div>
+                <div class="stats-box" style="flex:1;"><div style="font-size: 11px;">利润</div><div style="font-size: 16px; font-weight: bold; color: var(--accent-main);" id="statPro">￥0</div></div>
+            </div>
+        </div>
+        <div class="card glass-panel">
+            <div class="view-toggle"><span id="viewBtnChart" class="active" onclick="switchViewMode('chart')">📉 概览</span><span id="viewBtnCal" onclick="switchViewMode('cal')">📅 热力图</span></div>
+            <div id="chartSection">
+                <div class="stats-segment" style="margin-bottom: 10px;"><div class="stats-seg-btn active" onclick="switchChartType('bar')">对比</div><div class="stats-seg-btn" onclick="switchChartType('line')">趋势</div><div class="stats-seg-btn" onclick="switchChartType('pie')">画像</div></div>
+                <div class="pie-sub-toggle" id="pieSubToggle"><div class="pie-sub-btn active" onclick="switchPieType('expense')">支出构成</div><div class="pie-sub-btn" onclick="switchPieType('income')">收入构成</div></div>
+                <div id="chartContainer"><canvas id="myChart"></canvas></div>
+            </div>
+            <div id="calSection" style="display: none;"><div class="cal-week-row"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div><div class="cal-grid" id="calendarGrid"></div></div>
+        </div>
+    </div>
+
+    <div id="pageNovel" class="page">
+        <div style="padding-bottom: 20px;">
+            <div style="font-size: 12px; color: var(--accent-main); font-weight: bold; text-align: center; margin-bottom: 10px; opacity: 0.8;">捕捉每一个灵光一闪的瞬间 (左滑删除)</div>
+            
+            <div style="text-align: center; margin-bottom: 15px;">
+                <button class="btn-light" style="padding: 10px 20px; font-size: 13px; border-radius: 30px; width: auto; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.05);" onclick="exportNovels()">☁️ 一键导出灵感备份 (TXT)</button>
+            </div>
+
+            <div id="novelList"></div>
+        </div>
+    </div>
+    <div class="novel-fab" id="novelFab" onclick="openNovelModal('add')">＋</div>
+
+    <div class="tab-bar glass-panel" id="mainTabBar">
+        <div class="tab-item active" onclick="showP('B')">
+            <div class="tab-icon-wrapper" id="tab-sticker-daily" style="width:32px; height:32px;"></div>日常生活
+        </div>
+        <div class="tab-item" onclick="showP('R')">
+            <div class="tab-icon-wrapper" id="tab-sticker- rabbit" style="width:32px; height:32px;"></div>转单本金
+        </div>
+        <div class="tab-item" onclick="showP('S')">
+            <div class="tab-icon-wrapper" style="font-size:32px; filter: grayscale(100%); transition: 0.2s;">📊</div>收支统计
+        </div>
+        <div class="tab-item" onclick="showP('N')">
+            <div class="tab-icon-wrapper" id="tab-sticker-novel" style="width:32px; height:32px;"></div>灵光一闪
+        </div>
+    </div>
+
+    <div id="overlay" onclick="closeAllModals()"></div>
+    <div id="overlay-top" onclick="closeTopModals()"></div>
+
+    <div id="novel-modal" class="novel-modal glass-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><div style="font-size: 12px; color: var(--accent-main);" id="novelDateText">今天</div><span onclick="closeTopModals()" style="color: var(--text-light); font-weight: bold; cursor: pointer;">✕</span></div>
+        <div id="novelEditContainer" style="display: flex; flex-direction: column; flex: 1;"><input type="text" id="novelTitle" class="novel-input-title" placeholder="灵感标题..."><textarea id="novelContent" class="novel-input-content" placeholder="记录灵光一闪..."></textarea><button class="btn-main" onclick="saveNovelRecord()" style="margin-top: 15px;">保存</button></div>
+        <div id="novelReadContainer" style="display: none; flex-direction: column; flex: 1;"><div id="novelReadTitle" class="novel-read-title"></div><div id="novelReadContent" class="novel-read-content"></div><button class="btn-pill-edit" onclick="enableNovelEdit()">✏️ 修改</button></div>
+    </div>
+
+    <div id="bottom-sheet" class="glass-panel">
+        <div class="sheet-title" id="sheetTitle">记一笔</div>
+        <div style="display: flex; align-items: center; background: rgba(255,255,255,0.7); border-radius: 14px; padding: 0 10px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.9);"><span style="font-size: 18px; margin-right: 5px;">📅</span><input type="date" id="sheetDate" style="border: none; background: transparent; margin: 0;"></div>
+        <select id="sheetCategory"></select>
+        <input type="number" id="sheetAmount" placeholder="输入金额 (￥)" style="font-size: 18px;">
+        <input type="text" id="sheetRemark" placeholder="备注 (如：买周边)">
+        <button class="btn-main" onclick="confirmSheetAction()">确认保存</button>
+    </div>
+
+    <div id="calendar-modal" class="glass-panel">
+        <div class="cal-modal-header"><h3 class="cal-modal-title" id="calModalTitle">专属日历</h3><div class="cal-modal-close" onclick="closeAllModals()">✕</div></div>
+        <div style="text-align: center; color: var(--accent-dark); font-weight: bold; margin-bottom: 10px;" id="calModalMonthLabel">2026年</div>
+        <div class="cal-week-row"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div>
+        <div class="cal-modal-grid" id="interactiveCalGrid"></div>
+    </div>
+
+    <div id="day-detail-modal" class="glass-panel">
+        <div class="day-detail-header"><span id="dayDetailTitle">日期</span><span onclick="closeTopModals()" style="color: var(--text-light); cursor: pointer;">✕</span></div>
+        <div id="dayDetailList"></div>
+    </div>
+    <div id="remark-modal"><div id="remarkText">备注内容</div></div>
+
+    <div id="record-edit-modal" class="glass-panel">
+        <div class="cal-modal-header" style="padding-bottom:5px;"><h3 class="cal-modal-title">🏷️ 明细与手账</h3><div class="cal-modal-close" onclick="closeTopModals()">✕</div></div>
+        <div style="display: flex; gap: 8px; margin-bottom: 5px;"><input type="text" id="editRemark" placeholder="备注" style="flex:2;"><input type="number" id="editAmt" style="flex:1;"></div>
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;"><input type="date" id="editDate" style="padding:10px;"><input type="time" id="editTime" style="padding:10px;"></div>
+        <div style="text-align: center; font-size: 11px; color: var(--accent-dark); font-weight: bold; margin-bottom: 5px; opacity: 0.7;">◀ 左右滑动：日记 / 图片 ▶</div>
+        <div class="swipe-container">
+            <div class="swipe-item"><div class="diary-container"><textarea id="editDiary" class="diary-paper" placeholder="今天发生了什么？"></textarea></div></div>
+            <div class="swipe-item">
+                <div class="media-box" id="mediaImageBox"><img id="displayImage" class="media-img" style="display: none;"><div id="uploadPrompt" style="text-align:center;">📷</div><input type="file" id="imageUploader" accept="image/*" onchange="handleImageUpload(event)"></div>
+                <button class="btn-light" style="padding: 8px; font-size: 12px; margin-top: 5px; border-radius: 30px;" onclick="document.getElementById('imageUploader').click()">选择图片</button>
+            </div>
+        </div>
+        <button class="btn-main" style="margin-top: 5px; border-radius: 30px;" onclick="saveRecordEdit()">保存修改</button>
+    </div>
+    
+    <div id="css-editor-modal" class="novel-modal glass-panel" style="display: none; height: 85vh; top: 7%; z-index: 400;">
+        <div class="cal-modal-header"><h3 class="cal-modal-title">🎨 界面皮肤编辑器</h3><div class="cal-modal-close" onclick="closeTopModals()">✕</div></div>
+        <input type="text" id="css-search-input" placeholder="🔍 搜索 (如: theme-gradient)">
+        <textarea id="css-code-input" spellcheck="false"></textarea>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button onclick="findInCSS()" style="background: #A8D5BA; color: #2C3E50; border: none; padding: 14px; border-radius: 30px; font-weight: bold;">🔍 查找下一个</button>
+            <div style="display: flex; gap: 10px;"><button class="btn-light" style="flex:1; border-radius:30px; margin:0;" onclick="resetCSS()">重置默认</button><button class="btn-main" style="flex:2; border-radius:30px;" onclick="saveCSS()">永久保存外观</button></div>
+        </div>
+    </div>
+
+    <canvas id="compressCanvas" style="display: none;"></canvas>
+
+<script>
+    // ==========================================
+    // ✨✨✨✨ 终极贴图配置区 ✨✨✨✨
+    // ==========================================
+    const STICKER_MAP = {
+        'topDeposit': '', 
+        'topProfit':  '', 
+        'topCapital': '', 
+        'colExp': '',     
+        'colInc': '',     
+        'colDep': '',     
+        'tabDaily': '',  
+        'tabRabbit':'',  
+        'tabNovel': '',  
+        'meal':     '',  
+        'shopping': '',  
+        'traffic':  '',  
+        'casual':   '',  
+        'job':      '',  
+        'allowance':'',  
+        'otherInc': ''   
+    };
+
+    function getStickerHtml(type, emojiFallback, isMini = false) {
+        const url = STICKER_MAP[type];
+        if (url && url.trim() !== '') {
+            const cls = isMini ? 'sticker-img mini-sticker' : 'sticker-img';
+            return `<img src="${url}" class="${cls}" alt="${type}">`;
+        }
+        if (isMini) return `<span style="font-size:16px; margin-right:4px; vertical-align: sub;">${emojiFallback}</span>`;
+        return `<span style="font-size:${isMini ? '18px' : '26px'}; font-family: apple color emoji, segoe ui emoji, noto color emoji;">${emojiFallback}</span>`;
+    }
+
+    let db = JSON.parse(localStorage.getItem('evan_rabbit_v4')) || [];
+    let curSav = parseFloat(localStorage.getItem('evan_sav_val')) || 0;
+    let novels = JSON.parse(localStorage.getItem('evan_novel_v1')) || []; 
+    
+    let currentSheetType = ''; let currentRange = 'month'; let currentViewMode = 'chart'; let currentChartType = 'bar'; 
+    let currentPieType = 'expense'; 
+    let myChartInstance = null; let editingRecordIndex = -1; let editingNovelIndex = -1; 
+
+    function getTodayString() { const tzOffset = (new Date()).getTimezoneOffset() * 60000; return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; }
+    function getTimeString() { return new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}); }
+
+    function showP(p) {
+        document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+        document.getElementById(p==='B'?'pageBear':(p==='R'?'pageRabbit':(p==='N'?'pageNovel':'pageStats'))).classList.add('active');
+        const tabItems = document.querySelectorAll('.tab-item');
+        tabItems.forEach(el => el.classList.remove('active'));
+        if(p === 'B') tabItems[0].classList.add('active');
+        if(p === 'R') tabItems[1].classList.add('active');
+        if(p === 'S') tabItems[2].classList.add('active');
+        if(p === 'N') tabItems[3].classList.add('active');
+        
+        if(p === 'N') { document.body.classList.add('theme-green'); document.getElementById('novelFab').style.display = 'flex'; renderNovels(); } 
+        else { document.body.classList.remove('theme-green'); document.getElementById('novelFab').style.display = 'none'; }
+        if(p === 'S') updateStatsUI();
+    }
+
+    function closeAllModals() { document.getElementById('bottom-sheet').style.transform = 'translateY(100%)'; document.getElementById('calendar-modal').style.display = 'none'; closeTopModals(); setTimeout(() => { document.getElementById('overlay').style.display = 'none'; }, 200); }
+    function closeTopModals() { document.getElementById('day-detail-modal').style.display = 'none'; document.getElementById('remark-modal').style.display = 'none'; document.getElementById('record-edit-modal').style.display = 'none'; document.getElementById('novel-modal').style.display = 'none'; document.getElementById('css-editor-modal').style.display = 'none'; document.getElementById('overlay-top').style.display = 'none'; }
+
+    function initializeStickers() {
+        document.getElementById('sticker-deposit').innerHTML = getStickerHtml('topDeposit', '🏦');
+        document.getElementById('sticker-profit').innerHTML  = getStickerHtml('topProfit',  '❤️');
+        document.getElementById('sticker-capital').innerHTML = getStickerHtml('topCapital', '🐰');
+        document.getElementById('col-sticker-exp').innerHTML = getStickerHtml('colExp', '🐰');
+        document.getElementById('col-sticker-inc').innerHTML = getStickerHtml('colInc', '🐻');
+        document.getElementById('col-sticker-dep').innerHTML = getStickerHtml('colDep', '🏦');
+        document.querySelectorAll('.col-icon-wrapper img').forEach(img => { img.style.width = '32px'; img.style.height = '32px'; });
+        document.getElementById('tab-sticker-daily').innerHTML  = getStickerHtml('tabDaily',  '🐻');
+        document.getElementById('tab-sticker- rabbit').innerHTML = getStickerHtml('tabRabbit', '🐰');
+        document.getElementById('tab-sticker-novel').innerHTML  = getStickerHtml('tabNovel',  '💡');
+    }
+
+    function renderNovels() {
+        const list = document.getElementById('novelList'); list.innerHTML = '';
+        if(novels.length === 0) { list.innerHTML = `<div style="text-align:center; color: var(--accent-main); margin-top: 50px; font-weight:bold; opacity:0.6;">捕捉灵感 💡</div>`; return; }
+        novels.forEach((n, idx) => { list.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openNovelModal('view', ${idx})"><div style="flex:1;"><div class="bubble-title">${n.title || '【无题】'}</div><div class="bubble-preview">${n.content || '...'}</div><div class="bubble-time">${n.time}</div></div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, true, event)">✕</div></div>`; });
+    }
+
+    function openNovelModal(mode, idx = -1) { document.getElementById('overlay-top').style.display = 'block'; document.getElementById('novel-modal').style.display = 'flex'; const editContainer = document.getElementById('novelEditContainer'); const readContainer = document.getElementById('novelReadContainer'); if (mode === 'add') { editingNovelIndex = -1; document.getElementById('novelDateText').innerText = getTodayString(); document.getElementById('novelTitle').value = ''; document.getElementById('novelContent').value = ''; editContainer.style.display = 'flex'; readContainer.style.display = 'none'; } else { editingNovelIndex = idx; const item = novels[idx]; document.getElementById('novelDateText').innerText = item.time; document.getElementById('novelReadTitle').innerText = item.title || '无题'; document.getElementById('novelReadContent').innerText = item.content || ''; editContainer.style.display = 'none'; readContainer.style.display = 'flex'; } }
+    function enableNovelEdit() { const item = novels[editingNovelIndex]; document.getElementById('novelTitle').value = item.title; document.getElementById('novelContent').value = item.content; document.getElementById('novelReadContainer').style.display = 'none'; document.getElementById('novelEditContainer').style.display = 'flex'; }
+    function saveNovelRecord() { const title = document.getElementById('novelTitle').value.trim(); const content = document.getElementById('novelContent').value.trim(); if(!title && !content) { closeTopModals(); return; } if (editingNovelIndex === -1) { novels.unshift({ title, content, time: getTodayString() }); } else { novels[editingNovelIndex].title = title; novels[editingNovelIndex].content = content; } localStorage.setItem('evan_novel_v1', JSON.stringify(novels)); renderNovels(); closeTopModals(); }
+    function triggerDeleteSwipe(idx, isNovel, event) { event.stopPropagation(); const msg = isNovel ? "抹除这个灵感？" : "删除这条记录？本金会计入。"; if(!confirm("⚠️ " + msg)) return; if(isNovel) { novels.splice(idx, 1); localStorage.setItem('evan_novel_v1', JSON.stringify(novels)); renderNovels(); } else { const r = db[idx]; if(r.type === '日常') { if(r.detail === '收入') curSav -= r.amt; else if(r.detail === '支出') curSav += r.amt; localStorage.setItem('evan_sav_val', curSav); } db.splice(idx, 1); saveAll(); } }
+
+    const CATEGORY_STICKER_MAP = { '吃饭': ['meal', '🍔'], '购物': ['shopping', '🛒'], '交通': ['traffic', '🚗'], '其他支出': ['casual', '🐰'], '兼职': ['job', '💰'], '生活费': ['allowance','🧧'], '其他收入': ['otherInc', '🐻'] };
+
+    function rdr() {
+        let pS = 0, cS = 0; const dl = document.getElementById('dailyList'), gl = document.getElementById('guList'); dl.innerHTML = ''; gl.innerHTML = '';
+        db.forEach((r, idx) => {
+            const hasMediaIcon = r.imageBase64 ? ' <span style="font-size:12px;">🖼️</span>' : '';
+            if(r.type === '日常') {
+                const isExp = r.detail === '支出'; const color = isExp ? 'var(--exp-color)' : (r.detail === '收入' ? 'var(--inc-color)' : 'var(--accent-dark)'); const sign = isExp ? '-' : (r.detail === '收入' ? '+' : '='); 
+                let stickerHtml = ''; if(r.category && CATEGORY_STICKER_MAP[r.category]) { const cfg = CATEGORY_STICKER_MAP[r.category]; stickerHtml = getStickerHtml(cfg[0], cfg[1], true); } else { stickerHtml = isExp ? getStickerHtml('colExp', '🐰', true) : getStickerHtml('colInc', '🐻', true); }
+                dl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:2px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.date} ${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:16px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
+            } else {
+                if(r.status === '已转单') pS += parseFloat(r.profit); if(r.status === '预售中') cS += r.buy;
+                gl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">#${r.id} <span style="font-size:10px; background:rgba(255,255,255,0.5); padding:2px 6px; border-radius:6px; vertical-align:middle;">${r.status}</span>${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light); margin-top:4px;">${r.date} | 买 ${r.buy} → 售 ${r.sell}</div></div><div style="color:var(--exp-color); font-weight:bold; font-size:16px;">+${r.profit}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
+            }
+        });
+        document.getElementById('topProfit').innerText = '￥' + pS.toFixed(2); document.getElementById('topCapital').innerText = '￥' + cS.toFixed(2); document.getElementById('topSaving').innerText = '￥' + curSav.toFixed(2);
+    }
+
+    function openSheet(type) {
+        currentSheetType = type; document.getElementById('sheetDate').value = getTodayString(); document.getElementById('sheetAmount').value = ''; document.getElementById('sheetRemark').value = '';
+        const title = document.getElementById('sheetTitle'); const category = document.getElementById('sheetCategory'); category.innerHTML = '';
+        if (type === '支出') { title.innerHTML = '记一笔支出'; const catExp = [['吃饭', 'meal', '🍔'], ['购物', 'shopping', '🛒'], ['交通', 'traffic', '🚗'], ['其他支出', 'casual', '🐰']]; catExp.forEach(c => { const emoji = STICKER_MAP[c[1]] && STICKER_MAP[c[1]].trim() !== '' ? '🖼️' : c[2]; category.innerHTML += `<option value="${c[0]}">${emoji} ${c[0]}</option>`; }); category.style.display = 'block'; } 
+        else if (type === '收入') { title.innerHTML = '记一笔收入'; const catInc = [['兼职', 'job', '💰'], ['生活费', 'allowance', '🧧'], ['其他收入', 'otherInc', '🐻']]; catInc.forEach(c => { const emoji = STICKER_MAP[c[1]] && STICKER_MAP[c[1]].trim() !== '' ? '🖼️' : c[2]; category.innerHTML += `<option value="${c[0]}">${emoji} ${c[0]}</option>`; }); category.style.display = 'block'; } 
+        else { title.innerHTML = '校准存款余额'; category.style.display = 'none'; document.getElementById('sheetRemark').value = '手动对账'; }
+        document.getElementById('overlay').style.display = 'block'; setTimeout(() => { document.getElementById('bottom-sheet').style.transform = 'translateY(0)'; }, 10);
+    }
+
+    function renderInteractiveCalendar(type) {
+        const grid = document.getElementById('interactiveCalGrid'); grid.innerHTML = '';
+        const now = new Date(); const year = now.getFullYear(); const month = now.getMonth(); document.getElementById('calModalMonthLabel').innerText = `${year}年 ${month + 1}月`;
+        const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
+        let monthData = {}; const prefix = `${year}-${String(month+1).padStart(2,'0')}`;
+        db.forEach(r => { if(r.type === '日常' && r.date && r.date.startsWith(prefix)) { if(!monthData[r.date]) monthData[r.date] = []; monthData[r.date].push(r); } });
+        for(let i=0; i<firstDay; i++) { grid.innerHTML += `<div class="cal-modal-cell" style="background:transparent; border:none; box-shadow:none;"></div>`; }
+        for(let i=1; i<=daysInMonth; i++) {
+            const dStr = `${prefix}-${String(i).padStart(2,'0')}`; const records = monthData[dStr] || []; let itemsHtml = '';
+            records.forEach(r => {
+                const safeRemark = r.remark ? r.remark.replace(/'/g, "\\'") : '';
+                if (type === '收入' && r.detail === '收入') { itemsHtml += `<div class="cal-item cal-item-inc" onclick="showRemark(event, '${safeRemark}')">+${r.amt}</div>`; } 
+                else if (type === '支出' && r.detail === '支出') { itemsHtml += `<div class="cal-item cal-item-exp" onclick="showRemark(event, '${safeRemark}')">-${r.amt}</div>`; } 
+                else if (type === '存款') { if(r.detail === '收入') itemsHtml += `<div class="cal-item cal-item-inc" onclick="showRemark(event, '${safeRemark}')">+${r.amt}</div>`; if(r.detail === '支出') itemsHtml += `<div class="cal-item cal-item-exp" onclick="showRemark(event, '${safeRemark}')">-${r.amt}</div>`; }
+            });
+            const dColor = dStr === getTodayString() ? 'var(--accent-dark)' : 'var(--text-light)'; const borderC = dStr === getTodayString() ? 'var(--accent-main)' : 'rgba(255,255,255,0.8)';
+            grid.innerHTML += `<div class="cal-modal-cell" style="border-color: ${borderC};" onclick="openDayDetail('${type}', '${dStr}')"><div class="cal-modal-date" style="color:${dColor};">${i}</div><div style="flex:1; overflow-y:auto;">${itemsHtml}</div></div>`;
+        }
+    }
+    function showRemark(event, text) { event.stopPropagation(); document.getElementById('remarkText').innerText = text || '无备注'; document.getElementById('overlay-top').style.display = 'block'; document.getElementById('remark-modal').style.display = 'block'; }
+    function openDayDetail(type, dateStr) { document.getElementById('dayDetailTitle').innerText = `${dateStr} 明细`; const listDiv = document.getElementById('dayDetailList'); listDiv.innerHTML = ''; let dayRecords = []; db.forEach((r, idx) => { if (r.type === '日常' && r.date === dateStr) { if (type === '收入' && r.detail === '收入') dayRecords.push({r, idx}); else if (type === '支出' && r.detail === '支出') dayRecords.push({r, idx}); else if (type === '存款') dayRecords.push({r, idx}); } }); if(dayRecords.length === 0) { listDiv.innerHTML = '<div style="text-align:center; padding: 20px;">这里空空如也</div>'; } else { dayRecords.forEach(item => { const r = item.r; const isExp = r.detail === '支出'; const color = isExp ? 'var(--exp-color)' : 'var(--inc-color)'; const sign = isExp ? '-' : '+'; listDiv.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.6); cursor:pointer;" onclick="openRecordEdit(${item.idx})"><div><div style="font-weight:bold; color:var(--accent-dark);">${r.remark}</div></div><div style="color:${color}; font-weight:bold;">${sign}${r.amt}</div></div>`; }); } document.getElementById('overlay-top').style.display = 'block'; document.getElementById('day-detail-modal').style.display = 'block'; }
+
+    function confirmSheetAction() { const amt = parseFloat(document.getElementById('sheetAmount').value); if (!amt) return alert('填入金额'); const dateStr = document.getElementById('sheetDate').value; if (!dateStr) return; let cat = currentSheetType !== '存款' ? document.getElementById('sheetCategory').value : ''; const remark = document.getElementById('sheetRemark').value || '无备注'; if(currentSheetType === '收入') curSav += amt; else if(currentSheetType === '支出') curSav -= amt; else curSav = amt; db.unshift({ type: '日常', detail: currentSheetType, category: cat, remark: remark, amt: amt, date: dateStr, timeStr: getTimeString(), diaryText: '', imageBase64: '' }); localStorage.setItem('evan_sav_val', curSav); saveAll(); closeAllModals(); }
+    function parseClipPrompt() { const text = prompt("粘贴淘宝闲鱼信息："); if (!text) return; const orderMatch = text.match(/\d{15,20}/); const priceMatch = text.match(/实付款[:\s]*(\d+\.\d+)/) || text.match(/￥(\d+\.\d+)/); if(orderMatch) document.getElementById('oId').value = orderMatch[ orderMatch.length - 1].slice(-4); if(priceMatch) document.getElementById('bP').value = priceMatch[1]; }
+    function addGu() { const b = parseFloat(document.getElementById('bP').value); const s = parseFloat(document.getElementById('sP').value); if(!b || !s) return alert('填完整信息'); db.unshift({ type: '转单', id: document.getElementById('oId').value || '单据', buy: b, sell: s, status: document.getElementById('gS').value, profit: (s - b).toFixed(2), date: getTodayString() }); saveAll(); document.getElementById('oId').value=''; document.getElementById('bP').value = ''; document.getElementById('sP').value = ''; }
+    function saveAll() { localStorage.setItem('evan_rabbit_v4', JSON.stringify(db)); rdr(); if(document.getElementById('pageStats').classList.contains('active')) updateStatsUI(); }
+    function openInteractiveCalendar(type) { renderInteractiveCalendar(type); document.getElementById('overlay').style.display = 'block'; document.getElementById('calendar-modal').style.display = 'block'; }
+    function switchDateRange(range) { currentRange = range; const btns = document.querySelectorAll('.stats-seg-btn'); btns[0].classList.toggle('active', range==='month'); btns[1].classList.toggle('active', range==='year'); updateStatsUI(); }
+    function switchViewMode(mode) { currentViewMode = mode; document.getElementById('viewBtnChart').classList.toggle('active', mode === 'chart'); document.getElementById('viewBtnCal').classList.toggle('active', mode === 'cal'); document.getElementById('chartSection').style.display = mode === 'chart' ? 'block' : 'none'; document.getElementById('calSection').style.display = mode === 'cal' ? 'block' : 'none'; if(mode === 'chart') updateChart(); else updateStatsCalendar(); }
+    function switchChartType(type) { currentChartType = type; const btns = document.querySelectorAll('#chartSection .stats-seg-btn'); btns.forEach((b,i) => b.classList.toggle('active', (type==='bar'&&i===0)||(type==='line'&&i===1)||(type==='pie'&&i===2))); document.getElementById('pieSubToggle').style.display = type === 'pie' ? 'flex' : 'none'; updateChart(); }
+    function switchPieType(type) { currentPieType = type; document.querySelectorAll('.pie-sub-btn').forEach((b,i)=>b.classList.toggle('active', (type==='expense'&&i===0)||(type==='income'&&i===1))); updateChart(); }
+    function processStatsData() { const todayStr = getTodayString(); const matchStr = currentRange === 'month' ? todayStr.substring(0, 7) : todayStr.substring(0, 4); document.getElementById('statsDateLabel').innerText = matchStr; let tInc = 0, tExp = 0, tPro = 0; let dayData = {}; db.forEach(r => { if (r.date && r.date.startsWith(matchStr)) { if(!dayData[r.date]) dayData[r.date] = { inc:0, exp:0, pro:0 }; if (r.type === '日常') { if (r.detail === '收入') { tInc += r.amt; dayData[r.date].inc += r.amt; } if (r.detail === '支出') { tExp += r.amt; dayData[r.date].exp += r.amt; } } else if (r.type === '转单' && r.status === '已转单') { const prof = parseFloat(r.profit); tPro += prof; dayData[r.date].pro += prof; } } }); document.getElementById('statInc').innerText = '￥' + tInc.toFixed(2); document.getElementById('statExp').innerText = '￥' + tExp.toFixed(2); document.getElementById('statPro').innerText = '￥' + tPro.toFixed(2); return { timeline: dayData }; }
+    function updateStatsUI() { const data = processStatsData(); if(currentViewMode === 'chart') updateChart(data); else updateStatsCalendar(data); }
+    function updateChart(dataObj) { if(!dataObj) dataObj = processStatsData(); const ctx = document.getElementById('myChart').getContext('2d'); if(myChartInstance) myChartInstance.destroy(); const dates = Object.keys(dataObj.timeline).sort(); const colorInc = '#A8D5BA', colorExp = '#F4B8B8', colorPro = '#DDA77B'; if(currentChartType === 'pie') { let catData = {}; db.forEach(r => { if (r.date && r.date.startsWith(document.getElementById('statsDateLabel').innerText)) { if (currentPieType === 'expense' && r.type === '日常' && r.detail === '支出') { let cat = r.category || '其他'; catData[cat] = (catData[cat] || 0) + r.amt; } else if (currentPieType === 'income') { if (r.type === '日常' && r.detail === '收入') { let cat = r.category || '其他'; catData[cat] = (catData[cat] || 0) + r.amt; } else if (r.type === '转单' && r.status === '已转单') { catData['转单'] = (catData['转单'] || 0) + parseFloat(r.profit); } } } }); myChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(catData), datasets: [{ data: Object.values(catData), backgroundColor: ['#F4B8B8', '#A8D5BA', '#F5CBA7', '#D7BDE2', '#FFE082'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } }); } else { myChartInstance = new Chart(ctx, { type: currentChartType, data: { labels: dates.map(d=>d.substring(5)), datasets: [{ label: '支出', data: dates.map(d=>dataObj.timeline[d].exp), backgroundColor: colorExp, borderColor: colorExp }, { label: '收入', data: dates.map(d=>dataObj.timeline[d].inc), backgroundColor: colorInc, borderColor: colorInc }, { label: '利润', data: dates.map(d=>dataObj.timeline[d].pro), backgroundColor: colorPro, borderColor: colorPro }] }, options: { responsive: true, maintainAspectRatio: false } }); } }
+    function updateStatsCalendar(dataObj) { if(!dataObj) dataObj = processStatsData(); const grid = document.getElementById('calendarGrid'); grid.innerHTML = ''; const now = new Date(); const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(); const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay(); for(let i=0; i<firstDay; i++) grid.innerHTML += `<div class="cal-cell" style="background:transparent; border:none;"></div>`; for(let i=1; i<=daysInMonth; i++) { const dateStr = `${getTodayString().substring(0,8)}${String(i).padStart(2,'0')}`; const dayInfo = dataObj.timeline[dateStr]; let dots = ''; if(dayInfo) { if(dayInfo.inc > 0) dots += '<div class="cal-dot dot-inc"></div>'; if(dayInfo.exp > 0) dots += '<div class="cal-dot dot-exp"></div>'; if(dayInfo.pro > 0) dots += '<div class="cal-dot dot-pro"></div>'; } const borderC = dateStr === getTodayString() ? 'var(--accent-dark)' : 'rgba(255,255,255,0.8)'; grid.innerHTML += `<div class="cal-cell" style="border-color: ${borderC};"><span class="cal-date">${i}</span><div style="display:flex; gap:2px;">${dots}</div></div>`; } }
+
+    function openRecordEdit(idx) { editingRecordIndex = idx; const r = db[idx]; document.getElementById('editRemark').value = r.remark || r.id; document.getElementById('editAmt').value = r.amt || r.profit || r.buy; document.getElementById('editDate').value = r.date || getTodayString(); document.getElementById('editTime').value = r.timeStr || getTimeString(); document.getElementById('editDiary').value = r.diaryText || ''; const imgEl = document.getElementById('displayImage'); if (r.imageBase64) { imgEl.src = r.imageBase64; imgEl.style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; } else { imgEl.style.display = 'none'; document.getElementById('uploadPrompt').style.display = 'block'; } document.getElementById('overlay-top').style.display = 'block'; document.getElementById('record-edit-modal').style.display = 'flex'; }
+    function handleImageUpload(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(e) { const img = new Image(); img.onload = function() { const canvas = document.getElementById('compressCanvas'); const MAX_WIDTH = 400; let width = img.width, height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height); db[editingRecordIndex].imageBase64 = canvas.toDataURL('image/jpeg', 0.6); saveAll(); document.getElementById('displayImage').src = db[editingRecordIndex].imageBase64; document.getElementById('displayImage').style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; }; img.src = e.target.result; }; reader.readAsDataURL(file); }
+    function saveRecordEdit() { if(editingRecordIndex === -1) return; const r = db[editingRecordIndex]; const oldAmt = parseFloat(r.amt || 0); const newAmt = parseFloat(document.getElementById('editAmt').value || 0); r.remark = document.getElementById('editRemark').value; r.date = document.getElementById('editDate').value; r.timeStr = document.getElementById('editTime').value; r.diaryText = document.getElementById('editDiary').value; if(r.type === '日常') { if(r.detail === '收入') curSav = curSav - oldAmt + newAmt; else if(r.detail === '支出') curSav = curSav + oldAmt - newAmt; r.amt = newAmt; localStorage.setItem('evan_sav_val', curSav); } else if(r.type === '转单') { r.id = r.remark; r.profit = newAmt; } saveAll(); closeTopModals(); }
+
+    const cssInput = document.getElementById('css-code-input'), customStyleTag = document.getElementById('custom-theme'), searchInput = document.getElementById('css-search-input'); let savedCSS = localStorage.getItem('evan_custom_css') || customStyleTag.innerHTML; cssInput.value = savedCSS.trim(); customStyleTag.innerHTML = savedCSS; cssInput.addEventListener('input', () => { customStyleTag.innerHTML = cssInput.value; }); document.getElementById('mainTitle').onclick = function() { document.getElementById('overlay-top').style.display = 'block'; document.getElementById('css-editor-modal').style.display = 'flex'; }; function saveCSS() { localStorage.setItem('evan_custom_css', cssInput.value); alert('✨ 新皮肤已保存！'); closeTopModals(); } function resetCSS() { if(confirm("重置为默认？")) { localStorage.removeItem('evan_custom_css'); location.reload(); } } let lastSearchTerm = '', lastSearchIndex = -1; function findInCSS() { const searchTerm = searchInput.value.trim(); if (!searchTerm) return alert('请输入关键词'); if (searchTerm !== lastSearchTerm) { lastSearchTerm = searchTerm; lastSearchIndex = -1; } const text = cssInput.value, nextIndex = text.toLowerCase().indexOf(searchTerm.toLowerCase(), lastSearchIndex + 1); if (nextIndex !== -1) { cssInput.focus(); cssInput.setSelectionRange(nextIndex, nextIndex + searchTerm.length); lastSearchIndex = nextIndex; cssInput.scrollTop = (nextIndex / 35) * 18 - 50; } else { alert('没找到了🐰'); lastSearchIndex = -1; } }
+
+    // --- ✨ 灵感一键导出功能 ---
+    function exportNovels() {
+        if(novels.length === 0) {
+            alert('🐰 你的灵感库还是空的哦，先去记录一点吧！');
+            return;
+        }
+
+        let content = "====== Evan.小兔 专属灵感备份 ======\n\n";
+        content += "导出时间: " + getTodayString() + " " + getTimeString() + "\n";
+        content += "共计 " + novels.length + " 条记录\n";
+        content += "====================================\n\n";
+
+        novels.forEach((n, index) => {
+            content += `【灵感 ${novels.length - index}】 ${n.title || '无题'}\n`;
+            content += `记录时间: ${n.time}\n`;
+            content += `内容: \n${n.content}\n`;
+            content += `------------------------------------\n\n`;
+        });
+
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `小兔灵感备份_${getTodayString()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    initializeStickers(); 
+    rdr();
+
+</script>
+</body>
+</html>
