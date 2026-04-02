@@ -505,17 +505,30 @@
 
         picker.onscroll = updateBubbles;
 
-        // 4. 初始化：自动滚到底部并锁定
+        // 4. 智能定位：优先停在上次选中的日期，没选过才滚到底部
         setTimeout(() => {
-            picker.scrollTop = picker.scrollHeight;
+            // 从全局变量里获取你当前选中的日期（比如 2026-03-31）
+            const currentVal = window.customSelectedValue;
+            let targetItem = null;
+            if (currentVal) {
+                targetItem = picker.querySelector(`.picker-item[data-val="${currentVal}"]`);
+            }
+            if (targetItem) {
+                const offset = targetItem.offsetTop - (picker.offsetHeight / 2) + (targetItem.offsetHeight / 2);
+                picker.scrollTop = offset;
+            } else {
+                picker.scrollTop = picker.scrollHeight;
+            }
             updateBubbles();
-        }, 10);
+        }, 30);
 
-        // 5. 点击外部关闭
+        // 5. 点击外部关闭（逻辑保持不变，确保点击其他地方能收起气泡）
         setTimeout(() => { 
-            const closeP = () => { 
-                picker.style.display = 'none'; 
-                document.removeEventListener('click', closeP); 
+            const closeP = (e) => { 
+                if (!picker.contains(e.target)) {
+                    picker.style.display = 'none'; 
+                    document.removeEventListener('click', closeP); 
+                }
             };
             document.addEventListener('click', closeP);
         }, 10);
