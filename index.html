@@ -649,6 +649,10 @@ function copyCSS() {
     
     initializeStickers(); 
     rdr();
+    
+    // ✨ 关键魔法：网页刚加载完，立马去查刚才的书签，然后自动跳过去
+    let lastTab = localStorage.getItem('evan_current_tab') || 'B';
+    showP(lastTab);
 
 </script>
 </body>
