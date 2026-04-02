@@ -464,9 +464,6 @@
         // 关键：我们要让 processStatsData 知道我们选了什么
         window.customSelectedValue = value; 
         
-        // 刷新 UI
-        updateStatsUI();
-        
         // 关掉框
         document.querySelectorAll('.custom-picker-box').forEach(el => el.style.display = 'none');
     }
