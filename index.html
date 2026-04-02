@@ -910,6 +910,35 @@ function copyCSS() {
     const savedTab = localStorage.getItem('evan_current_tab') || 'B';
     showP(savedTab);
 
+        // ✨ 修复：图表界面的三大切换魔法（之前缺失的电线）
+    function switchViewMode(mode) {
+        currentViewMode = mode;
+        document.getElementById('viewBtnChart').classList.toggle('active', mode === 'chart');
+        document.getElementById('viewBtnCal').classList.toggle('active', mode === 'cal');
+        document.getElementById('chartSection').style.display = mode === 'chart' ? 'block' : 'none';
+        document.getElementById('calSection').style.display = mode === 'cal' ? 'block' : 'none';
+        updateStatsUI(); // 刷新一下
+    }
+
+    function switchChartType(type) {
+        currentChartType = type;
+        const btns = document.querySelectorAll('#chartSection .stats-segment .stats-seg-btn');
+        btns[0].classList.toggle('active', type === 'bar');
+        btns[1].classList.toggle('active', type === 'line');
+        btns[2].classList.toggle('active', type === 'pie');
+        // 如果是画像，就显示支出的二级菜单
+        document.getElementById('pieSubToggle').style.display = type === 'pie' ? 'flex' : 'none';
+        updateStatsUI(); // 刷新一下
+    }
+
+    function switchPieType(type) {
+        currentPieType = type;
+        const btns = document.querySelectorAll('.pie-sub-btn');
+        btns[0].classList.toggle('active', type === 'expense');
+        btns[1].classList.toggle('active', type === 'income');
+        updateStatsUI(); // 刷新一下
+    }
+
 </script>
 </body>
 </html>
