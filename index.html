@@ -52,8 +52,9 @@
         .header h2 { margin: 0 0 15px 0; font-size: 20px; letter-spacing: 1px; color: var(--accent-dark); font-weight: 800; cursor: pointer; }
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; align-items: end; position: relative; }
         
-        .stat-icon-wrapper { position: relative; z-index: 1; background: rgba(255,255,255,0.8); border-radius: 50%; width: 46px; height: 46px; line-height: 46px; margin: 0 auto 6px auto; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); border: 1px solid white; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); overflow: hidden; display: flex; align-items: center; justify-content: center; }
-
+        .stat-icon-wrapper { position: relative; z-index: 1; width: 60px; height: 60px; margin: 0 auto 5px auto; display: flex; align-items: center; justify-content: center; }
+        .stat-icon-wrapper img { width: 100% !important; height: 100% !important; object-fit: contain; background: transparent; }
+        
         .stat-val { font-size: 16px; font-weight: bold; color: var(--accent-dark); display: block; margin-top: 3px; }
         .stat-label { font-size: 11px; color: var(--text-light); font-weight: bold; }
 
@@ -172,17 +173,16 @@
 </head>
 <body>
 
-            <div class="header glass-panel" id="mainHeader">
-        <h2 id="mainTitle">Evan.兔</h2>
+         <div class="header glass-panel" id="mainHeader">
+         <h2 id="mainTitle">Evan.兔</h2>
         
-        <img src="https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/header-rabbit.jpg" class="header-img">
+         <img src="https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/header-rabbit.jpg" class="header-img">
         
-        <div class="stat-grid">
-            <div><div class="stat-icon-wrapper" id="sticker-deposit"></div><span class="stat-label">账户存款</span><span class="stat-val" id="topSaving">￥0</span></div>
-            <div><div class="stat-icon-wrapper" id="sticker-profit"></div><span class="stat-label">转单利润</span><span class="stat-val" id="topProfit">￥0</span></div>
-            <div><div class="stat-icon-wrapper" id="sticker-capital"></div><span class="stat-label">在途本金</span><span class="stat-val" id="topCapital">￥0</span></div>
-        </div>
-    </div>
+         <div class="stat-grid">
+         <div style="display: flex; flex-direction: column; align-items: center;"><span class="stat-label" style="margin-bottom: 5px;">账户存款</span><div class="stat-icon-wrapper" id="sticker-deposit"></div><span class="stat-val" id="topSaving">￥0</span></div>
+         <div style="display: flex; flex-direction: column; align-items: center;"><span class="stat-label" style="margin-bottom: 5px;">转单利润</span><div class="stat-icon-wrapper" id="sticker-profit"></div><span class="stat-val" id="topProfit">￥0</span></div>
+         <div style="display: flex; flex-direction: column; align-items: center;"><span class="stat-label" style="margin-bottom: 5px;">在途本金</span><div class="stat-icon-wrapper" id="sticker-capital"></div><span class="stat-val" id="topCapital">￥0</span></div>
+         </div>
 
     <div id="pageBear" class="page active">
         <div class="three-col-grid">
