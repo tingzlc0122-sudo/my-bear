@@ -247,27 +247,30 @@
 
     <div id="pageStats" class="page">
         <div class="card glass-panel">
-                <div class="stats-segment" id="timeRangeSegment" style="position: relative; overflow: visible;">
-                <div class="stats-seg-btn" onclick="toggleCustomPicker('day', event)">
-                    本日 <div id="picker-day" class="custom-picker-box"></div>
-                </div>
-                <div class="stats-seg-btn active" onclick="toggleCustomPicker('month', event)">
-                    本月 <div id="picker-month" class="custom-picker-box"></div>
-                </div>
-                <div class="stats-seg-btn" onclick="toggleCustomPicker('year', event)">
-                    本年 <div id="picker-year" class="custom-picker-box"></div>
+            <div class="stats-segment" id="timeRangeSegment">
+                <div class="stats-seg-btn" onclick="switchStatsRange('day')">本日</div>
+                <div class="stats-seg-btn active" onclick="switchStatsRange('month')">本月</div>
+                <div class="stats-seg-btn" onclick="switchStatsRange('year')">本年</div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                <div class="date-selector-wrap" onclick="toggleCustomPicker(currentRange, event)">
+                    <span id="currentSelectedText" style="font-size: 15px; color: var(--accent-dark); font-weight: 800;">2026-04</span>
+                    <span class="mini-triangle">▼</span>
+                    <div id="picker-day" class="frosted-picker"></div>
+                    <div id="picker-month" class="frosted-picker"></div>
+                    <div id="picker-year" class="frosted-picker"></div>
                 </div>
             </div>
 
-    <div id="currentSelectedText" style="text-align: center; margin-bottom: 10px; font-size: 13px; color: var(--text-light); font-weight: bold;"></div>
-    
-            <div style="text-align: center; color: var(--text-light); font-size: 12px; margin-bottom: 10px;" id="statsDateLabel">当前周期</div>
+            <div style="text-align: center; color: var(--text-light); font-size: 11px; margin-bottom: 10px; opacity: 0.6;">当前周期</div>
             <div style="display: flex; gap: 10px;">
                 <div class="stats-box" style="flex:1;"><div style="font-size: 11px;">总收入</div><div style="font-size: 16px; font-weight: bold; color: var(--inc-color);" id="statInc">￥0</div></div>
                 <div class="stats-box" style="flex:1;"><div style="font-size: 11px;">总支出</div><div style="font-size: 16px; font-weight: bold; color: var(--exp-color);" id="statExp">￥0</div></div>
                 <div class="stats-box" style="flex:1;"><div style="font-size: 11px;">利润</div><div style="font-size: 16px; font-weight: bold; color: var(--accent-main);" id="statPro">￥0</div></div>
             </div>
         </div>
+
         <div class="card glass-panel">
             <div class="view-toggle"><span id="viewBtnChart" class="active" onclick="switchViewMode('chart')">📉 概览</span><span id="viewBtnCal" onclick="switchViewMode('cal')">📅 热力图</span></div>
             <div id="chartSection">
@@ -418,68 +421,120 @@
     let currentPieType = 'expense'; 
     let myChartInstance = null; let editingRecordIndex = -1; let editingNovelIndex = -1; 
     
-        // ✨ 弹出/隐藏 悬浮微型滚轮 (终极修复版)
+    // 1. 切换 标签（本日/本月/本年）及按钮凸起状态
+    function switchStatsRange(range) {
+        currentRange = range;
+        const btns = document.querySelectorAll('#timeRangeSegment .stats-seg-btn');
+        btns.forEach(btn => btn.classList.remove('active'));
+        if (range === 'day') btns[0].classList.add('active');
+        else if (range === 'month') btns[1].classList.add('active');
+        else if (range === 'year') btns[2].classList.add('active');
+
+    // 设置默认值并刷新数据
+        const today = getTodayString();
+        if (range === 'day') window.customSelectedValue = today;
+        else if (range === 'month') window.customSelectedValue = today.slice(0, 7);
+        else if (range === 'year') window.customSelectedValue = today.slice(0, 4);
+        
+        updateStatsUI();
+    }
+
+    // 2. 弹出磨砂透明列表
+    function switchStatsRange(range) {
+        currentRange = range;
+        const btns = document.querySelectorAll('#timeRangeSegment .stats-seg-btn');
+        btns.forEach(btn => btn.classList.remove('active'));
+        if (range === 'day') btns[0].classList.add('active');
+        else if (range === 'month') btns[1].classList.add('active');
+        else if (range === 'year') btns[2].classList.add('active');
+        const today = getTodayString();
+        if (range === 'day') window.customSelectedValue = today;
+        else if (range === 'month') window.customSelectedValue = today.slice(0, 7);
+        else if (range === 'year') window.customSelectedValue = today.slice(0, 4);
+        updateStatsUI();
+    }
+
     function toggleCustomPicker(type, event) {
         event.stopPropagation();
-        
-        // 先关掉所有选框
-        document.querySelectorAll('.custom-picker-box').forEach(el => el.style.display = 'none');
-        
+        document.querySelectorAll('.frosted-picker').forEach(el => el.style.display = 'none');
         let picker = document.getElementById('picker-' + type);
         if(!picker) return;
-
         let html = '';
-        let now = new Date();
-        
-        // 🔮 修复时区导致的日子慢一天的问题（强制获取手机本地真实时间）
         const getLocalStr = (d) => {
             const tzOffset = d.getTimezoneOffset() * 60000;
             return new Date(d.getTime() - tzOffset).toISOString();
         };
-
         if(type === 'day') {
             for(let i = 0; i < 15; i++) {
-                let d = new Date(); 
-                d.setDate(d.getDate() - i);
+                let d = new Date(); d.setDate(d.getDate() - i);
                 let val = getLocalStr(d).split('T')[0];
-                // ⚠️ 重点：style 里面强制加了深棕色 (#5D4037) 和居中，拒绝白底白字！
-                html += `<div class="picker-item" style="color: #5D4037 !important; text-align: center;" onclick="selectFromPicker('day', '${val}', event)">${i===0?'今天':val}</div>`;
+                html += `<div class="picker-item" onclick="selectFromPicker('day', '${val}', event)">${i===0?'今天':val}</div>`;
             }
         } else if(type === 'month') {
             for(let i = 0; i < 12; i++) {
-                let d = new Date(); 
-                d.setMonth(d.getMonth() - i);
+                let d = new Date(); d.setMonth(d.getMonth() - i);
                 let val = getLocalStr(d).slice(0,7);
-                html += `<div class="picker-item" style="color: #5D4037 !important; text-align: center;" onclick="selectFromPicker('month', '${val}', event)">${val}</div>`;
+                html += `<div class="picker-item" onclick="selectFromPicker('month', '${val}', event)">${val}</div>`;
             }
         } else {
-            // 🔮 动态获取今年的真实年份，围绕今年上下推算 (不再写死 2024)
-            let currentYear = now.getFullYear();
-            for(let i = currentYear - 1; i <= currentYear + 3; i++) { 
-                html += `<div class="picker-item" style="color: #5D4037 !important; text-align: center;" onclick="selectFromPicker('year', '${i}', event)">${i}年</div>`;
+            let cy = new Date().getFullYear();
+            for(let i = cy - 1; i <= cy + 2; i++) {
+                html += `<div class="picker-item" onclick="selectFromPicker('year', '${i}', event)">${i}年</div>`;
             }
         }
-        
-        picker.innerHTML = html;
-        picker.style.display = 'block';
+        picker.innerHTML = html; picker.style.display = 'block';
+        setTimeout(() => { document.onclick = () => { picker.style.display = 'none'; document.onclick = null; }; }, 10);
     }
 
-    // ✨ 选中后的处理（数据联动）
+    function selectFromPicker(range, value, event) {
+        event.stopPropagation(); window.customSelectedValue = value;
+        document.querySelectorAll('.frosted-picker').forEach(el => el.style.display = 'none');
+        updateStatsUI();
+    }
+
+    function updateChart(dataObj) { 
+        if(!dataObj) dataObj = processStatsData(); 
+        const ctx = document.getElementById('myChart').getContext('2d'); 
+        if(myChartInstance) myChartInstance.destroy(); 
+        Chart.defaults.font.family = "-apple-system, sans-serif";
+        Chart.defaults.color = '#8D6E63'; Chart.defaults.font.weight = 'bold';
+        const dates = Object.keys(dataObj.timeline).sort(); 
+        if(currentChartType === 'pie') { 
+            let catData = {}; 
+            const pinkPalette = ['#F4B8B8', '#F8BBD0', '#FFCDD2', '#EF9A9A', '#FF8A80']; 
+            const greenPalette = ['#A8D5BA', '#C8E6C9', '#B2DFDB', '#80CBC4', '#4DB6AC']; 
+            db.forEach(r => { 
+                if (r.date && r.date.startsWith(dataObj.matchStr)) { 
+                    if (currentPieType === 'expense' && r.type === '日常' && r.detail === '支出') { 
+                        let cat = r.category || '其他'; catData[cat] = (catData[cat] || 0) + r.amt; 
+                    } else if (currentPieType === 'income') { 
+                        if (r.type === '日常' && r.detail === '收入') { 
+                            let cat = r.category || '其他'; catData[cat] = (catData[cat] || 0) + r.amt; 
+                        } else if (r.type === '转单' && r.status === '已转单') { 
+                            catData['转单'] = (catData['转单'] || 0) + parseFloat(r.profit || 0); 
+                        } 
+                    } 
+                } 
+            }); 
+            myChartInstance = new Chart(ctx, { 
+                type: 'doughnut', 
+                data: { labels: Object.keys(catData), datasets: [{ data: Object.values(catData), backgroundColor: currentPieType === 'expense' ? pinkPalette : greenPalette, borderWidth: 2, borderColor: '#ffffff' }] }, 
+                options: { 
+                    responsive: true, maintainAspectRatio: false, radius: '80%', layout: { padding: 10 },
+                    plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } }, cutout: '65%' 
+                } 
+            }); 
+        } else { 
+            myChartInstance = new Chart(ctx, { type: currentChartType, data: { labels: dates.map(d=>d.substring(5)), datasets: [{ label: '支出', data: dates.map(d=>dataObj.timeline[d].exp), backgroundColor: '#F4B8B8', borderColor: '#F4B8B8', borderWidth: 2, tension: 0.3 }, { label: '收入', data: dates.map(d=>dataObj.timeline[d].inc), backgroundColor: '#A8D5BA', borderColor: '#A8D5BA', borderWidth: 2, tension: 0.3 }, { label: '利润', data: dates.map(d=>dataObj.timeline[d].pro), backgroundColor: '#DDA77B', borderColor: '#DDA77B', borderWidth: 2, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } } } }); 
+        } 
+    }
+
+    // 3. 选中日期后的处理
     function selectFromPicker(range, value, event) {
         event.stopPropagation();
-        currentRange = range;
-        
-        // 联动按钮发光状态
-        const btns = document.querySelectorAll('#timeRangeSegment .stats-seg-btn');
-        btns.forEach(btn => btn.classList.remove('active'));
-        if (range === 'day') btns[0].classList.add('active');
-        if (range === 'month') btns[1].classList.add('active');
-        if (range === 'year') btns[2].classList.add('active');
-
-        // 记录选中值并刷新
-        window.customSelectedValue = value; 
-        document.querySelectorAll('.custom-picker-box').forEach(el => el.style.display = 'none');
-        updateStatsUI(); // 通知图表立即变身！
+        window.customSelectedValue = value;
+        document.querySelectorAll('.frosted-picker').forEach(el => el.style.display = 'none');
+        updateStatsUI();
     }
 
     function getTodayString() { const tzOffset = (new Date()).getTimezoneOffset() * 60000; return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; }
@@ -496,7 +551,7 @@
         document.getElementById('col-sticker-dep').innerHTML = getStickerHtml('colDep', '🏦');
         document.querySelectorAll('.col-icon-wrapper img').forEach(img => { img.style.width = '40px'; img.style.height = '40px'; });
         
-        // ✨ 底部导航栏交替比心（在这里找回了收支统计的图标！）
+    // ✨ 底部导航栏交替比心（在这里找回了收支统计的图标！）
         document.getElementById('tab-sticker-daily').innerHTML  = getStickerHtml('tabDaily',  '🐻');
         document.getElementById('tab-sticker-rabbit').innerHTML = getStickerHtml('tabRabbit', '🐰');
         document.getElementById('tab-sticker-stats').innerHTML  = getStickerHtml('tabStats',  '📊');
@@ -554,7 +609,7 @@
             category.style.display = 'block'; 
         } 
         else { 
-            // ✨ 这里新增了存款的三个细分
+    // ✨ 这里新增了存款的三个细分
             title.innerHTML = '账户余额校准'; 
             category.innerHTML = `
                 <option value="基金">📈 基金账户</option>
@@ -643,7 +698,7 @@
 
     function processStatsData() { 
         const todayStr = getTodayString(); 
-        // ✨ 这里修复了日期、月份、年份的获取逻辑
+    // ✨ 这里修复了日期、月份、年份的获取逻辑
         let selected = window.customSelectedValue || todayStr;
         let matchStr = selected;
         
@@ -669,14 +724,13 @@
             } 
         }); 
         
-        // 更新界面上的总额
+    // 更新界面上的总额
         document.getElementById('statInc').innerText = '￥' + tInc.toFixed(2); 
         document.getElementById('statExp').innerText = '￥' + tExp.toFixed(2); 
         document.getElementById('statPro').innerText = '￥' + tPro.toFixed(2); 
         
         return { timeline: dayData, matchStr: matchStr }; 
     }
-    
     // ✨ 这是一个关键补丁：确保你选完日期后，数据会立刻跳动更新
     function updateStatsUI() {
         const data = processStatsData();
@@ -686,13 +740,12 @@
             updateStatsCalendar(data);
         }
     }
-
     function updateChart(dataObj) { 
         if(!dataObj) dataObj = processStatsData(); 
         const ctx = document.getElementById('myChart').getContext('2d'); 
         if(myChartInstance) myChartInstance.destroy(); 
         
-        // ✨ 全局字体与颜色微调，匹配奶油咖啡主题
+    // ✨ 全局字体与颜色微调，匹配奶油咖啡主题
         Chart.defaults.font.family = "-apple-system, sans-serif";
         Chart.defaults.color = '#8D6E63'; // 对应 --text-light
         Chart.defaults.font.weight = 'bold';
@@ -731,7 +784,7 @@
                 options: { 
                     responsive: true, 
                     maintainAspectRatio: false, 
-            // 🎯 核心修复：强制设定外圆半径为 80%，这样无论文字多长，圆圈大小都固定死
+    // 🎯 核心修复：强制设定外圆半径为 80%，这样无论文字多长，圆圈大小都固定死
                     radius: '80%', 
                     plugins: { 
                         legend: { 
@@ -787,7 +840,6 @@
             }); 
         } 
     }
-
     function updateStatsCalendar(dataObj) { 
         if(!dataObj) dataObj = processStatsData(); 
         const grid = document.getElementById('calendarGrid'); grid.innerHTML = ''; 
@@ -827,12 +879,10 @@ let cssSnapshot = ""; // 撤回快照
 let savedCSS = localStorage.getItem('evan_custom_css') || customStyleTag.innerHTML;
 cssInput.value = savedCSS.trim();
 customStyleTag.innerHTML = savedCSS;
-
 // 2. 实时预览：边写边看效果
 cssInput.addEventListener('input', () => {
     customStyleTag.innerHTML = cssInput.value;
 });
-
 // 3. 点击标题：打开编辑器并记录初始状态
 document.getElementById('mainTitle').onclick = function() {
     const currentStyle = localStorage.getItem('evan_custom_css') || customStyleTag.innerHTML;
@@ -842,7 +892,6 @@ document.getElementById('mainTitle').onclick = function() {
     document.getElementById('overlay-top').style.display = 'block';
     document.getElementById('css-editor-modal').style.display = 'flex';
 };
-
 // 4. 撤回修改：回到刚点开时的样子
 function undoCSS() {
     if (confirm("确定要撤回本次修改，回到刚打开时的样子吗？🐻")) {
@@ -851,14 +900,12 @@ function undoCSS() {
         alert("已成功撤回！✨");
     }
 }
-
 // 5. 保存并关闭
 function saveCSS() {
     localStorage.setItem('evan_custom_css', cssInput.value);
     alert('✨ 新皮肤已保存！');
     closeTopModals();
 }
-
 // 6. 恢复默认
 function resetCSS() {
     if (confirm("重置为默认皮肤吗？🐰")) {
@@ -866,7 +913,6 @@ function resetCSS() {
         location.reload();
     }
 }
-
 // 7. 搜索代码功能
 let lastSearchTerm = '', lastSearchIndex = -1;
 function findInCSS() {
@@ -877,7 +923,6 @@ function findInCSS() {
         lastSearchTerm = searchTerm;
         lastSearchIndex = -1;
     }
-    
     const text = cssInput.value;
     const nextIndex = text.toLowerCase().indexOf(searchTerm.toLowerCase(), lastSearchIndex + 1);
     
@@ -885,21 +930,18 @@ function findInCSS() {
         cssInput.focus();
         cssInput.setSelectionRange(nextIndex, nextIndex + searchTerm.length);
         lastSearchIndex = nextIndex;
-        // 自动滚动到找到的位置
+    // 自动滚动到找到的位置
         cssInput.scrollTop = (nextIndex / text.length) * cssInput.scrollHeight - 50;
     } else {
         alert('没找到了🐰');
         lastSearchIndex = -1;
     }
 }
-
 // 8. 一键复制 (解决太长选不中的问题)
 function copyCSS() {
     if (!cssInput.value.trim()) return alert('内容是空的哦 🐰');
-
     cssInput.select();
     cssInput.setSelectionRange(0, 99999); // 适配手机全选
-
     try {
         navigator.clipboard.writeText(cssInput.value).then(() => {
             alert('📋 代码已成功复制！');
@@ -912,7 +954,7 @@ function copyCSS() {
         alert('📋 已复制！');
     }
 }
-    // --- ✨ 灵感一键导出功能 ---
+// --- ✨ 灵感一键导出功能 ---
     function exportNovels() {
         if(novels.length === 0) {
             alert('🐰 你的灵感库还是空的哦，先去记录一点吧！');
@@ -968,7 +1010,7 @@ function copyCSS() {
         }
     }
 
-        // ✨ 修复：图表界面的三大切换魔法（之前缺失的电线）
+    // ✨ 修复：图表界面的三大切换魔法（之前缺失的电线）
     function switchViewMode(mode) {
         currentViewMode = mode;
         document.getElementById('viewBtnChart').classList.toggle('active', mode === 'chart');
@@ -996,7 +1038,27 @@ function copyCSS() {
         btns[1].classList.toggle('active', type === 'income');
         updateStatsUI(); // 刷新一下
     }
-        
+
+    .date-selector-wrap {
+    display: inline-flex; align-items: center; padding: 6px 18px;
+    background: rgba(255, 255, 255, 0.3); border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.5); cursor: pointer;
+    position: relative; transition: all 0.2s;
+}
+.mini-triangle { font-size: 8px; margin-left: 8px; opacity: 0.5; color: var(--accent-dark); transform: scaleX(1.2); }
+.frosted-picker {
+    display: none; position: absolute; top: 130%; left: 50%; transform: translateX(-50%);
+    width: 130px; max-height: 200px; overflow-y: auto; z-index: 2000;
+    background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+.picker-item { padding: 12px 0; text-align: center; font-size: 14px; font-weight: bold; color: #5D4037 !important; border-bottom: 1px solid rgba(255,255,255,0.2); }
+.stats-seg-btn.active {
+    background: #fff !important; color: var(--accent-dark) !important;
+    box-shadow: 0 4px 12px rgba(139, 90, 43, 0.15) !important;
+    transform: translateY(-2px); font-weight: 900 !important;
+}
+
 </script>
 </body>
 </html>
