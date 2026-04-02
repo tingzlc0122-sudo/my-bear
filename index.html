@@ -470,25 +470,6 @@
 
     function getTodayString() { const tzOffset = (new Date()).getTimezoneOffset() * 60000; return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; }
     function getTimeString() { return new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}); }
-
-    function showP(p) {
-    document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-    document.getElementById(p==='B'?'pageBear':(p==='R'?'pageRabbit':(p==='N'?'pageNovel':'pageStats'))).classList.add('active');
-    const tabItems = document.querySelectorAll('.tab-item');
-    tabItems.forEach(el => el.classList.remove('active'));
-    if(p === 'B') tabItems[0].classList.add('active');
-    if(p === 'R') tabItems[1].classList.add('active');
-    if(p === 'S') tabItems[2].classList.add('active');
-    if(p === 'N') tabItems[3].classList.add('active');
-        
-    if(p === 'N') { document.body.classList.add('theme-green'); document.getElementById('novelFab').style.display = 'flex'; renderNovels(); } 
-    else { document.body.classList.remove('theme-green'); document.getElementById('novelFab').style.display = 'none'; }
-    if(p === 'S') updateStatsUI();
-
-    // ✨ 关键魔法：把当前页面的代号存进手机本地的“记忆”里
-    localStorage.setItem('evan_current_tab', p);
-    }
-
     function closeAllModals() { document.getElementById('bottom-sheet').style.transform = 'translateY(100%)'; document.getElementById('calendar-modal').style.display = 'none'; closeTopModals(); setTimeout(() => { document.getElementById('overlay').style.display = 'none'; }, 200); }
     function closeTopModals() { document.getElementById('day-detail-modal').style.display = 'none'; document.getElementById('remark-modal').style.display = 'none'; document.getElementById('record-edit-modal').style.display = 'none'; document.getElementById('novel-modal').style.display = 'none'; document.getElementById('css-editor-modal').style.display = 'none'; document.getElementById('overlay-top').style.display = 'none'; }
 
@@ -579,7 +560,7 @@
         const targetId = p==='B'?'pageBear':(p==='R'?'pageRabbit':(p==='N'?'pageNovel':'pageStats'));
         document.getElementById(targetId).classList.add('active');
         
-        // 隐藏/显示顶部金钱数据块
+    // 隐藏/显示顶部金钱数据块
         const headerStats = document.querySelector('.stat-grid');
         headerStats.style.display = (p === 'N') ? 'none' : 'grid';
 
@@ -742,28 +723,6 @@
             grid.innerHTML += `<div class="cal-cell" style="border-color: ${borderC};"><span class="cal-date">${i}</span><div style="display:flex; gap:2px;">${dots}</div></div>`; 
         } 
     }
-
-    function showP(p) {
-        document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-        const targetId = p==='B'?'pageBear':(p==='R'?'pageRabbit':(p==='N'?'pageNovel':'pageStats'));
-        document.getElementById(targetId).classList.add('active');
-        const tabItems = document.querySelectorAll('.tab-item');
-        tabItems.forEach(el => el.classList.remove('active'));
-        if(p === 'B') tabItems[0].classList.add('active');
-        if(p === 'R') tabItems[1].classList.add('active');
-        if(p === 'S') tabItems[2].classList.add('active');
-        if(p === 'N') tabItems[3].classList.add('active');
-        if(p === 'N') { document.body.classList.add('theme-green'); document.getElementById('novelFab').style.display = 'flex'; renderNovels(); } 
-        else { document.body.classList.remove('theme-green'); document.getElementById('novelFab').style.display = 'none'; }
-        if(p === 'S') updateStatsUI();
-        localStorage.setItem('evan_current_tab', p);
-    }
-
-    // --- ✨ 启动程序 ---
-    initializeStickers(); 
-    rdr();
-    let lastTab = localStorage.getItem('evan_current_tab') || 'B';
-    showP(lastTab);
 
     function openRecordEdit(idx) { editingRecordIndex = idx; const r = db[idx]; document.getElementById('editRemark').value = r.remark || r.id; document.getElementById('editAmt').value = r.amt || r.profit || r.buy; document.getElementById('editDate').value = r.date || getTodayString(); document.getElementById('editTime').value = r.timeStr || getTimeString(); document.getElementById('editDiary').value = r.diaryText || ''; const imgEl = document.getElementById('displayImage'); if (r.imageBase64) { imgEl.src = r.imageBase64; imgEl.style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; } else { imgEl.style.display = 'none'; document.getElementById('uploadPrompt').style.display = 'block'; } document.getElementById('overlay-top').style.display = 'block'; document.getElementById('record-edit-modal').style.display = 'flex'; }
     function handleImageUpload(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(e) { const img = new Image(); img.onload = function() { const canvas = document.getElementById('compressCanvas'); const MAX_WIDTH = 400; let width = img.width, height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height); db[editingRecordIndex].imageBase64 = canvas.toDataURL('image/jpeg', 0.6); saveAll(); document.getElementById('displayImage').src = db[editingRecordIndex].imageBase64; document.getElementById('displayImage').style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; }; img.src = e.target.result; }; reader.readAsDataURL(file); }
