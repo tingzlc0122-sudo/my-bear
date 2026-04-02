@@ -245,14 +245,26 @@
         </div>
     </div>
 
-     <div id="pageStats" class="page">
+    <div id="pageStats" class="page">
         <div class="card glass-panel">
-            <div class="stats-segment" id="timeRangeSegment">
-                <div class="stats-seg-btn" onclick="switchDateRange('day')">本日</div>
-                <div class="stats-seg-btn active" onclick="switchDateRange('month')">本月</div>
-                <div class="stats-seg-btn" onclick="switchDateRange('year')">本年</div>
+            <div class="stats-segment" id="timeRangeSegment" style="position: relative;">
+                <div class="stats-seg-btn" style="position: relative;">
+                    本日 <input type="date" id="statsDatePicker" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0;" onchange="syncAndUI('day')">
+                </div>
+                <div class="stats-seg-btn active" style="position: relative;">
+                    本月 <input type="month" id="statsMonthPicker" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0;" onchange="syncAndUI('month')">
+                </div>
+                <div class="stats-seg-btn" style="position: relative;">
+                    本年 <select id="statsYearPicker" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0;" onchange="syncAndUI('year')">
+                        <option value="2024">2024</option><option value="2025">2025</option><option value="2026" selected>2026</option>
+                        <option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                    </select>
+                </div>
             </div>
-            <div style="text-align: center; margin-bottom: 10px; display: flex; justify-content: center; align-items: center;">
+            
+    <div id="currentSelectedText" style="text-align: center; margin-bottom: 10px; font-size: 13px; color: var(--text-light); font-weight: bold;"></div>
+            
+    <div style="text-align: center; margin-bottom: 10px; display: flex; justify-content: center; align-items: center;">
                 <input type="date" id="statsDatePicker" style="display:none; border:none; background:transparent; font-family:inherit; color:var(--text-light); font-size:14px; font-weight:bold; outline:none;" onchange="updateStatsUI()">
                 <input type="month" id="statsMonthPicker" style="border:none; background:transparent; font-family:inherit; color:var(--text-light); font-size:14px; font-weight:bold; outline:none;" onchange="updateStatsUI()">
                 <select id="statsYearPicker" style="display:none; border:none; background:transparent; font-family:inherit; color:var(--text-light); font-size:14px; font-weight:bold; outline:none; text-align:center;" onchange="updateStatsUI()">
@@ -544,6 +556,38 @@
         if (currentRange === 'day') matchStr = dPicker.value;
         else if (currentRange === 'month') matchStr = mPicker.value;
         else matchStr = document.getElementById('statsYearPicker').value;
+    function initializeStickers() {
+        document.getElementById('sticker-deposit').innerHTML = getStickerHtml('topDeposit', '🏦');
+        document.getElementById('sticker-profit').innerHTML  = getStickerHtml('topProfit',  '❤️');
+        document.getElementById('sticker-capital').innerHTML = getStickerHtml('topCapital', '🐰');
+        document.getElementById('col-sticker-exp').innerHTML = getStickerHtml('colExp', '🐰');
+        document.getElementById('col-sticker-inc').innerHTML = getStickerHtml('colInc', '🐻');
+        document.getElementById('col-sticker-dep').innerHTML = getStickerHtml('colDep', '🏦');
+        document.querySelectorAll('.col-icon-wrapper img').forEach(img => { img.style.width = '40px'; img.style.height = '40px'; });
+        document.getElementById('tab-sticker-daily').innerHTML  = getStickerHtml('tabDaily',  '🐻');
+        document.getElementById('tab-sticker-rabbit').innerHTML = getStickerHtml('tabRabbit', '🐰');
+        document.getElementById('tab-sticker-novel').innerHTML  = getStickerHtml('tabNovel',  '💡');
+    }
+
+    // --- ✨ 核心修复：联动、交互与书签 ---
+    function syncAndUI(range) {
+        currentRange = range;
+        const btns = document.querySelectorAll('#timeRangeSegment .stats-seg-btn');
+        btns[0].classList.toggle('active', range === 'day');
+        btns[1].classList.toggle('active', range === 'month');
+        btns[2].classList.toggle('active', range === 'year');
+        updateStatsUI();
+    }
+
+    function processStatsData() { 
+        const todayStr = getTodayString(); 
+        const dVal = document.getElementById('statsDatePicker').value || todayStr;
+        const mVal = document.getElementById('statsMonthPicker').value || todayStr.substring(0, 7);
+        const yVal = document.getElementById('statsYearPicker').value;
+        let matchStr = '';
+        if (currentRange === 'day') { matchStr = dVal; document.getElementById('currentSelectedText').innerText = dVal; }
+        else if (currentRange === 'month') { matchStr = mVal; document.getElementById('currentSelectedText').innerText = mVal; }
+        else { matchStr = yVal; document.getElementById('currentSelectedText').innerText = yVal + '年'; }
         let tInc = 0, tExp = 0, tPro = 0; let dayData = {}; 
         db.forEach(r => { 
             if (r.date && r.date.startsWith(matchStr)) { 
@@ -552,7 +596,7 @@
                     if (r.detail === '收入') { tInc += r.amt; dayData[r.date].inc += r.amt; } 
                     if (r.detail === '支出') { tExp += r.amt; dayData[r.date].exp += r.amt; } 
                 } else if (r.type === '转单' && r.status === '已转单') { 
-                    const prof = parseFloat(r.profit); tPro += prof; dayData[r.date].pro += prof; 
+                    const prof = parseFloat(r.profit || 0); tPro += prof; dayData[r.date].pro += prof; 
                 } 
             } 
         }); 
@@ -566,14 +610,9 @@
         if(!dataObj) dataObj = processStatsData(); 
         const ctx = document.getElementById('myChart').getContext('2d'); 
         if(myChartInstance) myChartInstance.destroy(); 
-        
-        // ✨ 保留了你图表之前的字体配置
         Chart.defaults.font.family = "'Nunito', ui-rounded, 'ZCOOL KuaiLe', 'PingFang SC', sans-serif";
-        Chart.defaults.color = '#A1887F'; 
-        Chart.defaults.font.weight = 'bold';
-
+        Chart.defaults.color = '#A1887F'; Chart.defaults.font.weight = 'bold';
         const dates = Object.keys(dataObj.timeline).sort(); 
-        const colorInc = '#A8D5BA', colorExp = '#F4B8B8', colorPro = '#DDA77B'; 
         if(currentChartType === 'pie') { 
             let catData = {}; 
             db.forEach(r => { 
@@ -584,29 +623,14 @@
                         if (r.type === '日常' && r.detail === '收入') { 
                             let cat = r.category || '其他'; catData[cat] = (catData[cat] || 0) + r.amt; 
                         } else if (r.type === '转单' && r.status === '已转单') { 
-                            catData['转单'] = (catData['转单'] || 0) + parseFloat(r.profit); 
+                            catData['转单'] = (catData['转单'] || 0) + parseFloat(r.profit || 0); 
                         } 
                     } 
                 } 
             }); 
-            myChartInstance = new Chart(ctx, { 
-                type: 'doughnut', 
-                data: { labels: Object.keys(catData), datasets: [{ data: Object.values(catData), backgroundColor: ['#F4B8B8', '#A8D5BA', '#F5CBA7', '#D7BDE2', '#FFE082'], borderWidth: 0 }] }, 
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } 
-            }); 
+            myChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(catData), datasets: [{ data: Object.values(catData), backgroundColor: ['#F4B8B8', '#A8D5BA', '#F5CBA7', '#D7BDE2', '#FFE082'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } }); 
         } else { 
-            myChartInstance = new Chart(ctx, { 
-                type: currentChartType, 
-                data: { 
-                    labels: dates.map(d=>d.substring(5)), 
-                    datasets: [
-                        { label: '支出', data: dates.map(d=>dataObj.timeline[d].exp), backgroundColor: colorExp, borderColor: colorExp }, 
-                        { label: '收入', data: dates.map(d=>dataObj.timeline[d].inc), backgroundColor: colorInc, borderColor: colorInc }, 
-                        { label: '利润', data: dates.map(d=>dataObj.timeline[d].pro), backgroundColor: colorPro, borderColor: colorPro }
-                    ] 
-                }, 
-                options: { responsive: true, maintainAspectRatio: false } 
-            }); 
+            myChartInstance = new Chart(ctx, { type: currentChartType, data: { labels: dates.map(d=>d.substring(5)), datasets: [{ label: '支出', data: dates.map(d=>dataObj.timeline[d].exp), backgroundColor: '#F4B8B8', borderColor: '#F4B8B8' }, { label: '收入', data: dates.map(d=>dataObj.timeline[d].inc), backgroundColor: '#A8D5BA', borderColor: '#A8D5BA' }, { label: '利润', data: dates.map(d=>dataObj.timeline[d].pro), backgroundColor: '#DDA77B', borderColor: '#DDA77B' }] }, options: { responsive: true, maintainAspectRatio: false } }); 
         } 
     }
 
@@ -632,6 +656,29 @@
             grid.innerHTML += `<div class="cal-cell" style="border-color: ${borderC};"><span class="cal-date">${i}</span><div style="display:flex; gap:2px;">${dots}</div></div>`; 
         } 
     }
+
+    function showP(p) {
+        document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+        const targetId = p==='B'?'pageBear':(p==='R'?'pageRabbit':(p==='N'?'pageNovel':'pageStats'));
+        document.getElementById(targetId).classList.add('active');
+        const tabItems = document.querySelectorAll('.tab-item');
+        tabItems.forEach(el => el.classList.remove('active'));
+        if(p === 'B') tabItems[0].classList.add('active');
+        if(p === 'R') tabItems[1].classList.add('active');
+        if(p === 'S') tabItems[2].classList.add('active');
+        if(p === 'N') tabItems[3].classList.add('active');
+        if(p === 'N') { document.body.classList.add('theme-green'); document.getElementById('novelFab').style.display = 'flex'; renderNovels(); } 
+        else { document.body.classList.remove('theme-green'); document.getElementById('novelFab').style.display = 'none'; }
+        if(p === 'S') updateStatsUI();
+        localStorage.setItem('evan_current_tab', p);
+    }
+
+    // --- ✨ 启动程序 ---
+    initializeStickers(); 
+    rdr();
+    let lastTab = localStorage.getItem('evan_current_tab') || 'B';
+    showP(lastTab);
+
     function openRecordEdit(idx) { editingRecordIndex = idx; const r = db[idx]; document.getElementById('editRemark').value = r.remark || r.id; document.getElementById('editAmt').value = r.amt || r.profit || r.buy; document.getElementById('editDate').value = r.date || getTodayString(); document.getElementById('editTime').value = r.timeStr || getTimeString(); document.getElementById('editDiary').value = r.diaryText || ''; const imgEl = document.getElementById('displayImage'); if (r.imageBase64) { imgEl.src = r.imageBase64; imgEl.style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; } else { imgEl.style.display = 'none'; document.getElementById('uploadPrompt').style.display = 'block'; } document.getElementById('overlay-top').style.display = 'block'; document.getElementById('record-edit-modal').style.display = 'flex'; }
     function handleImageUpload(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(e) { const img = new Image(); img.onload = function() { const canvas = document.getElementById('compressCanvas'); const MAX_WIDTH = 400; let width = img.width, height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height); db[editingRecordIndex].imageBase64 = canvas.toDataURL('image/jpeg', 0.6); saveAll(); document.getElementById('displayImage').src = db[editingRecordIndex].imageBase64; document.getElementById('displayImage').style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; }; img.src = e.target.result; }; reader.readAsDataURL(file); }
     function saveRecordEdit() { if(editingRecordIndex === -1) return; const r = db[editingRecordIndex]; const oldAmt = parseFloat(r.amt || 0); const newAmt = parseFloat(document.getElementById('editAmt').value || 0); r.remark = document.getElementById('editRemark').value; r.date = document.getElementById('editDate').value; r.timeStr = document.getElementById('editTime').value; r.diaryText = document.getElementById('editDiary').value; if(r.type === '日常') { if(r.detail === '收入') curSav = curSav - oldAmt + newAmt; else if(r.detail === '支出') curSav = curSav + oldAmt - newAmt; r.amt = newAmt; localStorage.setItem('evan_sav_val', curSav); } else if(r.type === '转单') { r.id = r.remark; r.profit = newAmt; } saveAll(); closeTopModals(); }
