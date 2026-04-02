@@ -247,18 +247,15 @@
 
     <div id="pageStats" class="page">
         <div class="card glass-panel">
-                <div class="stats-segment" id="timeRangeSegment" style="position: relative;">
-                <div class="stats-seg-btn" style="position: relative;">
-                    本日 <select id="statsDatePicker" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; appearance:none;" onchange="syncAndUI('day')"></select>
+                <div class="stats-segment" id="timeRangeSegment" style="position: relative; overflow: visible;">
+                <div class="stats-seg-btn" onclick="toggleCustomPicker('day', event)">
+                    本日 <div id="picker-day" class="custom-picker-box"></div>
                 </div>
-                <div class="stats-seg-btn active" style="position: relative;">
-                    本月 <select id="statsMonthPicker" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; appearance:none;" onchange="syncAndUI('month')"></select>
+                <div class="stats-seg-btn active" onclick="toggleCustomPicker('month', event)">
+                    本月 <div id="picker-month" class="custom-picker-box"></div>
                 </div>
-                <div class="stats-seg-btn" style="position: relative;">
-                    本年 <select id="statsYearPicker" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; appearance:none;" onchange="syncAndUI('year')">
-                        <option value="2024">2024年</option><option value="2025">2025年</option><option value="2026" selected>2026年</option>
-                        <option value="2027">2027年</option><option value="2028">2028年</option><option value="2029">2029年</option>
-                    </select>
+                <div class="stats-seg-btn" onclick="toggleCustomPicker('year', event)">
+                    本年 <div id="picker-year" class="custom-picker-box"></div>
                 </div>
             </div>
 
@@ -421,37 +418,59 @@
     let currentPieType = 'expense'; 
     let myChartInstance = null; let editingRecordIndex = -1; let editingNovelIndex = -1; 
     
-    // ✨ 专门生成手机透明滑动滚轮数据的魔法
-    function initScrollWheels() {
-    // 1. 生成“本日”的滑动选项（前后几十天）
-        let datePicker = document.getElementById('statsDatePicker');
-        let dHtml = '';
-        for(let i = -10; i <= 30; i++) {
-            let d = new Date();
-            d.setDate(d.getDate() - i);
-            let y = d.getFullYear();
-            let m = String(d.getMonth() + 1).padStart(2, '0');
-            let day = String(d.getDate()).padStart(2, '0');
-            let val = `${y}-${m}-${day}`;
-            let label = i === 0 ? '📅 今天' : `${m}月${day}日`;
-            dHtml += `<option value="${val}" ${i===0 ? 'selected' : ''}>${label}</option>`;
+        // ✨ 弹出/隐藏 悬浮微型滚轮
+    function toggleCustomPicker(type, event) {
+        event.stopPropagation();
+        // 先关掉所有选框
+        document.querySelectorAll('.custom-picker-box').forEach(el => el.style.display = 'none');
+        
+        let picker = document.getElementById('picker-' + type);
+        picker.style.display = 'block';
+        
+        // 生成内容
+        let html = '';
+        if(type === 'day') {
+            for(let i = 0; i < 15; i++) {
+                let d = new Date(); d.setDate(d.getDate() - i);
+                let val = d.toISOString().split('T')[0];
+                html += `<div class="picker-item" onclick="selectFromPicker('day', '${val}', event)">${i===0?'今天':val.slice(5)}</div>`;
+            }
+        } else if(type === 'month') {
+            for(let i = 0; i < 12; i++) {
+                let d = new Date(); d.setMonth(d.getMonth() - i);
+                let val = d.toISOString().slice(0,7);
+                html += `<div class="picker-item" onclick="selectFromPicker('month', '${val}', event)">${val}</div>`;
+            }
+        } else {
+            for(let i = 2024; i <= 2027; i++) {
+                html += `<div class="picker-item" onclick="selectFromPicker('year', '${i}', event)">${i}年</div>`;
+            }
         }
-        if(datePicker) datePicker.innerHTML = dHtml;
-
-    // 2. 生成“本月”的滑动选项（前后几十个月）
-        let monthPicker = document.getElementById('statsMonthPicker');
-        let mHtml = '';
-        for(let i = -6; i <= 24; i++) {
-            let d = new Date();
-            d.setMonth(d.getMonth() - i);
-            let y = d.getFullYear();
-            let m = String(d.getMonth() + 1).padStart(2, '0');
-            let val = `${y}-${m}`;
-            let label = i === 0 ? '📅 本月' : `${y}年${m}月`;
-            mHtml += `<option value="${val}" ${i===0 ? 'selected' : ''}>${label}</option>`;
-        }
-        if(monthPicker) monthPicker.innerHTML = mHtml;
+        picker.innerHTML = html;
     }
+
+    // 选中后的处理
+    function selectFromPicker(range, value, event) {
+        event.stopPropagation();
+        currentRange = range;
+        
+        // 1. 让按钮“凸起”联动
+        const btns = document.querySelectorAll('#timeRangeSegment .stats-seg-btn');
+        btns[0].classList.toggle('active', range === 'day');
+        btns[1].classList.toggle('active', range === 'month');
+        btns[2].classList.toggle('active', range === 'year');
+
+        // 2. 模拟数据更新（核心：手动修改数据获取的来源）
+        // 关键：我们要让 processStatsData 知道我们选了什么
+        window.customSelectedValue = value; 
+        
+        // 刷新 UI
+        updateStatsUI();
+        
+        // 关掉框
+        document.querySelectorAll('.custom-picker-box').forEach(el => el.style.display = 'none');
+    }
+
     // 网页一打开就装载滚轮
     initScrollWheels();
 
@@ -636,28 +655,14 @@
     function processStatsData() { 
         const todayStr = getTodayString(); 
         // ✨ 这里修复了日期、月份、年份的获取逻辑
-        const dVal = document.getElementById('statsDatePicker').value || todayStr;
-        const mVal = document.getElementById('statsMonthPicker').value || todayStr.substring(0, 7);
-        const yVal = document.getElementById('statsYearPicker').value || todayStr.substring(0, 4);
+        let selected = window.customSelectedValue || todayStr;
+        let matchStr = selected;
         
-        let matchStr = "";
-        let displayLabel = "";
+        if (currentRange === 'month' && matchStr.length > 7) matchStr = matchStr.slice(0,7);
+        if (currentRange === 'year' && matchStr.length > 4) matchStr = matchStr.slice(0,4);
+        
+        document.getElementById('currentSelectedText').innerText = matchStr + (currentRange === 'year'?'年':'');
 
-        // ✨ 确保切换“本日/本月/本年”时，匹配的文字是正确的
-        if (currentRange === 'day') { 
-            matchStr = dVal; 
-            displayLabel = dVal;
-        } else if (currentRange === 'month') { 
-            matchStr = mVal; 
-            displayLabel = mVal;
-        } else { 
-            matchStr = yVal; 
-            displayLabel = yVal + "年";
-        }
-        
-        // 更新中间显示的日期文字
-        document.getElementById('currentSelectedText').innerText = displayLabel;
-        
         let tInc = 0, tExp = 0, tPro = 0; 
         let dayData = {}; 
         
