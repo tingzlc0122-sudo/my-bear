@@ -446,7 +446,7 @@
         updateStatsUI();
     }
 
-        function toggleCustomPicker(type, event) {
+    function toggleCustomPicker(type, event) {
         event.stopPropagation();
         // 关闭所有已打开的选择器
         document.querySelectorAll('.frosted-picker').forEach(el => el.style.display = 'none');
@@ -476,8 +476,9 @@
                 html += `<div class="picker-item" data-val="${val}" onclick="selectFromPicker('month', '${val}', event)">${val}</div>`;
             }
         } else {
+            // 🔄 修改这里：只显示去年和今年，不再往后多刷年份
             let cy = new Date().getFullYear();
-            for(let i = cy - 1; i <= cy + 2; i++) {
+            for(let i = cy - 2; i <= cy; i++) { // 只显示 前年、去年、今年
                 html += `<div class="picker-item" data-val="${i}" onclick="selectFromPicker('year', '${i}', event)">${i}年</div>`;
             }
         }
