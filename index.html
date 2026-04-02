@@ -468,9 +468,6 @@
         document.querySelectorAll('.custom-picker-box').forEach(el => el.style.display = 'none');
     }
 
-    // 网页一打开就装载滚轮
-    initScrollWheels();
-
     function getTodayString() { const tzOffset = (new Date()).getTimezoneOffset() * 60000; return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; }
     function getTimeString() { return new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}); }
 
