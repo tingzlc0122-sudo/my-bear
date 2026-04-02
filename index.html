@@ -418,62 +418,68 @@
     let currentPieType = 'expense'; 
     let myChartInstance = null; let editingRecordIndex = -1; let editingNovelIndex = -1; 
     
-        // ✨ 弹出/隐藏 悬浮微型滚轮
+        // ✨ 弹出/隐藏 悬浮微型滚轮 (终极修复版)
     function toggleCustomPicker(type, event) {
         event.stopPropagation();
         
-        // 1. 关掉所有弹出的透明列表
+        // 先关掉所有选框
         document.querySelectorAll('.custom-picker-box').forEach(el => el.style.display = 'none');
         
         let picker = document.getElementById('picker-' + type);
         if(!picker) return;
 
-        // 2. 动态生成列表内容
         let html = '';
+        let now = new Date();
+        
+        // 🔮 修复时区导致的日子慢一天的问题（强制获取手机本地真实时间）
+        const getLocalStr = (d) => {
+            const tzOffset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - tzOffset).toISOString();
+        };
+
         if(type === 'day') {
             for(let i = 0; i < 15; i++) {
-                let d = new Date(); d.setDate(d.getDate() - i);
-                let val = d.toISOString().split('T')[0];
-                html += `<div class="picker-item" onclick="selectFromPicker('day', '${val}', event)">${i===0?'今天':val}</div>`;
+                let d = new Date(); 
+                d.setDate(d.getDate() - i);
+                let val = getLocalStr(d).split('T')[0];
+                // ⚠️ 重点：style 里面强制加了深棕色 (#5D4037) 和居中，拒绝白底白字！
+                html += `<div class="picker-item" style="color: #5D4037 !important; text-align: center;" onclick="selectFromPicker('day', '${val}', event)">${i===0?'今天':val}</div>`;
             }
         } else if(type === 'month') {
             for(let i = 0; i < 12; i++) {
-                let d = new Date(); d.setMonth(d.getMonth() - i);
-                let val = d.toISOString().slice(0,7);
-                html += `<div class="picker-item" onclick="selectFromPicker('month', '${val}', event)">${val}</div>`;
+                let d = new Date(); 
+                d.setMonth(d.getMonth() - i);
+                let val = getLocalStr(d).slice(0,7);
+                html += `<div class="picker-item" style="color: #5D4037 !important; text-align: center;" onclick="selectFromPicker('month', '${val}', event)">${val}</div>`;
             }
         } else {
-            // 这里修改年份，加入2026, 2027, 2028等
-            for(let i = 2024; i <= 2028; i++) {
-                html += `<div class="picker-item" onclick="selectFromPicker('year', '${i}', event)">${i}年</div>`;
+            // 🔮 动态获取今年的真实年份，围绕今年上下推算 (不再写死 2024)
+            let currentYear = now.getFullYear();
+            for(let i = currentYear - 1; i <= currentYear + 3; i++) { 
+                html += `<div class="picker-item" style="color: #5D4037 !important; text-align: center;" onclick="selectFromPicker('year', '${i}', event)">${i}年</div>`;
             }
         }
         
-        // 3. 把内容塞进框里，然后显示出来
         picker.innerHTML = html;
         picker.style.display = 'block';
     }
 
-    // ✨ 选中后的处理（核心数据联动修复）
+    // ✨ 选中后的处理（数据联动）
     function selectFromPicker(range, value, event) {
         event.stopPropagation();
         currentRange = range;
         
-        // 1. 让按钮“凸起”联动（修复一直亮着本月的问题）
+        // 联动按钮发光状态
         const btns = document.querySelectorAll('#timeRangeSegment .stats-seg-btn');
-        btns.forEach(btn => btn.classList.remove('active')); // 先把所有按钮都强制熄灭
+        btns.forEach(btn => btn.classList.remove('active'));
         if (range === 'day') btns[0].classList.add('active');
         if (range === 'month') btns[1].classList.add('active');
         if (range === 'year') btns[2].classList.add('active');
 
-        // 2. 记住你现在选中的时间（比如 2026-04）
+        // 记录选中值并刷新
         window.customSelectedValue = value; 
-        
-        // 3. 选完之后，自动关掉透明列表框
         document.querySelectorAll('.custom-picker-box').forEach(el => el.style.display = 'none');
-        
-        // 4. 📢 最关键的一句：通知图表和下面的金额马上刷新！
-        updateStatsUI();
+        updateStatsUI(); // 通知图表立即变身！
     }
 
     function getTodayString() { const tzOffset = (new Date()).getTimezoneOffset() * 60000; return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; }
