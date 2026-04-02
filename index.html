@@ -421,19 +421,20 @@
         // ✨ 弹出/隐藏 悬浮微型滚轮
     function toggleCustomPicker(type, event) {
         event.stopPropagation();
-        // 先关掉所有选框
+        
+        // 1. 关掉所有弹出的透明列表
         document.querySelectorAll('.custom-picker-box').forEach(el => el.style.display = 'none');
         
         let picker = document.getElementById('picker-' + type);
-        picker.style.display = 'block';
-        
-        // 生成内容
+        if(!picker) return;
+
+        // 2. 动态生成列表内容
         let html = '';
         if(type === 'day') {
             for(let i = 0; i < 15; i++) {
                 let d = new Date(); d.setDate(d.getDate() - i);
                 let val = d.toISOString().split('T')[0];
-                html += `<div class="picker-item" onclick="selectFromPicker('day', '${val}', event)">${i===0?'今天':val.slice(5)}</div>`;
+                html += `<div class="picker-item" onclick="selectFromPicker('day', '${val}', event)">${i===0?'今天':val}</div>`;
             }
         } else if(type === 'month') {
             for(let i = 0; i < 12; i++) {
@@ -442,30 +443,37 @@
                 html += `<div class="picker-item" onclick="selectFromPicker('month', '${val}', event)">${val}</div>`;
             }
         } else {
-            for(let i = 2024; i <= 2027; i++) {
+            // 这里修改年份，加入2026, 2027, 2028等
+            for(let i = 2024; i <= 2028; i++) {
                 html += `<div class="picker-item" onclick="selectFromPicker('year', '${i}', event)">${i}年</div>`;
             }
         }
+        
+        // 3. 把内容塞进框里，然后显示出来
         picker.innerHTML = html;
+        picker.style.display = 'block';
     }
 
-    // 选中后的处理
+    // ✨ 选中后的处理（核心数据联动修复）
     function selectFromPicker(range, value, event) {
         event.stopPropagation();
         currentRange = range;
         
-        // 1. 让按钮“凸起”联动
+        // 1. 让按钮“凸起”联动（修复一直亮着本月的问题）
         const btns = document.querySelectorAll('#timeRangeSegment .stats-seg-btn');
-        btns[0].classList.toggle('active', range === 'day');
-        btns[1].classList.toggle('active', range === 'month');
-        btns[2].classList.toggle('active', range === 'year');
+        btns.forEach(btn => btn.classList.remove('active')); // 先把所有按钮都强制熄灭
+        if (range === 'day') btns[0].classList.add('active');
+        if (range === 'month') btns[1].classList.add('active');
+        if (range === 'year') btns[2].classList.add('active');
 
-        // 2. 模拟数据更新（核心：手动修改数据获取的来源）
-        // 关键：我们要让 processStatsData 知道我们选了什么
+        // 2. 记住你现在选中的时间（比如 2026-04）
         window.customSelectedValue = value; 
         
-        // 关掉框
+        // 3. 选完之后，自动关掉透明列表框
         document.querySelectorAll('.custom-picker-box').forEach(el => el.style.display = 'none');
+        
+        // 4. 📢 最关键的一句：通知图表和下面的金额马上刷新！
+        updateStatsUI();
     }
 
     function getTodayString() { const tzOffset = (new Date()).getTimezoneOffset() * 60000; return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; }
