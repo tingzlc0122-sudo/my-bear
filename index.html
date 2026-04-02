@@ -687,15 +687,24 @@
         }
     }
 
-    function updateChart(dataObj) { 
+        function updateChart(dataObj) { 
         if(!dataObj) dataObj = processStatsData(); 
         const ctx = document.getElementById('myChart').getContext('2d'); 
         if(myChartInstance) myChartInstance.destroy(); 
-        Chart.defaults.font.family = "'Nunito', ui-rounded, 'ZCOOL KuaiLe', 'PingFang SC', sans-serif";
-        Chart.defaults.color = '#A1887F'; Chart.defaults.font.weight = 'bold';
+        
+        // ✨ 全局字体与颜色微调，匹配奶油咖啡主题
+        Chart.defaults.font.family = "-apple-system, sans-serif";
+        Chart.defaults.color = '#8D6E63'; // 对应 --text-light
+        Chart.defaults.font.weight = 'bold';
+
         const dates = Object.keys(dataObj.timeline).sort(); 
+
         if(currentChartType === 'pie') { 
             let catData = {}; 
+            // 🎨 定义两套高质感配色方案
+            const pinkPalette = ['#F4B8B8', '#F8BBD0', '#FFCDD2', '#EF9A9A', '#FF8A80']; // 支出专用：粉红调
+            const greenPalette = ['#A8D5BA', '#C8E6C9', '#B2DFDB', '#80CBC4', '#4DB6AC']; // 收入专用：青绿调
+
             db.forEach(r => { 
                 if (r.date && r.date.startsWith(dataObj.matchStr)) { 
                     if (currentPieType === 'expense' && r.type === '日常' && r.detail === '支出') { 
@@ -709,9 +718,75 @@
                     } 
                 } 
             }); 
-            myChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(catData), datasets: [{ data: Object.values(catData), backgroundColor: ['#F4B8B8', '#A8D5BA', '#F5CBA7', '#D7BDE2', '#FFE082'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } }); 
+            
+            // 根据当前显示的饼图类型，自动选择配色方案
+            const finalPalette = currentPieType === 'expense' ? pinkPalette : greenPalette;
+
+            myChartInstance = new Chart(ctx, { 
+                type: 'doughnut', 
+                data: { 
+                    labels: Object.keys(catData), 
+                    datasets: [{ 
+                        data: Object.values(catData), 
+                        backgroundColor: finalPalette, 
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { 
+                            position: 'right',
+                            labels: { boxWidth: 12, font: { size: 11 } }
+                        } 
+                    },
+                    cutout: '65%' // 增加中间留白，更显高级感
+                } 
+            }); 
         } else { 
-            myChartInstance = new Chart(ctx, { type: currentChartType, data: { labels: dates.map(d=>d.substring(5)), datasets: [{ label: '支出', data: dates.map(d=>dataObj.timeline[d].exp), backgroundColor: '#F4B8B8', borderColor: '#F4B8B8' }, { label: '收入', data: dates.map(d=>dataObj.timeline[d].inc), backgroundColor: '#A8D5BA', borderColor: '#A8D5BA' }, { label: '利润', data: dates.map(d=>dataObj.timeline[d].pro), backgroundColor: '#DDA77B', borderColor: '#DDA77B' }] }, options: { responsive: true, maintainAspectRatio: false } }); 
+            // 📈 对比图/趋势图：保持与主界面金额颜色 100% 一致
+            myChartInstance = new Chart(ctx, { 
+                type: currentChartType, 
+                data: { 
+                    labels: dates.map(d=>d.substring(5)), 
+                    datasets: [
+                        { 
+                            label: '支出', 
+                            data: dates.map(d=>dataObj.timeline[d].exp), 
+                            backgroundColor: '#F4B8B8', 
+                            borderColor: '#F4B8B8',
+                            borderWidth: 2,
+                            tension: 0.3 // 让折线图变丝滑圆润
+                        }, 
+                        { 
+                            label: '收入', 
+                            data: dates.map(d=>dataObj.timeline[d].inc), 
+                            backgroundColor: '#A8D5BA', 
+                            borderColor: '#A8D5BA',
+                            borderWidth: 2,
+                            tension: 0.3
+                        }, 
+                        { 
+                            label: '利润', 
+                            data: dates.map(d=>dataObj.timeline[d].pro), 
+                            backgroundColor: '#DDA77B', 
+                            borderColor: '#DDA77B',
+                            borderWidth: 2,
+                            tension: 0.3
+                        }
+                    ] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false } },
+                        x: { grid: { display: false } }
+                    }
+                } 
+            }); 
         } 
     }
 
