@@ -687,7 +687,7 @@
         }
     }
 
-        function updateChart(dataObj) { 
+    function updateChart(dataObj) { 
         if(!dataObj) dataObj = processStatsData(); 
         const ctx = document.getElementById('myChart').getContext('2d'); 
         if(myChartInstance) myChartInstance.destroy(); 
@@ -701,10 +701,8 @@
 
         if(currentChartType === 'pie') { 
             let catData = {}; 
-            // 🎨 定义两套高质感配色方案
-            const pinkPalette = ['#F4B8B8', '#F8BBD0', '#FFCDD2', '#EF9A9A', '#FF8A80']; // 支出专用：粉红调
-            const greenPalette = ['#A8D5BA', '#C8E6C9', '#B2DFDB', '#80CBC4', '#4DB6AC']; // 收入专用：青绿调
-
+            const pinkPalette = ['#F4B8B8', '#F8BBD0', '#FFCDD2', '#EF9A9A', '#FF8A80']; 
+            const greenPalette = ['#A8D5BA', '#C8E6C9', '#B2DFDB', '#80CBC4', '#4DB6AC']; 
             db.forEach(r => { 
                 if (r.date && r.date.startsWith(dataObj.matchStr)) { 
                     if (currentPieType === 'expense' && r.type === '日常' && r.detail === '支出') { 
@@ -718,10 +716,7 @@
                     } 
                 } 
             }); 
-            
-            // 根据当前显示的饼图类型，自动选择配色方案
             const finalPalette = currentPieType === 'expense' ? pinkPalette : greenPalette;
-
             myChartInstance = new Chart(ctx, { 
                 type: 'doughnut', 
                 data: { 
@@ -736,16 +731,19 @@
                 options: { 
                     responsive: true, 
                     maintainAspectRatio: false, 
+            // 🎯 核心修复：强制设定外圆半径为 80%，这样无论文字多长，圆圈大小都固定死
+                    radius: '80%', 
                     plugins: { 
                         legend: { 
                             position: 'right',
                             labels: { boxWidth: 12, font: { size: 11 } }
                         } 
                     },
-                    cutout: '65%' // 增加中间留白，更显高级感
+                    cutout: '65%' // 保持中间留白一致
                 } 
             }); 
-        } else { 
+        }
+                else { 
             // 📈 对比图/趋势图：保持与主界面金额颜色 100% 一致
             myChartInstance = new Chart(ctx, { 
                 type: currentChartType, 
