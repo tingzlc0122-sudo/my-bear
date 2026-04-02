@@ -261,9 +261,8 @@
                     </select>
                 </div>
             </div>
-            
     <div id="currentSelectedText" style="text-align: center; margin-bottom: 10px; font-size: 13px; color: var(--text-light); font-weight: bold;"></div>
-            
+    
     <div style="text-align: center; margin-bottom: 10px; display: flex; justify-content: center; align-items: center;">
                 <input type="date" id="statsDatePicker" style="display:none; border:none; background:transparent; font-family:inherit; color:var(--text-light); font-size:14px; font-weight:bold; outline:none;" onchange="updateStatsUI()">
                 <input type="month" id="statsMonthPicker" style="border:none; background:transparent; font-family:inherit; color:var(--text-light); font-size:14px; font-weight:bold; outline:none;" onchange="updateStatsUI()">
@@ -810,12 +809,13 @@ function copyCSS() {
         URL.revokeObjectURL(url);
     }
     
+    // --- ✨ 启动程序：初始化并找回书签 ---
     initializeStickers(); 
     rdr();
     
-    // ✨ 关键魔法：网页刚加载完，立马去查刚才的书签，然后自动跳过去
-    let lastTab = localStorage.getItem('evan_current_tab') || 'B';
-    showP(lastTab);
+    // 强制检查上次停留在哪一页，并在刷新后跳回去
+    const savedTab = localStorage.getItem('evan_current_tab') || 'B';
+    showP(savedTab);
 
 </script>
 </body>
