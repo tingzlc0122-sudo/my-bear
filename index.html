@@ -43,6 +43,25 @@
             --inc-color: #4DB6AC;      
             --exp-color: #FF8A65;      
         }
+        .date-selector-wrap {
+            display: inline-flex; align-items: center; padding: 6px 18px;
+            background: rgba(255, 255, 255, 0.3); border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.5); cursor: pointer;
+            position: relative; transition: all 0.2s;
+        }
+       .mini-triangle { font-size: 8px; margin-left: 8px; opacity: 0.5; color: var(--accent-dark); transform: scaleX(1.2); }
+       .frosted-picker {
+            display: none; position: absolute; top: 130%; left: 50%; transform: translateX(-50%);
+            width: 130px; max-height: 200px; overflow-y: auto; z-index: 2000;
+            background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+       .picker-item { padding: 12px 0; text-align: center; font-size: 14px; font-weight: bold; color: #5D4037 !important; border-bottom: 1px solid rgba(255,255,255,0.2); }
+       .stats-seg-btn.active {
+            background: #fff !important; color: var(--accent-dark) !important;
+            box-shadow: 0 4px 12px rgba(139, 90, 43, 0.15) !important;
+            transform: translateY(-2px); font-weight: 900 !important;
+        }
         
         body { background: var(--theme-gradient); background-attachment: fixed; font-family: -apple-system, sans-serif; color: var(--text-main); margin: 0; padding-bottom: 110px; transition: background 0.4s ease; }
         
@@ -1038,26 +1057,6 @@ function copyCSS() {
         btns[1].classList.toggle('active', type === 'income');
         updateStatsUI(); // 刷新一下
     }
-
-    .date-selector-wrap {
-    display: inline-flex; align-items: center; padding: 6px 18px;
-    background: rgba(255, 255, 255, 0.3); border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.5); cursor: pointer;
-    position: relative; transition: all 0.2s;
-}
-.mini-triangle { font-size: 8px; margin-left: 8px; opacity: 0.5; color: var(--accent-dark); transform: scaleX(1.2); }
-.frosted-picker {
-    display: none; position: absolute; top: 130%; left: 50%; transform: translateX(-50%);
-    width: 130px; max-height: 200px; overflow-y: auto; z-index: 2000;
-    background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-}
-.picker-item { padding: 12px 0; text-align: center; font-size: 14px; font-weight: bold; color: #5D4037 !important; border-bottom: 1px solid rgba(255,255,255,0.2); }
-.stats-seg-btn.active {
-    background: #fff !important; color: var(--accent-dark) !important;
-    box-shadow: 0 4px 12px rgba(139, 90, 43, 0.15) !important;
-    transform: translateY(-2px); font-weight: 900 !important;
-}
 
 </script>
 </body>
