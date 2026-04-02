@@ -536,16 +536,6 @@
         updateStatsUI();
     }
 
-    function processStatsData() { 
-        const todayStr = getTodayString(); 
-        const dPicker = document.getElementById('statsDatePicker');
-        const mPicker = document.getElementById('statsMonthPicker');
-        if(!dPicker.value) dPicker.value = todayStr;
-        if(!mPicker.value) mPicker.value = todayStr.substring(0, 7);
-        let matchStr = '';
-        if (currentRange === 'day') matchStr = dPicker.value;
-        else if (currentRange === 'month') matchStr = mPicker.value;
-        else matchStr = document.getElementById('statsYearPicker').value;
     function initializeStickers() {
         document.getElementById('sticker-deposit').innerHTML = getStickerHtml('topDeposit', '🏦');
         document.getElementById('sticker-profit').innerHTML  = getStickerHtml('topProfit',  '❤️');
