@@ -448,20 +448,20 @@
 
     function toggleCustomPicker(type, event) {
         event.stopPropagation();
-        // 关闭所有已打开的选择器
+        // 1. 关闭所有已打开的选择器并重置状态
         document.querySelectorAll('.frosted-picker').forEach(el => el.style.display = 'none');
         let picker = document.getElementById('picker-' + type);
         if(!picker) return;
 
-        // 1. 生成内容：增加上下占位空间，让首尾项都能滚到中心放大
-        let html = '<div style="height: 90px; flex-shrink: 0;"></div>'; 
+        // 2. 生成内容：增加上下缓冲区，保证首尾项都能滚到气泡中心放大
+        let html = '<div style="height: 95px; flex-shrink: 0;"></div>'; 
         const getLocalStr = (d) => {
             const tzOffset = d.getTimezoneOffset() * 60000;
             return new Date(d.getTime() - tzOffset).toISOString();
         };
 
         if(type === 'day') {
-            // 🔄 顺序：以前 -> 今天 (从14天前循环到0)
+            // 🔄 顺序：以前 -> 今天
             for(let i = 14; i >= 0; i--) {
                 let d = new Date(); d.setDate(d.getDate() - i);
                 let val = getLocalStr(d).split('T')[0];
@@ -469,37 +469,33 @@
                 html += `<div class="picker-item" data-val="${val}" onclick="selectFromPicker('day', '${val}', event)">${label}</div>`;
             }
         } else if(type === 'month') {
-            // 🔄 顺序：以前 -> 本月 (从11个月前循环到0)
             for(let i = 11; i >= 0; i--) {
                 let d = new Date(); d.setMonth(d.getMonth() - i);
                 let val = getLocalStr(d).slice(0,7);
                 html += `<div class="picker-item" data-val="${val}" onclick="selectFromPicker('month', '${val}', event)">${val}</div>`;
             }
         } else {
-            // 🔄 修改这里：只显示去年和今年，不再往后多刷年份
+            // 🔄 年份：只显示去年和今年，不显示未来
             let cy = new Date().getFullYear();
-            for(let i = cy - 2; i <= cy; i++) { // 只显示 前年、去年、今年
+            for(let i = cy - 10; i <= cy; i++) {
                 html += `<div class="picker-item" data-val="${i}" onclick="selectFromPicker('year', '${i}', event)">${i}年</div>`;
             }
         }
-        html += '<div style="height: 90px; flex-shrink: 0;"></div>';
+        html += '<div style="height: 95px; flex-shrink: 0;"></div>';
 
         picker.innerHTML = html;
-        picker.style.display = 'block';
+        picker.style.display = 'flex'; // 使用 flex 布局确保内部元素垂直对齐
 
-        // 2. 核心交互：气泡滚动缩放逻辑
+        // 3. 核心交互：气泡缩放侦听
         const updateBubbles = () => {
             const items = picker.querySelectorAll('.picker-item');
-            const pickerRect = picker.getBoundingClientRect();
-            const centerY = pickerRect.top + (picker.offsetHeight / 2);
+            const centerY = picker.getBoundingClientRect().top + (picker.offsetHeight / 2);
 
             items.forEach(item => {
-                const itemRect = item.getBoundingClientRect();
-                const itemCenterY = itemRect.top + (itemRect.height / 2);
+                const itemCenterY = item.getBoundingClientRect().top + (item.offsetHeight / 2);
                 const dist = Math.abs(centerY - itemCenterY);
-
                 // 距离中心越近，气泡越大越清晰
-                if (dist < 35) {
+                if (dist < 32) {
                     item.classList.add('active-bubble');
                 } else {
                     item.classList.remove('active-bubble');
@@ -509,15 +505,18 @@
 
         picker.onscroll = updateBubbles;
 
-        // 3. 初始定位：自动滚到底部（今天）并触发一次放大效果
+        // 4. 初始化：自动滚到底部并锁定
         setTimeout(() => {
             picker.scrollTop = picker.scrollHeight;
             updateBubbles();
-        }, 20);
+        }, 10);
 
-        // 点击外部关闭逻辑
+        // 5. 点击外部关闭
         setTimeout(() => { 
-            const closeP = () => { picker.style.display = 'none'; document.removeEventListener('click', closeP); };
+            const closeP = () => { 
+                picker.style.display = 'none'; 
+                document.removeEventListener('click', closeP); 
+            };
             document.addEventListener('click', closeP);
         }, 10);
     }
