@@ -487,12 +487,62 @@
     }
 
     function openSheet(type) {
-        currentSheetType = type; document.getElementById('sheetDate').value = getTodayString(); document.getElementById('sheetAmount').value = ''; document.getElementById('sheetRemark').value = '';
-        const title = document.getElementById('sheetTitle'); const category = document.getElementById('sheetCategory'); category.innerHTML = '';
-        if (type === '支出') { title.innerHTML = '记一笔支出'; const catExp = [['吃饭', 'meal', '🍔'], ['购物', 'shopping', '🛒'], ['交通', 'traffic', '🚗'], ['生活开支', 'living', '🏠'], ['其他支出', 'casual', '🐰']]; catExp.forEach(c => { const emoji = STICKER_MAP[c[1]] && STICKER_MAP[c[1]].trim() !== '' ? '🖼️' : c[2]; category.innerHTML += `<option value="${c[0]}">${emoji} ${c[0]}</option>`; }); category.style.display = 'block'; }
-        else if (type === '收入') { title.innerHTML = '记一笔收入'; const catInc = [['兼职', 'job', '💰'], ['生活费', 'allowance', '🧧'], ['其他收入', 'otherInc', '🐻']]; catInc.forEach(c => { const emoji = STICKER_MAP[c[1]] && STICKER_MAP[c[1]].trim() !== '' ? '🖼️' : c[2]; category.innerHTML += `<option value="${c[0]}">${emoji} ${c[0]}</option>`; }); category.style.display = 'block'; } 
-        else { title.innerHTML = '校准存款余额'; category.style.display = 'none'; document.getElementById('sheetRemark').value = '手动对账'; }
-        document.getElementById('overlay').style.display = 'block'; setTimeout(() => { document.getElementById('bottom-sheet').style.transform = 'translateY(0)'; }, 10);
+        currentSheetType = type; 
+        document.getElementById('sheetDate').value = getTodayString(); 
+        document.getElementById('sheetAmount').value = ''; 
+        document.getElementById('sheetRemark').value = '';
+        const title = document.getElementById('sheetTitle'); 
+        const category = document.getElementById('sheetCategory'); 
+        category.innerHTML = '';
+
+        if (type === '支出') { 
+            title.innerHTML = '记一笔支出'; 
+            const catExp = [['吃饭', 'meal', '🍔'], ['购物', 'shopping', '🛒'], ['交通', 'traffic', '🚗'], ['生活开支', 'living', '🏠'], ['其他支出', 'casual', '🐰']]; 
+            catExp.forEach(c => { category.innerHTML += `<option value="${c[0]}">${c[2]} ${c[0]}</option>`; }); 
+            category.style.display = 'block'; 
+        }
+        else if (type === '收入') { 
+            title.innerHTML = '记一笔收入'; 
+            const catInc = [['兼职', 'job', '💰'], ['生活费', 'allowance', '🧧'], ['其他收入', 'otherInc', '🐻']]; 
+            catInc.forEach(c => { category.innerHTML += `<option value="${c[0]}">${c[2]} ${c[0]}</option>`; }); 
+            category.style.display = 'block'; 
+        } 
+        else { 
+            // ✨ 这里新增了存款的三个细分
+            title.innerHTML = '账户余额校准'; 
+            category.innerHTML = `
+                <option value="基金">📈 基金账户</option>
+                <option value="闲鱼">🐟 闲鱼资金</option>
+                <option value="银行卡">💳 银行卡余额</option>
+            `;
+            category.style.display = 'block'; 
+            document.getElementById('sheetRemark').value = '手动对账'; 
+        }
+        document.getElementById('overlay').style.display = 'block'; 
+        setTimeout(() => { document.getElementById('bottom-sheet').style.transform = 'translateY(0)'; }, 10);
+    }
+
+    // ✨ 同步修改：切换到灵感页时隐藏顶部数据
+    function showP(p) {
+        document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+        const targetId = p==='B'?'pageBear':(p==='R'?'pageRabbit':(p==='N'?'pageNovel':'pageStats'));
+        document.getElementById(targetId).classList.add('active');
+        
+        // 隐藏/显示顶部金钱数据块
+        const headerStats = document.querySelector('.stat-grid');
+        headerStats.style.display = (p === 'N') ? 'none' : 'grid';
+
+        const tabItems = document.querySelectorAll('.tab-item');
+        tabItems.forEach(el => el.classList.remove('active'));
+        if(p === 'B') tabItems[0].classList.add('active');
+        if(p === 'R') tabItems[1].classList.add('active');
+        if(p === 'S') tabItems[2].classList.add('active');
+        if(p === 'N') tabItems[3].classList.add('active');
+        
+        if(p === 'N') { document.body.classList.add('theme-green'); document.getElementById('novelFab').style.display = 'flex'; renderNovels(); } 
+        else { document.body.classList.remove('theme-green'); document.getElementById('novelFab').style.display = 'none'; }
+        if(p === 'S') updateStatsUI();
+        localStorage.setItem('evan_current_tab', p);
     }
 
     function renderInteractiveCalendar(type) {
@@ -561,14 +611,32 @@
 
     function processStatsData() { 
         const todayStr = getTodayString(); 
+        // ✨ 这里修复了日期、月份、年份的获取逻辑
         const dVal = document.getElementById('statsDatePicker').value || todayStr;
         const mVal = document.getElementById('statsMonthPicker').value || todayStr.substring(0, 7);
-        const yVal = document.getElementById('statsYearPicker').value;
-        let matchStr = '';
-        if (currentRange === 'day') { matchStr = dVal; document.getElementById('currentSelectedText').innerText = dVal; }
-        else if (currentRange === 'month') { matchStr = mVal; document.getElementById('currentSelectedText').innerText = mVal; }
-        else { matchStr = yVal; document.getElementById('currentSelectedText').innerText = yVal + '年'; }
-        let tInc = 0, tExp = 0, tPro = 0; let dayData = {}; 
+        const yVal = document.getElementById('statsYearPicker').value || todayStr.substring(0, 4);
+        
+        let matchStr = "";
+        let displayLabel = "";
+
+        // ✨ 确保切换“本日/本月/本年”时，匹配的文字是正确的
+        if (currentRange === 'day') { 
+            matchStr = dVal; 
+            displayLabel = dVal;
+        } else if (currentRange === 'month') { 
+            matchStr = mVal; 
+            displayLabel = mVal;
+        } else { 
+            matchStr = yVal; 
+            displayLabel = yVal + "年";
+        }
+        
+        // 更新中间显示的日期文字
+        document.getElementById('currentSelectedText').innerText = displayLabel;
+        
+        let tInc = 0, tExp = 0, tPro = 0; 
+        let dayData = {}; 
+        
         db.forEach(r => { 
             if (r.date && r.date.startsWith(matchStr)) { 
                 if(!dayData[r.date]) dayData[r.date] = { inc:0, exp:0, pro:0 }; 
@@ -576,14 +644,29 @@
                     if (r.detail === '收入') { tInc += r.amt; dayData[r.date].inc += r.amt; } 
                     if (r.detail === '支出') { tExp += r.amt; dayData[r.date].exp += r.amt; } 
                 } else if (r.type === '转单' && r.status === '已转单') { 
-                    const prof = parseFloat(r.profit || 0); tPro += prof; dayData[r.date].pro += prof; 
+                    const prof = parseFloat(r.profit || 0); 
+                    tPro += prof; 
+                    dayData[r.date].pro += prof; 
                 } 
             } 
         }); 
+        
+        // 更新界面上的总额
         document.getElementById('statInc').innerText = '￥' + tInc.toFixed(2); 
         document.getElementById('statExp').innerText = '￥' + tExp.toFixed(2); 
         document.getElementById('statPro').innerText = '￥' + tPro.toFixed(2); 
+        
         return { timeline: dayData, matchStr: matchStr }; 
+    }
+    
+    // ✨ 这是一个关键补丁：确保你选完日期后，数据会立刻跳动更新
+    function updateStatsUI() {
+        const data = processStatsData();
+        if (currentViewMode === 'chart') {
+            updateChart(data);
+        } else {
+            updateStatsCalendar(data);
+        }
     }
 
     function updateChart(dataObj) { 
