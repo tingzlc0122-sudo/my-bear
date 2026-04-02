@@ -871,6 +871,24 @@ function copyCSS() {
     const savedTab = localStorage.getItem('evan_current_tab') || 'B';
     showP(savedTab);
 
+    // ==========================================
+    // ✨ 终极解决核心：强制刷新软件图标 (防缓存)
+    // ==========================================
+    const appHeaderImg = document.querySelector('.header-img');
+    if (appHeaderImg) {
+        // 在图片地址后面强行加上一个时间戳 (比如 ?t=170123456789)
+        // 浏览器看到地址变了，就会认为是一张新图，强制重新下载
+        const currentSrc = appHeaderImg.src;
+        const timestamp = "t=" + new Date().getTime();
+        
+        // 检查原本地址里是不是已经有问号了（处理 CDN 加密链问题）
+        if (currentSrc.includes('?')) {
+            appHeaderImg.src = currentSrc + "&" + timestamp;
+        } else {
+            appHeaderImg.src = currentSrc + "?" + timestamp;
+        }
+    }
+
         // ✨ 修复：图表界面的三大切换魔法（之前缺失的电线）
     function switchViewMode(mode) {
         currentViewMode = mode;
@@ -899,7 +917,7 @@ function copyCSS() {
         btns[1].classList.toggle('active', type === 'income');
         updateStatsUI(); // 刷新一下
     }
-
+        
 </script>
 </body>
 </html>
