@@ -373,9 +373,10 @@
         'colExp': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Ting-speechless.jpg',     
         'colInc': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Ting-excited.jpg',     
         'colDep': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Ting-laugh.jpg',     
-        'tabDaily': '',  
-        'tabRabbit':'',  
-        'tabNovel': '',  
+        'tabDaily': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Evan-love.png',  // 熊
+        'tabRabbit':'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Ting-love.png',   // 兔
+        'tabStats': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Evan-love.png',  // 熊
+        'tabNovel': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Ting-love.png',   // 兔  
         'meal':     '',  
         'shopping': '',  
         'traffic':  '',  
@@ -434,10 +435,10 @@
         document.getElementById('col-sticker-dep').innerHTML = getStickerHtml('colDep', '🏦');
         document.querySelectorAll('.col-icon-wrapper img').forEach(img => { img.style.width = '40px'; img.style.height = '40px'; });
         document.getElementById('tab-sticker-daily').innerHTML  = getStickerHtml('tabDaily',  '🐻');
-        document.getElementById('tab-sticker- rabbit').innerHTML = getStickerHtml('tabRabbit', '🐰');
+        document.getElementById('tab-sticker-rabbit').innerHTML = getStickerHtml('tabRabbit', '🐰');
+        document.getElementById('tab-sticker-stats').innerHTML  = getStickerHtml('tabStats',  '📊');
         document.getElementById('tab-sticker-novel').innerHTML  = getStickerHtml('tabNovel',  '💡');
     }
-
     function renderNovels() {
         const list = document.getElementById('novelList'); list.innerHTML = '';
         if(novels.length === 0) { list.innerHTML = `<div style="text-align:center; color: var(--accent-main); margin-top: 50px; font-weight:bold; opacity:0.6;">捕捉灵感 💡</div>`; return; }
