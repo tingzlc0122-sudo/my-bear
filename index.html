@@ -409,18 +409,21 @@
     function getTimeString() { return new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}); }
 
     function showP(p) {
-        document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-        document.getElementById(p==='B'?'pageBear':(p==='R'?'pageRabbit':(p==='N'?'pageNovel':'pageStats'))).classList.add('active');
-        const tabItems = document.querySelectorAll('.tab-item');
-        tabItems.forEach(el => el.classList.remove('active'));
-        if(p === 'B') tabItems[0].classList.add('active');
-        if(p === 'R') tabItems[1].classList.add('active');
-        if(p === 'S') tabItems[2].classList.add('active');
-        if(p === 'N') tabItems[3].classList.add('active');
+    document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+    document.getElementById(p==='B'?'pageBear':(p==='R'?'pageRabbit':(p==='N'?'pageNovel':'pageStats'))).classList.add('active');
+    const tabItems = document.querySelectorAll('.tab-item');
+    tabItems.forEach(el => el.classList.remove('active'));
+    if(p === 'B') tabItems[0].classList.add('active');
+    if(p === 'R') tabItems[1].classList.add('active');
+    if(p === 'S') tabItems[2].classList.add('active');
+    if(p === 'N') tabItems[3].classList.add('active');
         
-        if(p === 'N') { document.body.classList.add('theme-green'); document.getElementById('novelFab').style.display = 'flex'; renderNovels(); } 
-        else { document.body.classList.remove('theme-green'); document.getElementById('novelFab').style.display = 'none'; }
-        if(p === 'S') updateStatsUI();
+    if(p === 'N') { document.body.classList.add('theme-green'); document.getElementById('novelFab').style.display = 'flex'; renderNovels(); } 
+    else { document.body.classList.remove('theme-green'); document.getElementById('novelFab').style.display = 'none'; }
+    if(p === 'S') updateStatsUI();
+
+    // ✨ 关键魔法：把当前页面的代号存进手机本地的“记忆”里
+    localStorage.setItem('evan_current_tab', p);
     }
 
     function closeAllModals() { document.getElementById('bottom-sheet').style.transform = 'translateY(100%)'; document.getElementById('calendar-modal').style.display = 'none'; closeTopModals(); setTimeout(() => { document.getElementById('overlay').style.display = 'none'; }, 200); }
