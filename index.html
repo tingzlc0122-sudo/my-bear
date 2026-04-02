@@ -465,7 +465,7 @@
             for(let i = 14; i >= 0; i--) {
                 let d = new Date(); d.setDate(d.getDate() - i);
                 let val = getLocalStr(d).split('T')[0];
-                let label = (i === 0) ? '今天' : val;
+                let label = (i === 0) ? '今天' : val.slice(5);
                 html += `<div class="picker-item" data-val="${val}" onclick="selectFromPicker('day', '${val}', event)">${label}</div>`;
             }
         } else if(type === 'month') {
