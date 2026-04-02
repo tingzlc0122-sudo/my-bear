@@ -452,11 +452,14 @@
         document.getElementById('col-sticker-inc').innerHTML = getStickerHtml('colInc', '🐻');
         document.getElementById('col-sticker-dep').innerHTML = getStickerHtml('colDep', '🏦');
         document.querySelectorAll('.col-icon-wrapper img').forEach(img => { img.style.width = '40px'; img.style.height = '40px'; });
+        
+        // ✨ 底部导航栏交替比心（在这里找回了收支统计的图标！）
         document.getElementById('tab-sticker-daily').innerHTML  = getStickerHtml('tabDaily',  '🐻');
         document.getElementById('tab-sticker-rabbit').innerHTML = getStickerHtml('tabRabbit', '🐰');
         document.getElementById('tab-sticker-stats').innerHTML  = getStickerHtml('tabStats',  '📊');
         document.getElementById('tab-sticker-novel').innerHTML  = getStickerHtml('tabNovel',  '💡');
     }
+
     function renderNovels() {
         const list = document.getElementById('novelList'); list.innerHTML = '';
         if(novels.length === 0) { list.innerHTML = `<div style="text-align:center; color: var(--accent-main); margin-top: 50px; font-weight:bold; opacity:0.6;">捕捉灵感 💡</div>`; return; }
@@ -584,21 +587,7 @@
         document.getElementById('statsMonthPicker').style.display = range === 'month' ? 'inline-block' : 'none';
         document.getElementById('statsYearPicker').style.display = range === 'year' ? 'inline-block' : 'none';
         updateStatsUI();
-    }
-
-    function initializeStickers() {
-        document.getElementById('sticker-deposit').innerHTML = getStickerHtml('topDeposit', '🏦');
-        document.getElementById('sticker-profit').innerHTML  = getStickerHtml('topProfit',  '❤️');
-        document.getElementById('sticker-capital').innerHTML = getStickerHtml('topCapital', '🐰');
-        document.getElementById('col-sticker-exp').innerHTML = getStickerHtml('colExp', '🐰');
-        document.getElementById('col-sticker-inc').innerHTML = getStickerHtml('colInc', '🐻');
-        document.getElementById('col-sticker-dep').innerHTML = getStickerHtml('colDep', '🏦');
-        document.querySelectorAll('.col-icon-wrapper img').forEach(img => { img.style.width = '40px'; img.style.height = '40px'; });
-        document.getElementById('tab-sticker-daily').innerHTML  = getStickerHtml('tabDaily',  '🐻');
-        document.getElementById('tab-sticker-rabbit').innerHTML = getStickerHtml('tabRabbit', '🐰');
-        document.getElementById('tab-sticker-novel').innerHTML  = getStickerHtml('tabNovel',  '💡');
-    }
-
+    }  
     // --- ✨ 核心修复：联动、交互与书签 ---
     function syncAndUI(range) {
         currentRange = range;
