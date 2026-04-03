@@ -241,14 +241,8 @@
             <input type="text" id="oId" placeholder="订单号/宝贝名称">
             <div style="display: flex; gap: 10px;"><input type="number" id="bP" placeholder="买入实付"><input type="number" id="sP" placeholder="闲鱼售价(预售可不填)"></div>
             
-            <select id="gCat">
-                <option value="吧唧">🔘 吧唧</option>
-                <option value="色纸">📄 色纸</option>
-                <option value="挂件">🔑 挂件</option>
-                <option value="立牌">🧍 立牌</option>
-                <option value="生日谷">🎂 生日谷</option>
-                <option value="其他">📦 其他</option>
-            </select>
+            <input list="dynamicCatList" id="gCat" placeholder="商品品类 (如:吧唧,可直接手填)">
+            <datalist id="dynamicCatList"></datalist>
             
             <select id="gS">
                 <option value="预售中">⏳ 预售中 (占用本金)</option>
@@ -467,20 +461,18 @@
 
     function toggleCustomPicker(type, event) {
         event.stopPropagation();
-        // 1. 关闭所有已打开的选择器并重置状态
+    // 1. 关闭所有已打开的选择器并重置状态
         document.querySelectorAll('.frosted-picker').forEach(el => el.style.display = 'none');
         let picker = document.getElementById('picker-' + type);
         if(!picker) return;
-
-        // 2. 生成内容：增加上下缓冲区，保证首尾项都能滚到气泡中心放大
+    // 2. 生成内容：增加上下缓冲区，保证首尾项都能滚到气泡中心放大
         let html = '<div style="height: 95px; flex-shrink: 0;"></div>'; 
         const getLocalStr = (d) => {
             const tzOffset = d.getTimezoneOffset() * 60000;
             return new Date(d.getTime() - tzOffset).toISOString();
         };
-
         if(type === 'day') {
-            // 🔄 顺序：以前 -> 今天
+        // 🔄 顺序：以前 -> 今天
             for(let i = 14; i >= 0; i--) {
                 let d = new Date(); d.setDate(d.getDate() - i);
                 let val = getLocalStr(d).split('T')[0];
@@ -494,7 +486,7 @@
                 html += `<div class="picker-item" data-val="${val}" onclick="selectFromPicker('month', '${val}', event)">${val}</div>`;
             }
         } else {
-            // 🔄 年份：只显示去年和今年，不显示未来
+        // 🔄 年份：只显示去年和今年，不显示未来
             let cy = new Date().getFullYear();
             for(let i = cy - 10; i <= cy; i++) {
                 html += `<div class="picker-item" data-val="${i}" onclick="selectFromPicker('year', '${i}', event)">${i}年</div>`;
@@ -504,16 +496,14 @@
 
         picker.innerHTML = html;
         picker.style.display = 'flex'; // 使用 flex 布局确保内部元素垂直对齐
-
-        // 3. 核心交互：气泡缩放侦听
+    // 3. 核心交互：气泡缩放侦听
         const updateBubbles = () => {
             const items = picker.querySelectorAll('.picker-item');
             const centerY = picker.getBoundingClientRect().top + (picker.offsetHeight / 2);
-
             items.forEach(item => {
                 const itemCenterY = item.getBoundingClientRect().top + (item.offsetHeight / 2);
                 const dist = Math.abs(centerY - itemCenterY);
-                // 距离中心越近，气泡越大越清晰
+            // 距离中心越近，气泡越大越清晰
                 if (dist < 32) {
                     item.classList.add('active-bubble');
                 } else {
@@ -521,10 +511,8 @@
                 }
             });
         };
-
         picker.onscroll = updateBubbles;
-
-        // 4. 智能定位逻辑 (保持你之前的记忆功能)
+    // 4. 智能定位逻辑 (保持你之前的记忆功能)
         setTimeout(() => {
             const currentVal = window.customSelectedValue;
             let targetItem = null;
@@ -538,36 +526,33 @@
                 picker.scrollTop = picker.scrollHeight;
             }
             updateBubbles();
-        }, 30);
-        
-        // 5. ✨ 核心交互：点击外部自动提交当前“气泡中心”的值
+        }, 30);     
+    // 5. ✨ 核心交互：点击外部自动提交当前“气泡中心”的值
         setTimeout(() => { 
             const closeAndSync = (e) => { 
-                // 如果点的是气泡外部
+            // 如果点的是气泡外部
                 if (!picker.contains(e.target)) {
-                    // 🔍 找到当前正处于中心放大状态的那个气泡
+                // 🔍 找到当前正处于中心放大状态的那个气泡
                     const activeItem = picker.querySelector('.active-bubble');
                     if (activeItem) {
                         const val = activeItem.getAttribute('data-val');
-                        // 🚀 自动触发选择指令，更新下方金额数据
+                    // 🚀 自动触发选择指令，更新下方金额数据
                         selectFromPicker(type, val, e);
                     }
-                    // 彻底关闭并移除监听
+                // 彻底关闭并移除监听
                     picker.style.display = 'none'; 
                     document.removeEventListener('click', closeAndSync); 
                 }
             };
-            // 使用 capture 模式确保在其他点击事件前触发
+        // 使用 capture 模式确保在其他点击事件前触发
             document.addEventListener('click', closeAndSync); 
         }, 50);
     }
-
     function selectFromPicker(range, value, event) {
         event.stopPropagation(); window.customSelectedValue = value;
         document.querySelectorAll('.frosted-picker').forEach(el => el.style.display = 'none');
         updateStatsUI();
     }
-
     function updateChart(dataObj) { 
         if(!dataObj) dataObj = processStatsData(); 
         const ctx = document.getElementById('myChart').getContext('2d'); 
@@ -604,7 +589,6 @@
             myChartInstance = new Chart(ctx, { type: currentChartType, data: { labels: dates.map(d=>d.substring(5)), datasets: [{ label: '支出', data: dates.map(d=>dataObj.timeline[d].exp), backgroundColor: '#F4B8B8', borderColor: '#F4B8B8', borderWidth: 2, tension: 0.3 }, { label: '收入', data: dates.map(d=>dataObj.timeline[d].inc), backgroundColor: '#A8D5BA', borderColor: '#A8D5BA', borderWidth: 2, tension: 0.3 }, { label: '利润', data: dates.map(d=>dataObj.timeline[d].pro), backgroundColor: '#DDA77B', borderColor: '#DDA77B', borderWidth: 2, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } } } }); 
         } 
     }
-
     // 3. 选中日期后的处理
     function selectFromPicker(range, value, event) {
         event.stopPropagation();
@@ -659,8 +643,30 @@
                 if(r.status === '已转单') pS += parseFloat(r.profit); if(r.status === '预售中') cS += r.buy;
                 gl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">#${r.id} <span style="font-size:10px; background:rgba(255,255,255,0.5); padding:2px 6px; border-radius:6px; vertical-align:middle;">${r.status}</span>${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light); margin-top:4px;">${r.date} | 买 ${r.buy} → 售 ${r.sell}</div></div><div style="color:var(--exp-color); font-weight:bold; font-size:16px;">+${r.profit}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
             }
-        });
+        });   
         document.getElementById('topProfit').innerText = '￥' + pS.toFixed(2); document.getElementById('topCapital').innerText = '￥' + cS.toFixed(2); document.getElementById('topSaving').innerText = '￥' + curSav.toFixed(2);
+            // ✨ 新增：动态提取出场率 Top 10 的品类
+        const catDatalist = document.getElementById('dynamicCatList');
+        if (catDatalist) {
+            let catCounts = {};
+            // 遍历所有转单记录，统计品类出现次数
+            db.forEach(r => {
+                if (r.type === '转单' && r.category) {
+                    catCounts[r.category] = (catCounts[r.category] || 0) + 1;
+                }
+            });
+            // 按出现次数从高到低排序，截取前 10 名
+            let topCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(item => item[0]);
+            
+            // 如果你的数据库还是空的，给几个初始默认值
+            if (topCats.length === 0) topCats = ['吧唧', '色纸', '挂件', '立牌', '娃娃', '戒指'];
+            
+            // 把这前 10 名塞进下拉提示框里
+            catDatalist.innerHTML = '';
+            topCats.forEach(cat => {
+                catDatalist.innerHTML += `<option value="${cat}"></option>`;
+            });
+        }
     }
 
     function openSheet(type) {
@@ -745,7 +751,38 @@
     function openDayDetail(type, dateStr) { document.getElementById('dayDetailTitle').innerText = `${dateStr} 明细`; const listDiv = document.getElementById('dayDetailList'); listDiv.innerHTML = ''; let dayRecords = []; db.forEach((r, idx) => { if (r.type === '日常' && r.date === dateStr) { if (type === '收入' && r.detail === '收入') dayRecords.push({r, idx}); else if (type === '支出' && r.detail === '支出') dayRecords.push({r, idx}); else if (type === '存款') dayRecords.push({r, idx}); } }); if(dayRecords.length === 0) { listDiv.innerHTML = '<div style="text-align:center; padding: 20px;">这里空空如也</div>'; } else { dayRecords.forEach(item => { const r = item.r; const isExp = r.detail === '支出'; const color = isExp ? 'var(--exp-color)' : 'var(--inc-color)'; const sign = isExp ? '-' : '+'; listDiv.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.6); cursor:pointer;" onclick="openRecordEdit(${item.idx})"><div><div style="font-weight:bold; color:var(--accent-dark);">${r.remark}</div></div><div style="color:${color}; font-weight:bold;">${sign}${r.amt}</div></div>`; }); } document.getElementById('overlay-top').style.display = 'block'; document.getElementById('day-detail-modal').style.display = 'block'; }
 
     function confirmSheetAction() { const amt = parseFloat(document.getElementById('sheetAmount').value); if (!amt) return alert('填入金额'); const dateStr = document.getElementById('sheetDate').value; if (!dateStr) return; let cat = currentSheetType !== '存款' ? document.getElementById('sheetCategory').value : ''; const remark = document.getElementById('sheetRemark').value || '无备注'; if(currentSheetType === '收入') curSav += amt; else if(currentSheetType === '支出') curSav -= amt; else curSav = amt; db.unshift({ type: '日常', detail: currentSheetType, category: cat, remark: remark, amt: amt, date: dateStr, timeStr: getTimeString(), diaryText: '', imageBase64: '' }); localStorage.setItem('evan_sav_val', curSav); saveAll(); closeAllModals(); }
-    function parseClipPrompt() { const text = prompt("粘贴淘宝闲鱼信息："); if (!text) return; const orderMatch = text.match(/\d{15,20}/); const priceMatch = text.match(/实付款[:\s]*(\d+\.\d+)/) || text.match(/￥(\d+\.\d+)/); if(orderMatch) document.getElementById('oId').value = orderMatch[ orderMatch.length - 1].slice(-4); if(priceMatch) document.getElementById('bP').value = priceMatch[1]; }
+    function parseClipPrompt() {
+        const text = prompt("✨ 请直接粘贴【淘宝订单信息】和【闲鱼订单信息】（顺序不限）：");
+        if (!text) return;
+        // 1. 抓取订单号/名称
+        const orderMatch = text.match(/\d{15,20}/);
+        if (orderMatch) {
+            document.getElementById('oId').value = orderMatch[0].slice(-4);
+        } else {
+            const titleMatch = text.match(/[\u4e00-\u9fa5]{4,10}/); 
+            if(titleMatch) document.getElementById('oId').value = titleMatch[0];
+        }
+        // 2. 抓取买入价和闲鱼售价
+        const buyMatch = text.match(/(?:实付款|合计|小计|应付)[：\s]*￥?(\d+(\.\d+)?)/);
+        const sellMatches = [...text.matchAll(/(?:售价|卖价|转|出|实付)[：\s]*￥?(\d+(\.\d+)?)/g)];   
+        if (buyMatch) document.getElementById('bP').value = buyMatch[1];
+        if (sellMatches.length > 0) {
+            document.getElementById('sP').value = sellMatches[sellMatches.length - 1][1];
+        }
+        // ✨ 3. 自动识别品类核心逻辑（关键词雷达）
+        // 涵盖了绝大多数二次元谷子的叫法，你也可以自己往里加
+        const commonKeywords = ['吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '戒指', '拍立得', '镭射票', '盲盒', '手办', '明信片', '特典'];
+        for (let kw of commonKeywords) {
+            if (text.includes(kw)) {
+                // 如果在剪贴板文本里发现了“戒指”，就自动填入品类框
+                document.getElementById('gCat').value = kw;
+                break; // 找到一个就停止
+            }
+        }
+        if (document.getElementById('bP').value) {
+            alert("✅ 识别完成！请核对提取的价格和品类。");
+        }
+    }
     function addGu() { 
         const b = parseFloat(document.getElementById('bP').value); 
         const s = parseFloat(document.getElementById('sP').value) || 0; // 预售时售价可为空
