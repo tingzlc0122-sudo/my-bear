@@ -834,6 +834,8 @@
         } else {
             updateStatsCalendar(data);
         }
+        // ✨ 新增这一行：确保每次刷新统计数据时，转化率排行榜也会同步更新
+        renderConversionRates(); 
     }
     function updateChart(dataObj) { 
         if(!dataObj) dataObj = processStatsData(); 
