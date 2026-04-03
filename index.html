@@ -244,11 +244,10 @@
             <input list="dynamicCatList" id="gCat" placeholder="商品品类 (如:吧唧,可直接手填)">
             <datalist id="dynamicCatList"></datalist>
             
-            <select id="gS">
-                <option value="预售中">⏳ 预售中 (占用本金)</option>
-                <option value="已转单">✅ 已转单 (核算利润)</option>
-                <option value="已退款">❌ 已退款 (资金回流)</option>
-            </select>
+            <input type="text" id="gS" value="预售中" readonly placeholder="请选择状态" 
+                   onclick="openCustomSelect('gS', ['⏳ 预售中 (占用本金)', '✅ 已转单 (核算利润)', '❌ 已退款 (资金回流)'])" 
+                   style="cursor: pointer; background: rgba(255,255,255,0.4); text-align: center;">
+
             <button class="btn-main" onclick="addGu()">保存转单记录</button>
         </div>
 
@@ -751,38 +750,62 @@
     function openDayDetail(type, dateStr) { document.getElementById('dayDetailTitle').innerText = `${dateStr} 明细`; const listDiv = document.getElementById('dayDetailList'); listDiv.innerHTML = ''; let dayRecords = []; db.forEach((r, idx) => { if (r.type === '日常' && r.date === dateStr) { if (type === '收入' && r.detail === '收入') dayRecords.push({r, idx}); else if (type === '支出' && r.detail === '支出') dayRecords.push({r, idx}); else if (type === '存款') dayRecords.push({r, idx}); } }); if(dayRecords.length === 0) { listDiv.innerHTML = '<div style="text-align:center; padding: 20px;">这里空空如也</div>'; } else { dayRecords.forEach(item => { const r = item.r; const isExp = r.detail === '支出'; const color = isExp ? 'var(--exp-color)' : 'var(--inc-color)'; const sign = isExp ? '-' : '+'; listDiv.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.6); cursor:pointer;" onclick="openRecordEdit(${item.idx})"><div><div style="font-weight:bold; color:var(--accent-dark);">${r.remark}</div></div><div style="color:${color}; font-weight:bold;">${sign}${r.amt}</div></div>`; }); } document.getElementById('overlay-top').style.display = 'block'; document.getElementById('day-detail-modal').style.display = 'block'; }
 
     function confirmSheetAction() { const amt = parseFloat(document.getElementById('sheetAmount').value); if (!amt) return alert('填入金额'); const dateStr = document.getElementById('sheetDate').value; if (!dateStr) return; let cat = currentSheetType !== '存款' ? document.getElementById('sheetCategory').value : ''; const remark = document.getElementById('sheetRemark').value || '无备注'; if(currentSheetType === '收入') curSav += amt; else if(currentSheetType === '支出') curSav -= amt; else curSav = amt; db.unshift({ type: '日常', detail: currentSheetType, category: cat, remark: remark, amt: amt, date: dateStr, timeStr: getTimeString(), diaryText: '', imageBase64: '' }); localStorage.setItem('evan_sav_val', curSav); saveAll(); closeAllModals(); }
+    // 1. 替换原生 prompt 的高级提取函数
     function parseClipPrompt() {
-        const text = prompt("✨ 请直接粘贴【淘宝订单信息】和【闲鱼订单信息】（顺序不限）：");
-        if (!text) return;
-        // 1. 抓取订单号/名称
-        const orderMatch = text.match(/\d{15,20}/);
-        if (orderMatch) {
-            document.getElementById('oId').value = orderMatch[0].slice(-4);
-        } else {
-            const titleMatch = text.match(/[\u4e00-\u9fa5]{4,10}/); 
-            if(titleMatch) document.getElementById('oId').value = titleMatch[0];
-        }
-        // 2. 抓取买入价和闲鱼售价
-        const buyMatch = text.match(/(?:实付款|合计|小计|应付)[：\s]*￥?(\d+(\.\d+)?)/);
-        const sellMatches = [...text.matchAll(/(?:售价|卖价|转|出|实付)[：\s]*￥?(\d+(\.\d+)?)/g)];   
-        if (buyMatch) document.getElementById('bP').value = buyMatch[1];
-        if (sellMatches.length > 0) {
-            document.getElementById('sP').value = sellMatches[sellMatches.length - 1][1];
-        }
-        // ✨ 3. 自动识别品类核心逻辑（关键词雷达）
-        // 涵盖了绝大多数二次元谷子的叫法，你也可以自己往里加
-        const commonKeywords = ['吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '戒指', '拍立得', '镭射票', '盲盒', '手办', '明信片', '特典'];
-        for (let kw of commonKeywords) {
-            if (text.includes(kw)) {
-                // 如果在剪贴板文本里发现了“戒指”，就自动填入品类框
-                document.getElementById('gCat').value = kw;
-                break; // 找到一个就停止
-            }
-        }
-        if (document.getElementById('bP').value) {
-            alert("✅ 识别完成！请核对提取的价格和品类。");
-        }
+        document.getElementById('customPromptInput').value = ''; // 清空上次输入
+        document.getElementById('customPromptModal').style.display = 'flex'; // 显示我们画的弹窗
     }
+
+    // 点击弹窗“确定”后执行的处理逻辑
+    function confirmCustomPrompt() {
+        const text = document.getElementById('customPromptInput').value;
+        if (!text) return;
+        document.getElementById('customPromptModal').style.display = 'none'; // 关掉弹窗
+
+        // 下面是你原本的提取逻辑
+        const orderMatch = text.match(/\d{15,20}/);
+        if (orderMatch) document.getElementById('oId').value = orderMatch[0].slice(-4);
+        else { const titleMatch = text.match(/[\u4e00-\u9fa5]{4,10}/); if(titleMatch) document.getElementById('oId').value = titleMatch[0]; }
+
+        const buyMatch = text.match(/(?:实付款|合计|小计|应付)[：\s]*￥?(\d+(\.\d+)?)/);
+        const sellMatches = [...text.matchAll(/(?:售价|卖价|转|出|实付)[：\s]*￥?(\d+(\.\d+)?)/g)];
+        if (buyMatch) document.getElementById('bP').value = buyMatch[1];
+        if (sellMatches.length > 0) document.getElementById('sP').value = sellMatches[sellMatches.length - 1][1];
+
+        // 自动识别品类
+        const commonKeywords = ['吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '戒指', '拍立得', '盲盒'];
+        for (let kw of commonKeywords) {
+            if (text.includes(kw)) { document.getElementById('gCat').value = kw; break; }
+        }
+        if (document.getElementById('bP').value) alert("✅ 识别完成！");
+    }
+
+    // 2. 替换原生 select 的高级下拉菜单函数
+    window.currentSelectTargetId = null; // 记住当前点的是哪个框
+    
+    function openCustomSelect(targetId, optionsArray) {
+        window.currentSelectTargetId = targetId;
+        const listDiv = document.getElementById('customSelectList');
+        listDiv.innerHTML = '<div style="width: 40px; height: 5px; background: rgba(141,110,99,0.2); border-radius: 10px; margin: 0 auto 15px auto;"></div>'; // 顶部小横条
+        
+        // 循环生成选项
+        optionsArray.forEach(opt => {
+            listDiv.innerHTML += `<div class="sheet-item" onclick="selectCustomOption('${opt}')">${opt}</div>`;
+        });
+        listDiv.innerHTML += `<div class="sheet-item cancel-btn" onclick="document.getElementById('customSelectModal').style.display='none'">取消</div>`;
+        
+        document.getElementById('customSelectModal').style.display = 'flex';
+    }
+
+    function selectCustomOption(value) {
+        if (window.currentSelectTargetId) {
+            // 把选中的值填回输入框
+            let targetInput = document.getElementById(window.currentSelectTargetId);
+            targetInput.value = value.split(' (')[0]; // 取前面真正的状态值，比如"预售中"
+        }
+        document.getElementById('customSelectModal').style.display = 'none';
+    }
+
     function addGu() { 
         const b = parseFloat(document.getElementById('bP').value); 
         const s = parseFloat(document.getElementById('sP').value) || 0; // 预售时售价可为空
@@ -1144,7 +1167,7 @@ function copyCSS() {
     }
 }
 // --- ✨ 灵感一键导出功能 ---
-    function exportNovels() {
+function exportNovels() {
         if(novels.length === 0) {
             alert('🐰 你的灵感库还是空的哦，先去记录一点吧！');
             return;
@@ -1200,7 +1223,7 @@ function copyCSS() {
     }
 
     // ✨ 修复：图表界面的三大切换魔法（之前缺失的电线）
-    function switchViewMode(mode) {
+function switchViewMode(mode) {
         currentViewMode = mode;
         document.getElementById('viewBtnChart').classList.toggle('active', mode === 'chart');
         document.getElementById('viewBtnCal').classList.toggle('active', mode === 'cal');
@@ -1209,7 +1232,7 @@ function copyCSS() {
         updateStatsUI(); // 刷新一下
     }
 
-    function switchChartType(type) {
+function switchChartType(type) {
         currentChartType = type;
         const btns = document.querySelectorAll('#chartSection .stats-segment .stats-seg-btn');
         btns[0].classList.toggle('active', type === 'bar');
@@ -1220,7 +1243,7 @@ function copyCSS() {
         updateStatsUI(); // 刷新一下
     }
 
-    function switchPieType(type) {
+function switchPieType(type) {
         currentPieType = type;
         const btns = document.querySelectorAll('.pie-sub-btn');
         btns[0].classList.toggle('active', type === 'expense');
@@ -1229,5 +1252,20 @@ function copyCSS() {
     }
 
 </script>
+<div id="customPromptModal" class="frosted-modal-overlay" style="display:none;">
+        <div class="frosted-modal-box">
+            <div style="font-weight:bold; margin-bottom:15px; color:#5D4037; text-align:center;">✨ 提取订单剪切板</div>
+            <textarea id="customPromptInput" placeholder="请粘贴【淘宝】和【闲鱼】订单信息..." rows="4"></textarea>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button class="btn-light" style="flex:1; padding:10px 0;" onclick="document.getElementById('customPromptModal').style.display='none'">取消</button>
+                <button class="btn-main" style="flex:1; padding:10px 0;" onclick="confirmCustomPrompt()">确定提取</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="customSelectModal" class="frosted-modal-overlay" style="display:none; align-items:flex-end;">
+        <div class="frosted-bottom-sheet" id="customSelectList">
+            </div>
+</div>
 </body>
 </html>
