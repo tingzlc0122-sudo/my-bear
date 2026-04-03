@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta name="apple-mobile-web-app-capable" content="yes">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="小兔记账">
 <link rel="manifest" href="manifest.json">
@@ -238,8 +239,8 @@
             <div class="card glass-panel">
             <div class="card-title">📦 淘宝闲鱼转单录入</div>
             <div id="csvDropZone" class="frosted-dropzone">
-            <span id="dropZoneText">📥 拖拽淘宝 CSV 文件到此<br>或点击上传</span>
-            <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
+            <span id="dropZoneText">📥 拖拽淘宝 Excel/CSV 文件到此<br>或点击上传</span>
+            <input type="file" id="csvFileInput" accept=".csv, .xlsx, .xls" style="display:none;">
             </div>
             <button class="btn-light" onclick="parseClipPrompt()">✨ 智能提取订单剪切板</button>
             <input type="text" id="oId" placeholder="订单号/宝贝名称">
@@ -766,7 +767,7 @@
         if (!text) return;
         document.getElementById('customPromptModal').style.display = 'none'; // 关掉弹窗
 
-        // 下面是你原本的提取逻辑
+    // 下面是你原本的提取逻辑
         const orderMatch = text.match(/\d{15,20}/);
         if (orderMatch) document.getElementById('oId').value = orderMatch[0].slice(-4);
         else { const titleMatch = text.match(/[\u4e00-\u9fa5]{4,10}/); if(titleMatch) document.getElementById('oId').value = titleMatch[0]; }
@@ -776,7 +777,7 @@
         if (buyMatch) document.getElementById('bP').value = buyMatch[1];
         if (sellMatches.length > 0) document.getElementById('sP').value = sellMatches[sellMatches.length - 1][1];
 
-        // 自动识别品类
+    // 自动识别品类
         const commonKeywords = ['吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '戒指', '拍立得', '盲盒'];
         for (let kw of commonKeywords) {
             if (text.includes(kw)) { document.getElementById('gCat').value = kw; break; }
@@ -791,29 +792,29 @@
         const targetEl = document.getElementById(targetId);
         const dropdown = document.getElementById('anchoredDropdown');
         if(!targetEl || !dropdown) return;
-        // ✨ 痛点 1 解决：再点一下就收起（Toggle 开关逻辑）
+    // ✨ 痛点 1 解决：再点一下就收起（Toggle 开关逻辑）
         if (dropdown.style.display === 'flex' && window.currentSelectTargetId === targetId) {
             dropdown.style.display = 'none';
             window.currentSelectTargetId = null;
             return; // 直接退出，不再往下执行
         }
         window.currentSelectTargetId = targetId;
-        // 生成菜单选项
+    // 生成菜单选项
         dropdown.innerHTML = '';
         optionsArray.forEach(opt => {
             dropdown.innerHTML += `<div class="dropdown-item" onclick="window.selectCustomOption('${opt}', event)">${opt}</div>`;
         });        
-        // ✨ 痛点 2 解决：精准往上弹（先隐身计算高度，再定位到按钮上方）
+    // ✨ 痛点 2 解决：精准往上弹（先隐身计算高度，再定位到按钮上方）
         dropdown.style.visibility = 'hidden'; // 先隐身
         dropdown.style.display = 'flex';      // 变成 flex 才能算出行高
         const dropHeight = dropdown.offsetHeight; // 获取气泡的真实高度
         const rect = targetEl.getBoundingClientRect();        
-        // 把气泡的底部，挂在按钮的顶部（留 8px 空隙呼吸）
+    // 把气泡的底部，挂在按钮的顶部（留 8px 空隙呼吸）
         dropdown.style.top = (rect.top + window.scrollY - dropHeight - 8) + 'px'; 
         dropdown.style.left = rect.left + 'px'; 
         dropdown.style.width = rect.width + 'px';      
         dropdown.style.visibility = 'visible'; // 算完坐标，解除隐身，触发往上冒的动画
-        // 点击外部空白处收起
+    // 点击外部空白处收起
         const closeDropdown = (e) => {
             if (!dropdown.contains(e.target) && e.target !== targetEl) {
                 dropdown.style.display = 'none';
@@ -836,7 +837,7 @@
         if(event) event.stopPropagation();
         if (window.currentSelectTargetId) {
             let targetInput = document.getElementById(window.currentSelectTargetId);
-            // 提取 "预售中" 存进输入框
+        // 提取 "预售中" 存进输入框
             targetInput.value = value.split(' ')[1] || value.split(' ')[0] || value; 
         }
         document.getElementById('anchoredDropdown').style.display = 'none'; // 选完瞬间消失
@@ -1309,22 +1310,51 @@ function switchPieType(type) {
         };
     }
 
-    function handleCSV(file) {
-        if(!file.name.endsWith('.csv')) return window.showToast('⚠️ 只能上传 CSV 格式的文件哦！');
+// ✨ 升级版：既能吃 CSV，也能生吞 Excel
+function handleCSV(file) {
+        const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+        const isCSV = file.name.endsWith('.csv');
+
+        if(!isExcel && !isCSV) return window.showToast('⚠️ 只能上传 CSV 或 Excel (.xlsx) 格式的文件哦！');
         
-        dropText.innerHTML = `⏳ 正在解析: ${file.name}...`;
+        const dropText = document.getElementById('dropZoneText');
+        const fileInput = document.getElementById('csvFileInput');
+        dropText.innerHTML = `⏳ 正在疯狂解析: ${file.name}...`;
+        
         const reader = new FileReader();
         
         reader.onload = function(e) {
-            parseTaobaoCSV(e.target.result);
-            fileInput.value = ''; // 清空输入框，方便下次上传
-            setTimeout(() => { dropText.innerHTML = '📥 拖拽淘宝 CSV 文件到此<br>或点击上传'; }, 2000);
+            try {
+                if (isExcel) {
+                    // 如果是 Excel，调用刚才装的 XLSX 魔法插件
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0]; // 拿第一张表
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    // 核心魔法：把复杂的 Excel 瞬间转化成纯文本 CSV，直接喂给咱们刚刚写好的洗单引擎！
+                    const csvText = XLSX.utils.sheet_to_csv(worksheet);
+                    parseTaobaoCSV(csvText); 
+                } else {
+                    // 如果本来就是 CSV，直接走老路
+                    parseTaobaoCSV(e.target.result);
+                }
+            } catch(err) {
+                console.error(err);
+                window.showToast('❌ 解析文件失败，请确保文件没有损坏！');
+            }
+            
+            fileInput.value = ''; // 还原输入框
+            setTimeout(() => { dropText.innerHTML = '📥 拖拽淘宝 Excel/CSV 到此<br>或点击上传'; }, 2000);
         };
         
-        // 默认使用 UTF-8 读取（如果解析出来是乱码，可以改成 'GBK'）
-        reader.readAsText(file, 'UTF-8'); 
+        // 区分读取方式：Excel 必须读成二进制，CSV 读成文本
+        if (isExcel) {
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.readAsText(file, 'UTF-8'); 
+        }
     }
-    function parseTaobaoCSV(csvText) {
+function parseTaobaoCSV(csvText) {
         const rows = csvText.split('\n');
         if(rows.length < 2) return window.showToast('⚠️ 文件为空或格式错误！');
 
