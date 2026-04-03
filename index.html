@@ -505,9 +505,8 @@
 
         picker.onscroll = updateBubbles;
 
-        // 4. 智能定位：优先停在上次选中的日期，没选过才滚到底部
+        // 4. 智能定位逻辑 (保持你之前的记忆功能)
         setTimeout(() => {
-            // 从全局变量里获取你当前选中的日期（比如 2026-03-31）
             const currentVal = window.customSelectedValue;
             let targetItem = null;
             if (currentVal) {
@@ -521,17 +520,27 @@
             }
             updateBubbles();
         }, 30);
-
-        // 5. 点击外部关闭（逻辑保持不变，确保点击其他地方能收起气泡）
+        
+        // 5. ✨ 核心交互：点击外部自动提交当前“气泡中心”的值
         setTimeout(() => { 
-            const closeP = (e) => { 
+            const closeAndSync = (e) => { 
+                // 如果点的是气泡外部
                 if (!picker.contains(e.target)) {
+                    // 🔍 找到当前正处于中心放大状态的那个气泡
+                    const activeItem = picker.querySelector('.active-bubble');
+                    if (activeItem) {
+                        const val = activeItem.getAttribute('data-val');
+                        // 🚀 自动触发选择指令，更新下方金额数据
+                        selectFromPicker(type, val, e);
+                    }
+                    // 彻底关闭并移除监听
                     picker.style.display = 'none'; 
-                    document.removeEventListener('click', closeP); 
+                    document.removeEventListener('click', closeAndSync); 
                 }
             };
-            document.addEventListener('click', closeP);
-        }, 10);
+            // 使用 capture 模式确保在其他点击事件前触发
+            document.addEventListener('click', closeAndSync); 
+        }, 50);
     }
 
     function selectFromPicker(range, value, event) {
@@ -845,7 +854,7 @@
             }); 
         }
                 else { 
-            // 📈 对比图/趋势图：保持与主界面金额颜色 100% 一致
+    // 📈 对比图/趋势图：保持与主界面金额颜色 100% 一致
             myChartInstance = new Chart(ctx, { 
                 type: currentChartType, 
                 data: { 
