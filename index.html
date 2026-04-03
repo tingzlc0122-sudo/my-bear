@@ -237,6 +237,10 @@
     <div id="pageRabbit" class="page">
             <div class="card glass-panel">
             <div class="card-title">📦 淘宝闲鱼转单录入</div>
+            <div id="csvDropZone" class="frosted-dropzone">
+            <span id="dropZoneText">📥 拖拽淘宝 CSV 文件到此<br>或点击上传</span>
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
+            </div>
             <button class="btn-light" onclick="parseClipPrompt()">✨ 智能提取订单剪切板</button>
             <input type="text" id="oId" placeholder="订单号/宝贝名称">
             <div style="display: flex; gap: 10px;"><input type="number" id="bP" placeholder="买入实付"><input type="number" id="sP" placeholder="闲鱼售价(预售可不填)"></div>
@@ -1281,7 +1285,178 @@ function switchPieType(type) {
         btns[1].classList.toggle('active', type === 'income');
         updateStatsUI(); // 刷新一下
     }
+ // ✨ 全新：CSV 批量导入引擎
+    const dropZone = document.getElementById('csvDropZone');
+    const fileInput = document.getElementById('csvFileInput');
+    const dropText = document.getElementById('dropZoneText');
 
+    if(dropZone && fileInput) {
+        // 点击触发文件选择
+        dropZone.onclick = () => fileInput.click();
+
+        // 拖拽交互效果
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleCSV(e.dataTransfer.files[0]);
+        };
+
+        // 选中文件后触发
+        fileInput.onchange = (e) => {
+            if (e.target.files.length) handleCSV(e.target.files[0]);
+        };
+    }
+
+    function handleCSV(file) {
+        if(!file.name.endsWith('.csv')) return window.showToast('⚠️ 只能上传 CSV 格式的文件哦！');
+        
+        dropText.innerHTML = `⏳ 正在解析: ${file.name}...`;
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            parseTaobaoCSV(e.target.result);
+            fileInput.value = ''; // 清空输入框，方便下次上传
+            setTimeout(() => { dropText.innerHTML = '📥 拖拽淘宝 CSV 文件到此<br>或点击上传'; }, 2000);
+        };
+        
+        // 默认使用 UTF-8 读取（如果解析出来是乱码，可以改成 'GBK'）
+        reader.readAsText(file, 'UTF-8'); 
+    }
+    function parseTaobaoCSV(csvText) {
+        const rows = csvText.split('\n');
+        if(rows.length < 2) return window.showToast('⚠️ 文件为空或格式错误！');
+
+        // ==========================================
+        // ⚙️ 超级谷圈雷达 & 层级配置区 (已为你满配)
+        // ==========================================
+        
+        // 1. 终极 IP 细分词库（覆盖国乙、日系偶像、热门二次元）
+        const ipList = [
+            // 国乙 & 热门女性向手游
+            '恋与深空', '恋与制作人', '光与夜之恋', '未定事件簿', '时空中的绘旅人', '世界之外', '代号鸢', 
+            '花亦山心之月', '摇光录', '食物语', '无期迷途', '第五人格', '绝对演绎', '掌门太忙',
+            
+            // 叠纸全家桶
+            '无限暖暖', '闪耀暖暖', '奇迹暖暖', '百面千相',
+            
+            // 日系大热/偶像企划/女性向吃谷重灾区
+            '偶像梦幻祭', 'es2', 'Ensemble Stars', '世界计划', 'pjsk', '初音未来', '吉伊卡哇', 'chiikawa', 
+            '排球少年', '蓝色监狱', '咒术回战', '名侦探柯南', '葬送的芙莉莲', '孤独摇滚', '间谍过家家', '鬼灭之刃',
+            
+            // 泛二次元顶流大厂
+            '原神', '星穹铁道', '星铁', '崩坏3', '明日方舟', '重返未来'
+        ];
+        
+        // 2. 扩充版：谷子特征词（拦截日用品的核心防线）
+        const guziKeywords = [
+            '吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '指娃', '戒指', '拍立得', 
+            '盲盒', '手办', '特典', '流沙', '预售', '透卡', '镭射票', '麻将', '痛包', '周边'
+        ];
+
+        // ==========================================
+
+        const headers = rows[0].split(',');
+        let idIdx = -1, titleIdx = -1, priceIdx = -1, dateIdx = -1, statusIdx = -1, shopIdx = -1;
+
+        headers.forEach((h, i) => {
+            if(h.includes('订单编号')) idIdx = i;
+            if(h.includes('标题') || h.includes('商品名称')) titleIdx = i;
+            if(h.includes('实际支付') || h.includes('实付金额')) priceIdx = i;
+            if(h.includes('创建时间') || h.includes('下单时间')) dateIdx = i;
+            if(h.includes('订单状态') || h.includes('交易状态')) statusIdx = i; 
+            if(h.includes('店铺')) shopIdx = i; 
+        });
+
+        if(idIdx === -1 || priceIdx === -1) {
+            return window.showToast('❌ 找不到必要列，请检查表头！');
+        }
+
+        let importCount = 0, skipCount = 0, refundSkipCount = 0, dailySkipCount = 0;
+
+        for(let i = 1; i < rows.length; i++) {
+            let rowText = rows[i].trim();
+            if(!rowText) continue;
+
+            const cols = rowText.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            if(cols.length <= Math.max(idIdx, priceIdx)) continue;
+
+            // 🛑 1. 状态拦截（严格拦截凑单和历史退款）
+            let tbStatus = statusIdx !== -1 ? cols[statusIdx].replace(/["=\s]/g, '') : '';
+            if (tbStatus.includes('关闭') || tbStatus.includes('退款')) {
+                refundSkipCount++;
+                continue; 
+            }
+
+            let title = titleIdx !== -1 ? cols[titleIdx].replace(/"/g, '') : '未知商品';
+            let shopName = shopIdx !== -1 ? cols[shopIdx].replace(/["=\s]/g, '') : '未知店铺';
+
+            // 🔍 2. 提取 IP
+            let itemIP = '其他/综合'; 
+            for (let ip of ipList) {
+                if (title.includes(ip) || shopName.includes(ip)) { 
+                    itemIP = ip; 
+                    break; 
+                }
+            }
+
+            // 🛑 3. 日用品防线
+            let isGuzi = false;
+            if (itemIP !== '其他/综合') isGuzi = true; 
+            if (shopName.includes('旗舰店') && (shopName.includes('游戏') || shopName.includes('动漫') || shopName.includes('官方'))) isGuzi = true;
+            if (shopName.includes('叠纸') || shopName.includes('米哈游') || shopName.includes('光与夜之恋') || shopName.includes('模玩熊')) isGuzi = true;
+            if (guziKeywords.some(kw => title.includes(kw))) isGuzi = true;
+            
+            if (!isGuzi) {
+                dailySkipCount++;
+                continue;
+            }
+
+            // 🔍 4. 提取具体品类
+            let cat = '其他';
+            for (let kw of guziKeywords) {
+                if (title.includes(kw)) { cat = kw; break; }
+            }
+
+            let orderId = cols[idIdx].replace(/["=\s]/g, '');
+            let price = parseFloat(cols[priceIdx].replace(/["￥\s]/g, ''));
+            let dateStr = dateIdx !== -1 ? cols[dateIdx].replace(/["=\s]/g, '') : getTodayString();
+            let shortDate = dateStr.length >= 10 ? dateStr.substring(0, 10) : getTodayString();
+            
+            if(!orderId || isNaN(price)) continue;
+
+            const shortId = orderId.slice(-4);
+            const exists = db.some(r => r.id === shortId && r.buy === price);
+            
+            if(!exists) {
+                db.unshift({
+                    type: '转单',
+                    id: shortId,
+                    buy: price,
+                    sell: 0,
+                    status: '预售中', 
+                    category: cat,
+                    ip: itemIP,       
+                    shop: shopName,   
+                    profit: "0.00",
+                    date: shortDate 
+                });
+                importCount++;
+            } else {
+                skipCount++;
+            }
+        }
+
+        if(importCount > 0) {
+            saveAll();
+            rdr(); 
+            window.showToast(`✅ 导入 ${importCount} 个谷子订单！\n(排除了 ${dailySkipCount} 个日用开支，拦截了 ${refundSkipCount} 个退款)`);
+        } else {
+            window.showToast(`⚠️ 无新订单导入\n(过滤了 ${dailySkipCount} 个日用开支，拦截 ${refundSkipCount} 个退款)`);
+        }
+    }
+    
 </script>
 <div id="anchoredDropdown" class="frosted-dropdown" style="display:none;"></div>
 
