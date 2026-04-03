@@ -1369,77 +1369,74 @@ function handleCSV(file) {
         if (isExcel) reader.readAsArrayBuffer(file);
         else reader.readAsText(file, 'UTF-8'); 
     }
-function parseTaobaoCSV(csvText) {
+    function parseTaobaoCSV(csvText) {
         const rows = csvText.split('\n');
         if(rows.length < 2) return window.showToast('⚠️ 文件为空或格式错误！');
-
         // ==========================================
-        // ⚙️ 超级谷圈雷达 & 层级配置区 (已为你满配)
+        // ⚙️ 满血版：IP 与 谷子特征词库
         // ==========================================
-        
-        // 1. 终极 IP 细分词库（覆盖国乙、日系偶像、热门二次元）
         const ipList = [
             // 国乙 & 热门女性向手游
             '恋与深空', '恋与制作人', '光与夜之恋', '未定事件簿', '时空中的绘旅人', '世界之外', '代号鸢', 
             '花亦山心之月', '摇光录', '食物语', '无期迷途', '第五人格', '绝对演绎', '掌门太忙',
-            
             // 叠纸全家桶
             '无限暖暖', '闪耀暖暖', '奇迹暖暖', '百面千相',
-            
             // 日系大热/偶像企划/女性向吃谷重灾区
             '偶像梦幻祭', 'es2', 'Ensemble Stars', '世界计划', 'pjsk', '初音未来', '吉伊卡哇', 'chiikawa', 
             '排球少年', '蓝色监狱', '咒术回战', '名侦探柯南', '葬送的芙莉莲', '孤独摇滚', '间谍过家家', '鬼灭之刃',
-            
             // 泛二次元顶流大厂
             '原神', '星穹铁道', '星铁', '崩坏3', '明日方舟', '重返未来'
         ];
         
-        // 2. 扩充版：谷子特征词（拦截日用品的核心防线）
         const guziKeywords = [
             '吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '指娃', '戒指', '拍立得', 
             '盲盒', '手办', '特典', '流沙', '预售', '透卡', '镭射票', '麻将', '痛包', '周边'
         ];
+        // ==========================================
 
-        // ✨ 升级：智能向下扫描，寻找真正的表头（解决淘宝加废话的问题）
+        // ✨ 寻找你专属的真实表头
         let headerRowIdx = -1;
-        // 扫描前 10 行，只要哪行有“订单编号”，哪行就是真正的表头！
-        for(let i = 0; i < Math.min(10, rows.length); i++) {
-            if(rows[i].includes('订单编号')) {
+        for(let i = 0; i < Math.min(15, rows.length); i++) {
+            // 只要这一行同时包含你表头里的这两个关键字段，就锁定它
+            if(rows[i].includes('订单号') && rows[i].includes('实付金额')) {
                 headerRowIdx = i;
                 break;
             }
         }
 
         if(headerRowIdx === -1) {
-            alert('❌ 找遍了表格前10行，都没看到【订单编号】这四个字！请确认这是不是淘宝导出的订单表？');
+            alert('❌ 找遍了前15行都没看到【订单号】和【实付金额】！请检查文件是否正确。');
             return;
         }
 
         const headers = rows[headerRowIdx].split(',');
         let idIdx = -1, titleIdx = -1, priceIdx = -1, dateIdx = -1, statusIdx = -1, shopIdx = -1;
 
+        // ✨ 严丝合缝地对接你的 9 个表头字段
         headers.forEach((h, i) => {
-            if(h.includes('订单编号')) idIdx = i;
-            if(h.includes('标题') || h.includes('商品名称')) titleIdx = i;
-            if(h.includes('实际支付') || h.includes('实付金额')) priceIdx = i;
-            if(h.includes('创建时间') || h.includes('下单时间')) dateIdx = i;
-            if(h.includes('订单状态') || h.includes('交易状态')) statusIdx = i; 
-            if(h.includes('店铺')) shopIdx = i; 
+            if(h.includes('订单号')) idIdx = i;
+            if(h.includes('商品名称')) titleIdx = i;
+            if(h.includes('实付金额')) priceIdx = i;
+            if(h.includes('订单提交时间')) dateIdx = i;
+            if(h.includes('订单状态')) statusIdx = i; 
+            if(h.includes('店铺名称')) shopIdx = i; 
         });
 
         if(idIdx === -1 || priceIdx === -1) {
-            alert('❌ 虽然找到了表头行，但缺了【订单编号】或【实际支付】，请检查！');
+            alert('❌ 找到了表头行，但匹配字段索引失败了！');
             return;
         }
 
         let importCount = 0, skipCount = 0, refundSkipCount = 0, dailySkipCount = 0;
 
-        // ✨ 升级：从真正表头的【下一行】开始读取数据，而不是死板地从第 2 行开始
         for(let i = headerRowIdx + 1; i < rows.length; i++) {
             let rowText = rows[i].trim();
             if(!rowText) continue;
 
-            // 🛑 1. 状态拦截（严格拦截凑单和历史退款）
+            const cols = rowText.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            if(cols.length <= Math.max(idIdx, priceIdx)) continue;
+
+            // 🛑 1. 状态拦截（关闭、退款）
             let tbStatus = statusIdx !== -1 ? cols[statusIdx].replace(/["=\s]/g, '') : '';
             if (tbStatus.includes('关闭') || tbStatus.includes('退款')) {
                 refundSkipCount++;
@@ -1461,8 +1458,8 @@ function parseTaobaoCSV(csvText) {
             // 🛑 3. 日用品防线
             let isGuzi = false;
             if (itemIP !== '其他/综合') isGuzi = true; 
-            if (shopName.includes('旗舰店') && (shopName.includes('游戏') || shopName.includes('动漫') || shopName.includes('官方'))) isGuzi = true;
-            if (shopName.includes('叠纸') || shopName.includes('米哈游') || shopName.includes('光与夜之恋') || shopName.includes('模玩熊')) isGuzi = true;
+            if (shopName.includes('旗舰店') && (shopName.includes('游戏') || shopName.includes('动漫'))) isGuzi = true;
+            if (shopName.includes('叠纸') || shopName.includes('光与夜之恋') || shopName.includes('模玩熊')) isGuzi = true;
             if (guziKeywords.some(kw => title.includes(kw))) isGuzi = true;
             
             if (!isGuzi) {
@@ -1476,9 +1473,12 @@ function parseTaobaoCSV(csvText) {
                 if (title.includes(kw)) { cat = kw; break; }
             }
 
-            let orderId = cols[idIdx].replace(/["=\s]/g, '');
-            let price = parseFloat(cols[priceIdx].replace(/["￥\s]/g, ''));
-            let dateStr = dateIdx !== -1 ? cols[dateIdx].replace(/["=\s]/g, '') : getTodayString();
+            let orderId = cols[idIdx].replace(/["=\s']/g, ''); 
+            let priceText = cols[priceIdx].replace(/["=\s'￥]/g, ''); 
+            let price = parseFloat(priceText);
+            
+            let dateStr = dateIdx !== -1 ? cols[dateIdx].replace(/["=\s']/g, '') : getTodayString();
+            // 提取 "YYYY-MM-DD" 部分（应对表头为"订单提交时间"时附带的精确秒数）
             let shortDate = dateStr.length >= 10 ? dateStr.substring(0, 10) : getTodayString();
             
             if(!orderId || isNaN(price)) continue;
@@ -1508,9 +1508,9 @@ function parseTaobaoCSV(csvText) {
         if(importCount > 0) {
             saveAll();
             rdr(); 
-            window.showToast(`✅ 导入 ${importCount} 个谷子订单！\n(排除了 ${dailySkipCount} 个日用开支，拦截了 ${refundSkipCount} 个退款)`);
+            window.showToast(`✅ 导入 ${importCount} 个谷子订单！\n(排除日用 ${dailySkipCount} 个，拦截退款 ${refundSkipCount} 个)`);
         } else {
-            window.showToast(`⚠️ 无新订单导入\n(过滤了 ${dailySkipCount} 个日用开支，拦截 ${refundSkipCount} 个退款)`);
+            window.showToast(`⚠️ 无新订单导入\n(过滤了 ${dailySkipCount} 个日用品)`);
         }
     }
     
