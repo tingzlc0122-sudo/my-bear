@@ -1369,7 +1369,7 @@ function handleCSV(file) {
         if (isExcel) reader.readAsArrayBuffer(file);
         else reader.readAsText(file, 'UTF-8'); 
     }
-    function parseTaobaoCSV(csvText) {
+function parseTaobaoCSV(csvText) {
         const rows = csvText.split('\n');
         if(rows.length < 2) return window.showToast('⚠️ 文件为空或格式错误！');
 
@@ -1416,112 +1416,147 @@ function handleCSV(file) {
         }
 
         let importCount = 0, skipCount = 0, refundSkipCount = 0, dailySkipCount = 0;
+    // ✨ 核心 1：处理编码，彻底终结中文乱码
+    function handleCSV(file) {
+        const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+        const isCSV = file.name.endsWith('.csv');
+        if(!isExcel && !isCSV) return window.showToast('⚠️ 格式不支持哦');
+        
+        const dropText = document.getElementById('dropZoneText');
+        window.isParsing = true;
+        dropText.innerHTML = `⏳ 正在深度解析全量词库中...`;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                if (isExcel) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const csvText = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]]);
+                    parseTaobaoCSV(csvText); 
+                } else {
+                    // 🎯 强制 GBK 解码，解决表格里的中文乱码
+                    const decoder = new TextDecoder('gbk'); 
+                    const csvText = decoder.decode(e.target.result);
+                    parseTaobaoCSV(csvText);
+                }
+            } catch(err) {
+                window.showToast('❌ 文件读取失败');
+            } finally {
+                window.isParsing = false;
+                setTimeout(() => { dropText.innerHTML = '📥 拖拽表格到此上传'; }, 2000);
+            }
+        };
+        
+        if (isExcel || isCSV) reader.readAsArrayBuffer(file);
+    }
 
-        // ✨ 新增：订单记忆大脑（解决淘宝合并单元格漏掉商品的问题）
-        let lastOrderId = '';
-        let lastDate = '';
-        let lastStatus = '';
-        let lastShop = '';
-        let lastTotalPrice = 0;
+    // ✨ 核心 2：满血版解析引擎（集成全量词库 + 智能记忆 + 乱码纠错）
+    function parseTaobaoCSV(csvText) {
+        const rows = csvText.split('\n');
+        if(rows.length < 2) return;
+
+        // ==========================================
+        // 📚 满血版超级词库 (已全部找回)
+        // ==========================================
+        const ipList = [
+            // 国乙 & 热门女性向手游
+            '恋与深空', '恋与制作人', '光与夜之恋', '未定事件簿', '时空中的绘旅人', '世界之外', '代号鸢', 
+            '花亦山心之月', '摇光录', '食物语', '无期迷途', '第五人格', '绝对演绎', '掌门太忙',
+            // 叠纸全家桶
+            '无限暖暖', '闪耀暖暖', '奇迹暖暖', '百面千相',
+            // 日系大热/偶像企划/女性向重灾区
+            '偶像梦幻祭', 'es2', 'Ensemble Stars', '世界计划', 'pjsk', '初音未来', '吉伊卡哇', 'chiikawa', 
+            '排球少年', '蓝色监狱', '咒术回战', '名侦探柯南', '葬送的芙莉莲', '孤独摇滚', '间谍过家家', '鬼灭之刃',
+            // 泛二次元顶流大厂
+            '原神', '星穹铁道', '星铁', '崩坏3', '明日方舟', '重返未来'
+        ];
+        
+        const guziKeywords = [
+            '吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '指娃', '戒指', '拍立得', 
+            '盲盒', '手办', '特典', '流沙', '预售', '透卡', '镭射票', '麻将', '痛包', '周边'
+        ];
+
+        // ==========================================
+
+        let headerRowIdx = -1;
+        for(let i = 0; i < Math.min(15, rows.length); i++) {
+            if(rows[i].includes('订单号') && (rows[i].includes('实付金额') || rows[i].includes('实付'))) {
+                headerRowIdx = i;
+                break;
+            }
+        }
+        if(headerRowIdx === -1) return alert('❌ 无法识别表头，请确认是否为导出的订单表');
+
+        const headers = rows[headerRowIdx].split(',');
+        let idIdx = -1, titleIdx = -1, priceIdx = -1, dateIdx = -1, statusIdx = -1, shopIdx = -1;
+        headers.forEach((h, i) => {
+            const head = h.trim();
+            if(head.includes('订单号')) idIdx = i;
+            if(head.includes('商品名称')) titleIdx = i;
+            if(head.includes('商品金额') || head.includes('实付金额')) priceIdx = i;
+            if(head.includes('订单提交时间')) dateIdx = i;
+            if(head.includes('订单状态')) statusIdx = i;
+            if(head.includes('店铺名称')) shopIdx = i;
+        });
+
+        let lastId = '', lastDate = '', lastStatus = '', lastShop = '';
+        let importCount = 0;
 
         for(let i = headerRowIdx + 1; i < rows.length; i++) {
-            let rowText = rows[i].trim();
-            if(!rowText) continue;
+            const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            if(cols.length < 5) continue;
 
-            const cols = rowText.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            if(cols.length <= Math.max(idIdx, titleIdx)) continue;
-
-            let rawId = cols[idIdx].replace(/["=\s']/g, '');
-            
-            // 如果这一行有单号，说明是一个新订单，更新大脑记忆
+            // 🧠 记忆逻辑：处理合并单元格，如果这行没单号，就沿用上一行的信息
+            let rawId = cols[idIdx]?.replace(/["=\s']/g, '');
             if (rawId && rawId.length > 5) {
-                lastOrderId = rawId;
-                lastDate = dateIdx !== -1 ? cols[dateIdx].replace(/["=\s']/g, '') : getTodayString();
-                lastStatus = statusIdx !== -1 ? cols[statusIdx].replace(/["=\s]/g, '') : '';
-                lastShop = shopIdx !== -1 ? cols[shopIdx].replace(/["=\s]/g, '') : '未知店铺';
-                let tp = priceIdx !== -1 ? cols[priceIdx].replace(/["=\s'￥]/g, '') : '0';
-                lastTotalPrice = parseFloat(tp) || 0;
-            } else {
-                // 如果这一行没有单号，说明它是合并单元格里的子商品！调用大脑里的记忆
-                if (!lastOrderId) continue; 
+                lastId = rawId;
+                lastDate = cols[dateIdx]?.substring(0,10) || getTodayString();
+                lastStatus = cols[statusIdx] || '';
+                lastShop = cols[shopIdx] || '';
             }
 
-            // 🛑 1. 状态拦截（使用记忆里的状态，连带子商品一起拦截退款单）
-            if (lastStatus.includes('关闭') || lastStatus.includes('退款')) {
-                continue; 
-            }
+            // 过滤无效订单（如交易关闭或退款）
+            if (!lastId || lastStatus.includes('关闭') || lastStatus.includes('退款')) continue;
 
-            let title = titleIdx !== -1 ? cols[titleIdx].replace(/"/g, '') : '未知商品';
+            let title = cols[titleIdx] || '';
+            let price = parseFloat(cols[priceIdx]?.replace(/["￥\s]/g, '')) || 0;
             
-            // 🔍 2. 提取 IP
-            let itemIP = '其他/综合'; 
-            for (let ip of ipList) {
-                if (title.includes(ip) || lastShop.includes(ip)) { 
-                    itemIP = ip; break; 
-                }
-            }
+            // 跳过金额无效的行
+            if (price <= 0) continue;
 
-            // 🛑 3. 日用品防线
-            let isGuzi = false;
-            if (itemIP !== '其他/综合') isGuzi = true; 
-            if (lastShop.includes('旗舰店') && (lastShop.includes('游戏') || lastShop.includes('动漫'))) isGuzi = true;
-            if (lastShop.includes('叠纸') || lastShop.includes('光与夜之恋') || lastShop.includes('模玩熊')) isGuzi = true;
-            if (guziKeywords.some(kw => title.includes(kw))) isGuzi = true;
-            
-            if (!isGuzi) {
-                dailySkipCount++;
-                continue;
-            }
-
-            // 🔍 4. 提取具体品类
+            // 识别分类与 IP
+            let itemIP = '其他';
+            for (let ip of ipList) { if (title.includes(ip) || lastShop.includes(ip)) { itemIP = ip; break; } }
             let cat = '其他';
-            for (let kw of guziKeywords) {
-                if (title.includes(kw)) { cat = kw; break; }
+            for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
+
+            // 🛑 处理 e+18 科学计数法导致的重复 ID 拦截
+            let shortId = lastId.slice(-4);
+            if (shortId.includes('+') || shortId.includes('e')) {
+                // 如果单号乱码了，用随机后缀防止被系统“防重机制”拦截
+                shortId = '乱码' + Math.floor(Math.random() * 100);
             }
 
-            // ✨ 核心修复 1：优先使用单件【商品金额】算作入库价格
-            let itemPriceText = itemPriceIdx !== -1 ? cols[itemPriceIdx].replace(/["=\s'￥]/g, '') : '';
-            let finalPrice = parseFloat(itemPriceText);
-            if (isNaN(finalPrice)) finalPrice = lastTotalPrice;
-
-            // ✨ 核心修复 2：处理 Excel 的 e+18 报错
-            let shortId = lastOrderId.slice(-4);
-            if (shortId.includes('e+') || shortId === '+18') {
-                // 给你一个明显的提示，但不阻断导入
-                shortId = '错码' + Math.floor(Math.random() * 99); 
-            }
-            
-            let shortDate = lastDate.length >= 10 ? lastDate.substring(0, 10) : getTodayString();
-            
-            // ✨ 防重录入逻辑更精细，同一个错码同一天同一个谷子才算重复
-            const exists = db.some(r => r.id === shortId && r.ip === itemIP && r.category === cat && r.buy === finalPrice);
-            
-            if(!exists) {
-                db.unshift({
-                    type: '转单',
-                    id: shortId,
-                    buy: finalPrice,
-                    sell: 0,
-                    status: '预售中', 
-                    category: cat,
-                    ip: itemIP,       
-                    shop: lastShop,   
-                    profit: "0.00",
-                    date: shortDate 
-                });
-                importCount++;
-            } else {
-                skipCount++;
-            }
+            // 存入数据库
+            db.unshift({
+                type: '转单',
+                id: shortId,
+                buy: price,
+                sell: 0,
+                status: '预售中', 
+                category: cat,
+                ip: itemIP,       
+                shop: lastShop,   
+                profit: "0.00",
+                date: lastDate 
+            });
+            importCount++;
         }
 
-        if(importCount > 0) {
-            saveAll();
-            rdr(); 
-            window.showToast(`✅ 成功导入 ${importCount} 个谷子商品！\n(排除日用品 ${dailySkipCount} 件)`);
-        } else {
-            window.showToast(`⚠️ 无新谷子导入\n(可能是重复录入，或全被拦截了)`);
-        }
+        saveAll();
+        rdr();
+        window.showToast(`✅ 已成功解析并导入 ${importCount} 个谷子商品！`);
     }
 
 </script>
