@@ -244,11 +244,11 @@
             <input list="dynamicCatList" id="gCat" placeholder="商品品类 (如:吧唧,可直接手填)">
             <datalist id="dynamicCatList"></datalist>
             
-            <input type="text" id="gS" value="预售中" readonly placeholder="请选择状态" 
-                   onclick="openCustomSelect('gS', ['⏳ 预售中 (占用本金)', '✅ 已转单 (核算利润)', '❌ 已退款 (资金回流)'])" 
-                   style="cursor: pointer; background: rgba(255,255,255,0.4); text-align: center;">
-
-            <button class="btn-main" onclick="addGu()">保存转单记录</button>
+    <input type="text" id="gS" value="预售中" readonly 
+                   onclick="window.openCustomSelect('gS', ['⏳ 预售中 (占用本金)', '✅ 已转单 (核算利润)', '❌ 已退款 (资金回流)'], event)" 
+                   style="cursor: pointer; background: rgba(255,255,255,0.4); text-align: center; border-radius: 18px; color: #5D4037; font-weight: bold; border: 1px solid rgba(141,110,99,0.3); padding: 12px; outline: none; width: 100%; box-sizing: border-box;">
+            
+    <button class="btn-main" onclick="addGu()">保存转单记录</button>
         </div>
 
         <div class="card glass-panel big-bubble">
@@ -780,31 +780,52 @@
         if (document.getElementById('bP').value) alert("✅ 识别完成！");
     }
 
-    // 2. 替换原生 select 的高级下拉菜单函数
-    window.currentSelectTargetId = null; // 记住当前点的是哪个框
+        // ✨ 新版悬浮气泡下拉逻辑
+    window.currentSelectTargetId = null; 
     
-    function openCustomSelect(targetId, optionsArray) {
-        window.currentSelectTargetId = targetId;
-        const listDiv = document.getElementById('customSelectList');
-        listDiv.innerHTML = '<div style="width: 40px; height: 5px; background: rgba(141,110,99,0.2); border-radius: 10px; margin: 0 auto 15px auto;"></div>'; // 顶部小横条
-        
-        // 循环生成选项
-        optionsArray.forEach(opt => {
-            listDiv.innerHTML += `<div class="sheet-item" onclick="selectCustomOption('${opt}')">${opt}</div>`;
-        });
-        listDiv.innerHTML += `<div class="sheet-item cancel-btn" onclick="document.getElementById('customSelectModal').style.display='none'">取消</div>`;
-        
-        document.getElementById('customSelectModal').style.display = 'flex';
-    }
+    window.openCustomSelect = function(targetId, optionsArray, event) {
+        if(event) event.stopPropagation(); // 防止点击穿透
 
-    function selectCustomOption(value) {
+    window.currentSelectTargetId = targetId;
+        const targetEl = document.getElementById(targetId);
+        const dropdown = document.getElementById('anchoredDropdown');
+        
+        if(!targetEl || !dropdown) return;
+
+        // 生成菜单选项
+        dropdown.innerHTML = '';
+        optionsArray.forEach(opt => {
+            dropdown.innerHTML += `<div class="dropdown-item" onclick="window.selectCustomOption('${opt}', event)">${opt}</div>`;
+        });
+        
+        // ✨ 核心定位魔法：获取按钮的坐标，让气泡挂在它正下方
+        const rect = targetEl.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + window.scrollY + 8) + 'px'; 
+        dropdown.style.left = rect.left + 'px'; 
+        dropdown.style.width = rect.width + 'px'; 
+        
+        dropdown.style.display = 'flex';
+
+        // 点击屏幕空白处，自动收起气泡
+        const closeDropdown = (e) => {
+            if (!dropdown.contains(e.target) && e.target !== targetEl) {
+                dropdown.style.display = 'none';
+                document.removeEventListener('click', closeDropdown);
+            }
+        };
+        setTimeout(() => { document.addEventListener('click', closeDropdown); }, 10);
+    };
+
+    window.selectCustomOption = function(value, event) {
+        if(event) event.stopPropagation();
         if (window.currentSelectTargetId) {
-            // 把选中的值填回输入框
             let targetInput = document.getElementById(window.currentSelectTargetId);
-            targetInput.value = value.split(' (')[0]; // 取前面真正的状态值，比如"预售中"
+            // 提取 "预售中" 存进输入框
+            targetInput.value = value.split(' ')[1] || value.split(' ')[0] || value; 
         }
-        document.getElementById('customSelectModal').style.display = 'none';
-    }
+        document.getElementById('anchoredDropdown').style.display = 'none'; // 选完瞬间消失
+    };
+
 
     function addGu() { 
         const b = parseFloat(document.getElementById('bP').value); 
@@ -1252,20 +1273,8 @@ function switchPieType(type) {
     }
 
 </script>
-<div id="customPromptModal" class="frosted-modal-overlay" style="display:none;">
-        <div class="frosted-modal-box">
-            <div style="font-weight:bold; margin-bottom:15px; color:#5D4037; text-align:center;">✨ 提取订单剪切板</div>
-            <textarea id="customPromptInput" placeholder="请粘贴【淘宝】和【闲鱼】订单信息..." rows="4"></textarea>
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <button class="btn-light" style="flex:1; padding:10px 0;" onclick="document.getElementById('customPromptModal').style.display='none'">取消</button>
-                <button class="btn-main" style="flex:1; padding:10px 0;" onclick="confirmCustomPrompt()">确定提取</button>
-            </div>
-        </div>
-    </div>
+<div id="anchoredDropdown" class="frosted-dropdown" style="display:none;"></div>
 
-    <div id="customSelectModal" class="frosted-modal-overlay" style="display:none; align-items:flex-end;">
-        <div class="frosted-bottom-sheet" id="customSelectList">
-            </div>
 </div>
 </body>
 </html>
