@@ -235,17 +235,29 @@
     </div>
 
     <div id="pageRabbit" class="page">
-        <div class="card glass-panel">
+            <div class="card glass-panel">
             <div class="card-title">📦 淘宝闲鱼转单录入</div>
             <button class="btn-light" onclick="parseClipPrompt()">✨ 智能提取订单剪切板</button>
             <input type="text" id="oId" placeholder="订单号/宝贝名称">
-            <div style="display: flex; gap: 10px;"><input type="number" id="bP" placeholder="买入实付"><input type="number" id="sP" placeholder="闲鱼售价"></div>
+            <div style="display: flex; gap: 10px;"><input type="number" id="bP" placeholder="买入实付"><input type="number" id="sP" placeholder="闲鱼售价(预售可不填)"></div>
+            
+            <select id="gCat">
+                <option value="吧唧">🔘 吧唧</option>
+                <option value="色纸">📄 色纸</option>
+                <option value="挂件">🔑 挂件</option>
+                <option value="立牌">🧍 立牌</option>
+                <option value="生日谷">🎂 生日谷</option>
+                <option value="其他">📦 其他</option>
+            </select>
+            
             <select id="gS">
                 <option value="预售中">⏳ 预售中 (占用本金)</option>
                 <option value="已转单">✅ 已转单 (核算利润)</option>
+                <option value="已退款">❌ 已退款 (资金回流)</option>
             </select>
             <button class="btn-main" onclick="addGu()">保存转单记录</button>
         </div>
+
         <div class="card glass-panel big-bubble">
             <div class="card-title">🧾 转单流水 <span style="font-size: 11px; color:var(--text-light);">左滑删除 / 点击修改</span></div>
             <div id="guList" style="max-height: 300px; overflow-y: auto;"></div>
@@ -286,6 +298,13 @@
                 <div id="chartContainer"><canvas id="myChart"></canvas></div>
             </div>
             <div id="calSection" style="display: none;"><div class="cal-week-row"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div><div class="cal-grid" id="calendarGrid"></div></div>
+        </div>
+
+        <div class="card glass-panel" style="margin-top: 15px;">
+            <div class="card-title">🔥 选品转化率 (好卖指数)</div>
+            <div id="conversionRateList" style="margin-top: 15px;">
+                <div style="text-align:center; font-size:12px; color:var(--text-light);">录入转单数据后将自动生成分析图表</div>
+            </div>
         </div>
     </div>
 
@@ -727,7 +746,26 @@
 
     function confirmSheetAction() { const amt = parseFloat(document.getElementById('sheetAmount').value); if (!amt) return alert('填入金额'); const dateStr = document.getElementById('sheetDate').value; if (!dateStr) return; let cat = currentSheetType !== '存款' ? document.getElementById('sheetCategory').value : ''; const remark = document.getElementById('sheetRemark').value || '无备注'; if(currentSheetType === '收入') curSav += amt; else if(currentSheetType === '支出') curSav -= amt; else curSav = amt; db.unshift({ type: '日常', detail: currentSheetType, category: cat, remark: remark, amt: amt, date: dateStr, timeStr: getTimeString(), diaryText: '', imageBase64: '' }); localStorage.setItem('evan_sav_val', curSav); saveAll(); closeAllModals(); }
     function parseClipPrompt() { const text = prompt("粘贴淘宝闲鱼信息："); if (!text) return; const orderMatch = text.match(/\d{15,20}/); const priceMatch = text.match(/实付款[:\s]*(\d+\.\d+)/) || text.match(/￥(\d+\.\d+)/); if(orderMatch) document.getElementById('oId').value = orderMatch[ orderMatch.length - 1].slice(-4); if(priceMatch) document.getElementById('bP').value = priceMatch[1]; }
-    function addGu() { const b = parseFloat(document.getElementById('bP').value); const s = parseFloat(document.getElementById('sP').value); if(!b || !s) return alert('填完整信息'); db.unshift({ type: '转单', id: document.getElementById('oId').value || '单据', buy: b, sell: s, status: document.getElementById('gS').value, profit: (s - b).toFixed(2), date: getTodayString() }); saveAll(); document.getElementById('oId').value=''; document.getElementById('bP').value = ''; document.getElementById('sP').value = ''; }
+    function addGu() { 
+        const b = parseFloat(document.getElementById('bP').value); 
+        const s = parseFloat(document.getElementById('sP').value) || 0; // 预售时售价可为空
+        if(!b) return alert('买入实付金额必须填写哦！'); 
+        
+        db.unshift({ 
+            type: '转单', 
+            id: document.getElementById('oId').value || '单据', 
+            buy: b, 
+            sell: s, 
+            status: document.getElementById('gS').value, 
+            category: document.getElementById('gCat').value, // ✨ 把品类存入数据库
+            profit: (s - b).toFixed(2), 
+            date: getTodayString() 
+        }); 
+        saveAll(); 
+        document.getElementById('oId').value=''; 
+        document.getElementById('bP').value = ''; 
+        document.getElementById('sP').value = ''; 
+    }
     function saveAll() { localStorage.setItem('evan_rabbit_v4', JSON.stringify(db)); rdr(); if(document.getElementById('pageStats').classList.contains('active')) updateStatsUI(); }
     function openInteractiveCalendar(type) { renderInteractiveCalendar(type); document.getElementById('overlay').style.display = 'block'; document.getElementById('calendar-modal').style.display = 'block'; }
     function switchDateRange(range) {
@@ -920,6 +958,61 @@
         } 
     }
 
+    // ✨ 全新的核心功能：计算并渲染转化率排行榜
+    function renderConversionRates() {
+        const list = document.getElementById('conversionRateList');
+        if(!list) return;
+
+        let stats = {};
+        
+        // 1. 遍历数据库统计
+        db.forEach(r => {
+            if(r.type === '转单' && r.category) {
+                if(!stats[r.category]) {
+                    stats[r.category] = { total: 0, sold: 0 };
+                }
+                // 只要不是退款，就算作总进货量（分母）
+                if(r.status !== '已退款') {
+                    stats[r.category].total++;
+                }
+                // 只有状态是“已转单”，才算成功转化（分子）
+                if(r.status === '已转单') {
+                    stats[r.category].sold++;
+                }
+            }
+        });
+
+        list.innerHTML = '';
+        
+        // 2. 排序：转化率高的排在前面
+        let sortedCats = Object.entries(stats).sort((a, b) => {
+            let rateA = a[1].total === 0 ? 0 : (a[1].sold / a[1].total);
+            let rateB = b[1].total === 0 ? 0 : (b[1].sold / b[1].total);
+            return rateB - rateA; 
+        });
+
+        if(sortedCats.length === 0) {
+            list.innerHTML = '<div style="text-align:center; font-size:12px; color:var(--text-light);">暂无有效的品类数据</div>';
+            return;
+        }
+
+        // 3. 生成进度条UI
+        sortedCats.forEach(([cat, data]) => {
+            let rate = data.total === 0 ? 0 : Math.round((data.sold / data.total) * 100);
+            
+            list.innerHTML += `
+                <div style="margin-bottom: 15px;">
+                    <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:bold; color:var(--accent-dark); margin-bottom:6px;">
+                        <span>🏷️ ${cat}</span>
+                        <span>${rate}% <span style="font-size:11px; color:var(--text-light); font-weight:normal;">(售出 ${data.sold} / 进货 ${data.total})</span></span>
+                    </div>
+                    <div style="height:10px; background:rgba(255,255,255,0.4); border-radius:5px; overflow:hidden; border: 1px solid rgba(255,255,255,0.6);">
+                        <div style="height:100%; width:${rate}%; background:var(--accent-main); border-radius:5px; transition: width 0.6s ease;"></div>
+                    </div>
+                </div>
+            `;
+        });
+    }
     function openRecordEdit(idx) { editingRecordIndex = idx; const r = db[idx]; document.getElementById('editRemark').value = r.remark || r.id; document.getElementById('editAmt').value = r.amt || r.profit || r.buy; document.getElementById('editDate').value = r.date || getTodayString(); document.getElementById('editTime').value = r.timeStr || getTimeString(); document.getElementById('editDiary').value = r.diaryText || ''; const imgEl = document.getElementById('displayImage'); if (r.imageBase64) { imgEl.src = r.imageBase64; imgEl.style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; } else { imgEl.style.display = 'none'; document.getElementById('uploadPrompt').style.display = 'block'; } document.getElementById('overlay-top').style.display = 'block'; document.getElementById('record-edit-modal').style.display = 'flex'; }
     function handleImageUpload(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(e) { const img = new Image(); img.onload = function() { const canvas = document.getElementById('compressCanvas'); const MAX_WIDTH = 400; let width = img.width, height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height); db[editingRecordIndex].imageBase64 = canvas.toDataURL('image/jpeg', 0.6); saveAll(); document.getElementById('displayImage').src = db[editingRecordIndex].imageBase64; document.getElementById('displayImage').style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; }; img.src = e.target.result; }; reader.readAsDataURL(file); }
     function saveRecordEdit() { if(editingRecordIndex === -1) return; const r = db[editingRecordIndex]; const oldAmt = parseFloat(r.amt || 0); const newAmt = parseFloat(document.getElementById('editAmt').value || 0); r.remark = document.getElementById('editRemark').value; r.date = document.getElementById('editDate').value; r.timeStr = document.getElementById('editTime').value; r.diaryText = document.getElementById('editDiary').value; if(r.type === '日常') { if(r.detail === '收入') curSav = curSav - oldAmt + newAmt; else if(r.detail === '支出') curSav = curSav + oldAmt - newAmt; r.amt = newAmt; localStorage.setItem('evan_sav_val', curSav); } else if(r.type === '转单') { r.id = r.remark; r.profit = newAmt; } saveAll(); closeTopModals(); }
