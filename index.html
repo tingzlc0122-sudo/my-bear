@@ -1319,27 +1319,29 @@ window.addEventListener('beforeunload', function (e) {
             e.returnValue = '⚠️ 正在拼命解析订单中，现在刷新会导致数据丢失哦！';
         }
     });
-// ✨ 究极版：带防假死缓冲和防刷新锁的解析引擎
-    function handleCSV(file) {
+function handleCSV(file) {
         const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
         const isCSV = file.name.endsWith('.csv');
 
-        if(!isExcel && !isCSV) return window.showToast('⚠️ 只能上传 CSV 或 Excel (.xlsx) 格式的文件哦！');
+        if(!isExcel && !isCSV) return window.showToast('⚠️ 只能上传 CSV 或 Excel 格式的文件！');
         
+        // 🚨 新增：强制检查 Excel 插件！如果没加载成功，直接拦截并弹窗报错！
+        if (isExcel && typeof XLSX === 'undefined') {
+            alert('🚨 致命错误：Excel解析插件没有加载成功！\n请检查 HTML 代码最顶部的 <head> 里，有没有正确贴上那段带有 cdnjs 的 <script> 标签！');
+            return; 
+        }
+
         const dropText = document.getElementById('dropZoneText');
         const fileInput = document.getElementById('csvFileInput');
         const dropZone = document.getElementById('csvDropZone');
         
-        // 🔒 第一步：立刻上锁！改变 UI 状态
         window.isParsing = true; 
-        dropZone.style.pointerEvents = 'none'; // 变灰，防止你等不及再去点它
+        dropZone.style.pointerEvents = 'none'; 
         dropText.innerHTML = `⏳ 正在疯狂解析: ${file.name}...<br><span style="font-size:12px; color:#D32F2F;">(解析完成前请绝对不要刷新页面！)</span>`;
         
         const reader = new FileReader();
         
         reader.onload = function(e) {
-            // ✨ 核心优化：用 setTimeout 强行让浏览器停顿 100 毫秒！
-            // 这样浏览器才有空隙把上面的“正在疯狂解析”这段字画到屏幕上，防止屏幕假死
             setTimeout(() => {
                 try {
                     if (isExcel) {
@@ -1354,23 +1356,18 @@ window.addEventListener('beforeunload', function (e) {
                     }
                 } catch(err) {
                     console.error(err);
-                    window.showToast('❌ 解析文件失败，请确保文件没有损坏！');
+                    alert('❌ 解析文件时内部崩溃了！请截图此界面联系你的 AI 助手。');
                 } finally {
-                    // 🔓 不管是解析成功还是报错，最后一定要解除锁定！
                     window.isParsing = false;
-                    dropZone.style.pointerEvents = 'auto'; // 恢复可点击
+                    dropZone.style.pointerEvents = 'auto'; 
                     fileInput.value = ''; 
                     setTimeout(() => { dropText.innerHTML = '📥 拖拽淘宝 Excel/CSV 到此<br>或点击上传'; }, 2000);
                 }
             }, 100); 
         };
         
-        // 开始读取文件
-        if (isExcel) {
-            reader.readAsArrayBuffer(file);
-        } else {
-            reader.readAsText(file, 'UTF-8'); 
-        }
+        if (isExcel) reader.readAsArrayBuffer(file);
+        else reader.readAsText(file, 'UTF-8'); 
     }
 function parseTaobaoCSV(csvText) {
         const rows = csvText.split('\n');
@@ -1403,9 +1400,22 @@ function parseTaobaoCSV(csvText) {
             '盲盒', '手办', '特典', '流沙', '预售', '透卡', '镭射票', '麻将', '痛包', '周边'
         ];
 
-        // ==========================================
+        // ✨ 升级：智能向下扫描，寻找真正的表头（解决淘宝加废话的问题）
+        let headerRowIdx = -1;
+        // 扫描前 10 行，只要哪行有“订单编号”，哪行就是真正的表头！
+        for(let i = 0; i < Math.min(10, rows.length); i++) {
+            if(rows[i].includes('订单编号')) {
+                headerRowIdx = i;
+                break;
+            }
+        }
 
-        const headers = rows[0].split(',');
+        if(headerRowIdx === -1) {
+            alert('❌ 找遍了表格前10行，都没看到【订单编号】这四个字！请确认这是不是淘宝导出的订单表？');
+            return;
+        }
+
+        const headers = rows[headerRowIdx].split(',');
         let idIdx = -1, titleIdx = -1, priceIdx = -1, dateIdx = -1, statusIdx = -1, shopIdx = -1;
 
         headers.forEach((h, i) => {
@@ -1418,17 +1428,16 @@ function parseTaobaoCSV(csvText) {
         });
 
         if(idIdx === -1 || priceIdx === -1) {
-            return window.showToast('❌ 找不到必要列，请检查表头！');
+            alert('❌ 虽然找到了表头行，但缺了【订单编号】或【实际支付】，请检查！');
+            return;
         }
 
         let importCount = 0, skipCount = 0, refundSkipCount = 0, dailySkipCount = 0;
 
-        for(let i = 1; i < rows.length; i++) {
+        // ✨ 升级：从真正表头的【下一行】开始读取数据，而不是死板地从第 2 行开始
+        for(let i = headerRowIdx + 1; i < rows.length; i++) {
             let rowText = rows[i].trim();
             if(!rowText) continue;
-
-            const cols = rowText.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            if(cols.length <= Math.max(idIdx, priceIdx)) continue;
 
             // 🛑 1. 状态拦截（严格拦截凑单和历史退款）
             let tbStatus = statusIdx !== -1 ? cols[statusIdx].replace(/["=\s]/g, '') : '';
