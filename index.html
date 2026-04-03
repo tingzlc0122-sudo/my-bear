@@ -780,42 +780,54 @@
         if (document.getElementById('bP').value) alert("✅ 识别完成！");
     }
 
-        // ✨ 新版悬浮气泡下拉逻辑
     window.currentSelectTargetId = null; 
     
     window.openCustomSelect = function(targetId, optionsArray, event) {
-        if(event) event.stopPropagation(); // 防止点击穿透
-
-    window.currentSelectTargetId = targetId;
+        if(event) event.stopPropagation(); 
         const targetEl = document.getElementById(targetId);
         const dropdown = document.getElementById('anchoredDropdown');
-        
         if(!targetEl || !dropdown) return;
-
+        // ✨ 痛点 1 解决：再点一下就收起（Toggle 开关逻辑）
+        if (dropdown.style.display === 'flex' && window.currentSelectTargetId === targetId) {
+            dropdown.style.display = 'none';
+            window.currentSelectTargetId = null;
+            return; // 直接退出，不再往下执行
+        }
+        window.currentSelectTargetId = targetId;
         // 生成菜单选项
         dropdown.innerHTML = '';
         optionsArray.forEach(opt => {
             dropdown.innerHTML += `<div class="dropdown-item" onclick="window.selectCustomOption('${opt}', event)">${opt}</div>`;
-        });
-        
-        // ✨ 核心定位魔法：获取按钮的坐标，让气泡挂在它正下方
-        const rect = targetEl.getBoundingClientRect();
-        dropdown.style.top = (rect.bottom + window.scrollY + 8) + 'px'; 
+        });        
+        // ✨ 痛点 2 解决：精准往上弹（先隐身计算高度，再定位到按钮上方）
+        dropdown.style.visibility = 'hidden'; // 先隐身
+        dropdown.style.display = 'flex';      // 变成 flex 才能算出行高
+        const dropHeight = dropdown.offsetHeight; // 获取气泡的真实高度
+        const rect = targetEl.getBoundingClientRect();        
+        // 把气泡的底部，挂在按钮的顶部（留 8px 空隙呼吸）
+        dropdown.style.top = (rect.top + window.scrollY - dropHeight - 8) + 'px'; 
         dropdown.style.left = rect.left + 'px'; 
-        dropdown.style.width = rect.width + 'px'; 
-        
-        dropdown.style.display = 'flex';
-
-        // 点击屏幕空白处，自动收起气泡
+        dropdown.style.width = rect.width + 'px';      
+        dropdown.style.visibility = 'visible'; // 算完坐标，解除隐身，触发往上冒的动画
+        // 点击外部空白处收起
         const closeDropdown = (e) => {
             if (!dropdown.contains(e.target) && e.target !== targetEl) {
                 dropdown.style.display = 'none';
+                window.currentSelectTargetId = null; // 清空记忆
                 document.removeEventListener('click', closeDropdown);
             }
         };
         setTimeout(() => { document.addEventListener('click', closeDropdown); }, 10);
     };
-
+    window.selectCustomOption = function(value, event) {
+        if(event) event.stopPropagation();
+        if (window.currentSelectTargetId) {
+            let targetInput = document.getElementById(window.currentSelectTargetId);
+            targetInput.value = value.split(' ')[1] || value.split(' ')[0] || value; 
+        }
+        document.getElementById('anchoredDropdown').style.display = 'none'; 
+        window.currentSelectTargetId = null; // 选完也要清空记忆
+    };
     window.selectCustomOption = function(value, event) {
         if(event) event.stopPropagation();
         if (window.currentSelectTargetId) {
@@ -825,8 +837,6 @@
         }
         document.getElementById('anchoredDropdown').style.display = 'none'; // 选完瞬间消失
     };
-
-
     function addGu() { 
         const b = parseFloat(document.getElementById('bP').value); 
         const s = parseFloat(document.getElementById('sP').value) || 0; // 预售时售价可为空
