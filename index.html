@@ -420,10 +420,10 @@
     <canvas id="compressCanvas" style="display: none;"></canvas>
 
 <script>
-    // ==========================================
+        // ==========================================
     // ✨✨✨✨ 终极贴图配置区 ✨✨✨✨
     // ==========================================
-        const STICKER_MAP = {
+    const STICKER_MAP = {
         'topDeposit': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Evan-smile.jpg', 
         'topProfit':  'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Evan-happy.jpg', 
         'topCapital': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Evan-think.jpg', 
@@ -432,16 +432,17 @@
         'colDep': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Ting-laugh.jpg',     
         'tabDaily': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Evan-love.png',  // 熊
         'tabRabbit':'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Ting-love.png',   // 兔
+        'tabAnalysis': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/hug.jpg', 
         'tabStats': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Evan-love.png',  // 熊
         'tabNovel': 'https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/Ting-love.png',   // 兔  
-        'meal':     '',  
-        'shopping': '',  
-        'traffic':  '',  
-        'casual':   '',  
-        'job':      '',  
-        'allowance':'',  
-        'otherInc': '',
-        'living':   ''   // ✨ 新增这一行：生活开支的专属贴图坑位
+        'meal': '', 
+        'shopping': '', 
+        'traffic': '', 
+        'casual': '', 
+        'job': '', 
+        'allowance':'', 
+        'otherInc': '', 
+        'living': ''
     };
 
     function getStickerHtml(type, emojiFallback, isMini = false) {
