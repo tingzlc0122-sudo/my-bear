@@ -204,11 +204,11 @@
             </div>
         </div>
     </div> 
+    
     <div id="pageBear" class="page active">
-
-    <div class="three-col-grid">
+            <div class="three-col-grid">
             <div class="col-btn glass-panel">
-                <div class="col-top-area" onclick="openInteractiveCalendar('支出')">
+            <div class="col-top-area" onclick="openInteractiveCalendar('支出')">
                     <div class="col-icon-wrapper" id="col-sticker-exp"></div>
                     <div class="col-title">支出</div>
                 </div>
@@ -264,7 +264,9 @@
                 左滑删除 / 点击修改
             </span>
         </div>
-        <div id="guList" style="max-height: 300px; overflow-y: auto;"></div>
+        
+    <div id="guList" style="max-height: 300px; overflow-y: auto;"></div>
+        
         </div>
     </div>
     <div id="pageAnalysis" class="page">
@@ -289,7 +291,7 @@
                 </div>
             </div>
         </div>
-        <div class="card glass-panel">
+            <div class="card glass-panel">
             <div class="card-title">🏷️ 品类投资与回报分析</div>
             <div id="categoryAnalysisList"><div style="text-align:center; font-size:12px; color:var(--text-light);">暂无数据</div></div>
         </div>
@@ -318,8 +320,10 @@
             <option value="已转单">✅ 已转单 (核算利润)</option>
             <option value="已退款">❌ 已退款 (资金回流)</option>
         </select>
-        
-        <div id="oeSellDateBox" style="display:none; margin-bottom:15px;">
+    
+    <div id="oeMarginDisplay" style="font-size:12px; color:var(--accent-main); font-weight:bold; margin: -5px 0 10px 4px;">利润率预估：0%</div>
+    
+    <div id="oeSellDateBox" style="display:none; margin-bottom:15px;">
             <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">实际售出/回款日期 (算周转率用)</div>
             <input type="date" id="oeSellDate">
         </div>
@@ -330,7 +334,7 @@
         </div>
     </div>
     <div id="pageStats" class="page">
-        <div class="card glass-panel">
+            <div class="card glass-panel">
             <div class="stats-segment" id="timeRangeSegment">
                 <div class="stats-seg-btn" onclick="switchStatsRange('day')">本日</div>
                 <div class="stats-seg-btn active" onclick="switchStatsRange('month')">本月</div>
@@ -365,6 +369,7 @@
             <div id="calSection" style="display: none;"><div class="cal-week-row"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div><div class="cal-grid" id="calendarGrid"></div></div>
         </div>
     </div>
+    
     <div id="pageNovel" class="page">
         <div style="padding-bottom: 20px;">
             <div style="font-size: 12px; color: var(--accent-main); font-weight: bold; text-align: center; margin-bottom: 10px; opacity: 0.8;">捕捉每一个灵光一闪的瞬间 (左滑删除)</div>
@@ -377,7 +382,6 @@
         </div>
     </div>
     <div class="novel-fab" id="novelFab" onclick="openNovelModal('add')">＋</div>
-
         <div class="tab-bar glass-panel" id="mainTabBar">
         <div class="tab-item active" onclick="showP('B')">
             <div class="tab-icon-wrapper" id="tab-sticker-daily" style="width:36px; height:36px;"></div>日常生活
@@ -425,6 +429,7 @@
         <div class="day-detail-header"><span id="dayDetailTitle">日期</span><span onclick="closeTopModals()" style="color: var(--text-light); cursor: pointer;">✕</span></div>
         <div id="dayDetailList"></div>
     </div>
+    
     <div id="remark-modal"><div id="remarkText">备注内容</div></div>
 
     <div id="record-edit-modal" class="glass-panel">
@@ -443,6 +448,7 @@
     </div>
     
     <div id="css-editor-modal" class="novel-modal glass-panel" style="display: none; height: 85vh; top: 7%; z-index: 400;">
+    
     <div class="cal-modal-header"><h3 class="cal-modal-title">🎨 界面皮肤编辑器</h3><div class="cal-modal-close" onclick="closeTopModals()">✕</div></div>
     <input type="text" id="css-search-input" placeholder="🔍 搜索 (如: theme-gradient)">
     <textarea id="css-code-input" spellcheck="false"></textarea>
@@ -806,30 +812,25 @@
     }
     function showRemark(event, text) { event.stopPropagation(); document.getElementById('remarkText').innerText = text || '无备注'; document.getElementById('overlay-top').style.display = 'block'; document.getElementById('remark-modal').style.display = 'block'; }
     function openDayDetail(type, dateStr) { document.getElementById('dayDetailTitle').innerText = `${dateStr} 明细`; const listDiv = document.getElementById('dayDetailList'); listDiv.innerHTML = ''; let dayRecords = []; db.forEach((r, idx) => { if (r.type === '日常' && r.date === dateStr) { if (type === '收入' && r.detail === '收入') dayRecords.push({r, idx}); else if (type === '支出' && r.detail === '支出') dayRecords.push({r, idx}); else if (type === '存款') dayRecords.push({r, idx}); } }); if(dayRecords.length === 0) { listDiv.innerHTML = '<div style="text-align:center; padding: 20px;">这里空空如也</div>'; } else { dayRecords.forEach(item => { const r = item.r; const isExp = r.detail === '支出'; const color = isExp ? 'var(--exp-color)' : 'var(--inc-color)'; const sign = isExp ? '-' : '+'; listDiv.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.6); cursor:pointer;" onclick="openRecordEdit(${item.idx})"><div><div style="font-weight:bold; color:var(--accent-dark);">${r.remark}</div></div><div style="color:${color}; font-weight:bold;">${sign}${r.amt}</div></div>`; }); } document.getElementById('overlay-top').style.display = 'block'; document.getElementById('day-detail-modal').style.display = 'block'; }
-
     function confirmSheetAction() { const amt = parseFloat(document.getElementById('sheetAmount').value); if (!amt) return alert('填入金额'); const dateStr = document.getElementById('sheetDate').value; if (!dateStr) return; let cat = currentSheetType !== '存款' ? document.getElementById('sheetCategory').value : ''; const remark = document.getElementById('sheetRemark').value || '无备注'; if(currentSheetType === '收入') curSav += amt; else if(currentSheetType === '支出') curSav -= amt; else curSav = amt; db.unshift({ type: '日常', detail: currentSheetType, category: cat, remark: remark, amt: amt, date: dateStr, timeStr: getTimeString(), diaryText: '', imageBase64: '' }); localStorage.setItem('evan_sav_val', curSav); saveAll(); closeAllModals(); }
     // 1. 替换原生 prompt 的高级提取函数
     function parseClipPrompt() {
         document.getElementById('customPromptInput').value = ''; // 清空上次输入
         document.getElementById('customPromptModal').style.display = 'flex'; // 显示我们画的弹窗
     }
-
     // 点击弹窗“确定”后执行的处理逻辑
     function confirmCustomPrompt() {
         const text = document.getElementById('customPromptInput').value;
         if (!text) return;
         document.getElementById('customPromptModal').style.display = 'none'; // 关掉弹窗
-
     // 下面是你原本的提取逻辑
         const orderMatch = text.match(/\d{15,20}/);
         if (orderMatch) document.getElementById('oId').value = orderMatch[0].slice(-4);
         else { const titleMatch = text.match(/[\u4e00-\u9fa5]{4,10}/); if(titleMatch) document.getElementById('oId').value = titleMatch[0]; }
-
         const buyMatch = text.match(/(?:实付款|合计|小计|应付)[：\s]*￥?(\d+(\.\d+)?)/);
         const sellMatches = [...text.matchAll(/(?:售价|卖价|转|出|实付)[：\s]*￥?(\d+(\.\d+)?)/g)];
         if (buyMatch) document.getElementById('bP').value = buyMatch[1];
         if (sellMatches.length > 0) document.getElementById('sP').value = sellMatches[sellMatches.length - 1][1];
-
     // 自动识别品类
         const commonKeywords = ['吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '戒指', '拍立得', '盲盒'];
         for (let kw of commonKeywords) {
@@ -837,9 +838,7 @@
         }
         if (document.getElementById('bP').value) alert("✅ 识别完成！");
     }
-
     window.currentSelectTargetId = null; 
-    
     window.openCustomSelect = function(targetId, optionsArray, event) {
         if(event) event.stopPropagation(); 
         const targetEl = document.getElementById(targetId);
@@ -855,7 +854,7 @@
     // 生成菜单选项
         dropdown.innerHTML = '';
         optionsArray.forEach(opt => {
-            dropdown.innerHTML += `<div class="dropdown-item" onclick="window.selectCustomOption('${opt}', event)">${opt}</div>`;
+        dropdown.innerHTML += `<div class="dropdown-item" onclick="window.selectCustomOption('${opt}', event)">${opt}</div>`;
         });        
     // ✨ 痛点 2 解决：精准往上弹（先隐身计算高度，再定位到按钮上方）
         dropdown.style.visibility = 'hidden'; // 先隐身
@@ -890,9 +889,7 @@
         const b = parseFloat(document.getElementById('bP').value); 
         const s = parseFloat(document.getElementById('sP').value) || 0; 
         if(!b) return alert('买入实付金额必须填写哦！'); 
-        
         const inputName = document.getElementById('oId').value || '未命名商品';
-        
         db.unshift({ 
             type: '转单', 
             id: inputName.slice(-4), 
@@ -916,10 +913,8 @@
             let tB = new Date(b.date + 'T' + (b.timeStr || '00:00:00')).getTime();
             return tB - tA;
         });
-
         localStorage.setItem('evan_rabbit_v4', JSON.stringify(db)); 
         rdr(); 
-        
         // 自动刷新统计大屏
         if(document.getElementById('pageStats').classList.contains('active')) updateStatsUI(); 
         let analysisPage = document.getElementById('pageAnalysis');
@@ -932,7 +927,6 @@
         const om = document.getElementById('order-edit-modal'); 
         if(om) om.style.display = 'none';
     };
-    
     function openInteractiveCalendar(type) { renderInteractiveCalendar(type); document.getElementById('overlay').style.display = 'block'; document.getElementById('calendar-modal').style.display = 'block'; }
     function switchDateRange(range) {
         currentRange = range;
@@ -956,21 +950,16 @@
         btns[2].classList.toggle('active', range === 'year');
         updateStatsUI();
     }
-
     function processStatsData() { 
         const todayStr = getTodayString(); 
     // ✨ 这里修复了日期、月份、年份的获取逻辑
         let selected = window.customSelectedValue || todayStr;
         let matchStr = selected;
-        
         if (currentRange === 'month' && matchStr.length > 7) matchStr = matchStr.slice(0,7);
         if (currentRange === 'year' && matchStr.length > 4) matchStr = matchStr.slice(0,4);
-        
         document.getElementById('currentSelectedText').innerText = matchStr + (currentRange === 'year'?'年':'');
-
         let tInc = 0, tExp = 0, tPro = 0; 
         let dayData = {}; 
-        
         db.forEach(r => { 
             if (r.date && r.date.startsWith(matchStr)) { 
                 if(!dayData[r.date]) dayData[r.date] = { inc:0, exp:0, pro:0 }; 
@@ -984,39 +973,82 @@
                 } 
             } 
         }); 
-        
     // 更新界面上的总额
         document.getElementById('statInc').innerText = '￥' + tInc.toFixed(2); 
         document.getElementById('statExp').innerText = '￥' + tExp.toFixed(2); 
         document.getElementById('statPro').innerText = '￥' + tPro.toFixed(2); 
-        
         return { timeline: dayData, matchStr: matchStr }; 
+    }
+    // ✨ 升级版：品类明细 + 死亡库存诊断
+    function openCatDetail(catName) {
+        document.getElementById('catModalTitle').innerText = `🏷️ ${catName} 明细`;
+        const listDiv = document.getElementById('catModalList');
+        listDiv.innerHTML = '';
+        let items = db.filter(r => r.type === '转单' && (r.category === catName || (catName === '未分类' && !r.category)));
+        items.sort((a, b) => (a.status === '预售中' ? -1 : 1));
+        const today = new Date();
+        items.forEach(r => {
+            // 计算持仓天数
+            let buyDate = new Date(r.date);
+            let holdDays = Math.floor((today - buyDate) / (1000 * 60000 * 60 * 24));
+            // 预警逻辑：如果是预售中且超过180天，就是死亡库存
+            let isDead = r.status === '预售中' && holdDays > 180;
+            let warningTag = isDead ? `<span style="background:#FF5252; color:white; padding:2px 6px; border-radius:6px; font-size:10px; margin-left:5px;">⚠️ 滞销预警(${holdDays}天)</span>` : '';
+            let statusColor = r.status === '预售中' ? '#FF8A65' : (r.status === '已退款' ? 'var(--text-light)' : 'var(--inc-color)');
+            let realProfit = r.status === '已转单' ? `润 ￥${r.profit}` : `买 ￥${r.buy}`;
+            listDiv.innerHTML += `
+            <div style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:${isDead ? '2px solid #FF5252' : '1px solid rgba(255,255,255,0.8)'};">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px;">
+                    <div style="font-weight:bold; color:var(--text-main); font-size:13px; line-height:1.4; flex:1;">
+                        ${r.title || '未知商品'}${warningTag}
+                    </div>
+                    <div style="font-size:11px; font-weight:bold; color:white; background:${statusColor}; padding:2px 6px; border-radius:8px; white-space:nowrap;">${r.status}</div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-light);">
+                    <div>${r.date} (持仓${holdDays}天)</div>
+                    <div style="font-weight:900; color:var(--accent-dark);">${realProfit}</div>
+                </div>
+            </div>`;
+        });
+        document.getElementById('overlay-top').style.display = 'block';
+        document.getElementById('category-detail-modal').style.display = 'flex';
     }
         // ✨ 专门负责计算并画出“谷子数据页”的引擎
     function renderCategoryAndShopAnalysis() {
         const catList = document.getElementById('categoryAnalysisList');
         const shopList = document.getElementById('shopAnalysisList');
         if(!catList || !shopList) return;
-
         let catStats = {};
         let shopStats = {};
-
+        // 核心修改：让店铺数据包含一个 ips 子目录
         db.forEach(r => {
             if(r.type === '转单') {
+                if(r.status === '预售中') {
+                    currentCapital += parseFloat(r.buy || 0);
+                } else if(r.status === '已转单') {
+                    let p = parseFloat(r.profit || 0); let b = parseFloat(r.buy || 0);
+                    totalProfit += p; totalInvestedInSold += b; soldCount++;
+                    if(r.holdDays) totalHoldDays += r.holdDays;
+                }
                 let c = r.category || '未分类';
                 if(!catStats[c]) catStats[c] = { buy: 0, profit: 0, count: 0 };
                 catStats[c].buy += parseFloat(r.buy || 0); 
                 if(r.status === '已转单') catStats[c].profit += parseFloat(r.profit || 0); 
                 catStats[c].count++; 
-
-                let s = r.shop || r.ip || '未知来源';
-                if(!shopStats[s]) shopStats[s] = { buy: 0, profit: 0, count: 0 };
+                // ✨ 店铺和 IP 的嵌套逻辑
+                let s = r.shop || '未知店铺';
+                let ipName = r.ip || '其他IP';
+                if(!shopStats[s]) shopStats[s] = { buy: 0, profit: 0, count: 0, ips: {} };
                 shopStats[s].buy += parseFloat(r.buy || 0);
                 if(r.status === '已转单') shopStats[s].profit += parseFloat(r.profit || 0);
                 shopStats[s].count++;
+                // 记录店铺内部各个 IP 的数据
+                if(!shopStats[s].ips[ipName]) shopStats[s].ips[ipName] = { buy: 0, profit: 0, count: 0 };
+                shopStats[s].ips[ipName].buy += parseFloat(r.buy || 0);
+                if(r.status === '已转单') shopStats[s].ips[ipName].profit += parseFloat(r.profit || 0);
+                shopStats[s].ips[ipName].count++;
             }
         });
-
         const generateUI = (statsObj) => {
             let sorted = Object.entries(statsObj).sort((a,b) => b[1].buy - a[1].buy);
             if(sorted.length === 0) return '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:10px;">暂无数据，快去导入表格吧！</div>';
@@ -1025,12 +1057,39 @@
             sorted.forEach(([name, data]) => {
                 let pColor = data.profit > 0 ? 'var(--exp-color)' : (data.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                 let proSign = data.profit > 0 ? '+' : '';
-                
-                html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.5);">
+          
+            html += `
+            <div onclick="openCatDetail('${name}')" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.5); cursor:pointer;">
+                <div style="flex:1;">
+                    <div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">
+                        ${name} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:12px; color:var(--text-light);">压本 ￥${data.buy.toFixed(2)}</div>
+                    <div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">赚 ￥${proSign}${data.profit.toFixed(2)}</div>
+                </div>
+            </div>`;
+            });
+            return html;
+        };
+
+        catList.innerHTML = generateUI(catStats);
+        // ✨ 生成带折叠箭头的店铺/IP树状图
+        let shopHtml = '';
+        let sortedShops = Object.entries(shopStats).sort((a,b) => b[1].buy - a[1].buy);
+        
+        sortedShops.forEach(([shopName, data], idx) => {
+            let pColor = data.profit > 0 ? 'var(--exp-color)' : (data.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
+            let proSign = data.profit > 0 ? '+' : '';
+            let hasMultipleIPs = Object.keys(data.ips).length > 0;
+            
+            shopHtml += `
+            <div style="border-bottom:1px dashed rgba(255,255,255,0.5);">
+                <div onclick="if(${hasMultipleIPs}) { let el = document.getElementById('ipList_${idx}'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; cursor:${hasMultipleIPs ? 'pointer' : 'default'};">
                     <div style="flex:1;">
                         <div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">
-                            ${name} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span>
+                            ${shopName} ${hasMultipleIPs ? '▼' : ''} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span>
                         </div>
                     </div>
                     <div style="text-align:right;">
@@ -1038,14 +1097,28 @@
                         <div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">赚 ￥${proSign}${data.profit.toFixed(2)}</div>
                     </div>
                 </div>`;
-            });
-            return html;
-        };
-
-        catList.innerHTML = generateUI(catStats);
-        shopList.innerHTML = generateUI(shopStats);
+                
+            // 折叠在里面的 IP 列表
+            if (hasMultipleIPs) {
+                shopHtml += `<div id="ipList_${idx}" style="display:none; padding-left:15px; margin-bottom:10px; border-left:3px solid rgba(255,255,255,0.4);">`;
+                let sortedIPs = Object.entries(data.ips).sort((a,b) => b[1].buy - a[1].buy);
+                sortedIPs.forEach(([ip, ipData]) => {
+                    let ipPColor = ipData.profit > 0 ? 'var(--exp-color)' : (ipData.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
+                    let ipProSign = ipData.profit > 0 ? '+' : '';
+                    shopHtml += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:12px;">
+                            <div style="color:var(--text-main); font-weight:bold;">↳ ${ip} (${ipData.count}件)</div>
+                            <div style="text-align:right; color:var(--text-light);">
+                                本 ￥${ipData.buy.toFixed(2)} | <span style="color:${ipPColor}; font-weight:bold;">润 ￥${ipProSign}${ipData.profit.toFixed(2)}</span>
+                            </div>
+                        </div>`;
+                });
+                shopHtml += `</div>`;
+            }
+            shopHtml += `</div>`;
+        });
+        shopList.innerHTML = shopHtml || '<div style="text-align:center; font-size:12px; padding:10px;">暂无数据</div>';
     }
-
     // ✨ 这是一个关键补丁：确保你选完日期后，数据会立刻跳动更新
     function updateStatsUI() {
         const data = processStatsData();
@@ -1061,7 +1134,6 @@
         if(!dataObj) dataObj = processStatsData(); 
         const ctx = document.getElementById('myChart').getContext('2d'); 
         if(myChartInstance) myChartInstance.destroy(); 
-        
     // ✨ 全局字体与颜色微调，匹配奶油咖啡主题
         Chart.defaults.font.family = "-apple-system, sans-serif";
         Chart.defaults.color = '#8D6E63'; // 对应 --text-light
@@ -1179,7 +1251,6 @@
             grid.innerHTML += `<div class="cal-cell" style="border-color: ${borderC};"><span class="cal-date">${i}</span><div style="display:flex; gap:2px;">${dots}</div></div>`; 
         } 
     }
-
     // ✨ 全新的核心功能：计算并渲染转化率排行榜
     function renderConversionRates() {
         const list = document.getElementById('conversionRateList');
@@ -1203,9 +1274,7 @@
                 }
             }
         });
-
         list.innerHTML = '';
-        
         // 2. 排序：转化率高的排在前面
         let sortedCats = Object.entries(stats).sort((a, b) => {
             let rateA = a[1].total === 0 ? 0 : (a[1].sold / a[1].total);
@@ -1217,7 +1286,6 @@
             list.innerHTML = '<div style="text-align:center; font-size:12px; color:var(--text-light);">暂无有效的品类数据</div>';
             return;
         }
-
         // 3. 生成进度条UI
         sortedCats.forEach(([cat, data]) => {
             let rate = data.total === 0 ? 0 : Math.round((data.sold / data.total) * 100);
@@ -1605,6 +1673,26 @@ function openOrderEdit(idx) {
 
         document.getElementById('overlay-top').style.display = 'block';
         document.getElementById('order-edit-modal').style.display = 'flex';
+
+        // ✨ 实时定价辅助：监听输入，自动算出利润率
+        const sellInput = document.getElementById('oeSell');
+        const buyInput = document.getElementById('oeBuy');
+        const marginText = document.getElementById('oeMarginDisplay');
+        
+        const updateMargin = () => {
+            let b = parseFloat(buyInput.value || 0);
+            let s = parseFloat(sellInput.value || 0);
+            if(b > 0) {
+                let m = ((s - b) / b * 100).toFixed(1);
+                marginText.innerText = `利润率预估：${m}% ${m >= 20 ? '🔥' : ''}`;
+                marginText.style.color = m >= 0 ? 'var(--accent-main)' : '#FF5252';
+            } else {
+                marginText.innerText = `利润率预估：0%`;
+            }
+        };
+        sellInput.oninput = updateMargin;
+        buyInput.oninput = updateMargin;
+        updateMargin(); // 每次打开弹窗先算一遍
     }
 
     // 🧠 终极核算中心：保存修改并计算周转天数
@@ -1637,7 +1725,7 @@ function saveOrderEdit() {
     }
 
     // 🧠 终极CFO大屏：负责渲染整个第 3 页
-function renderCategoryAndShopAnalysis() {
+    function renderCategoryAndShopAnalysis() {
         const catList = document.getElementById('categoryAnalysisList');
         const shopList = document.getElementById('shopAnalysisList');
         if(!catList || !shopList) return;
@@ -1662,11 +1750,20 @@ function renderCategoryAndShopAnalysis() {
                 if(r.status === '已转单') catStats[c].profit += parseFloat(r.profit || 0); 
                 catStats[c].count++; 
 
-                let s = r.shop || r.ip || '未知来源';
-                if(!shopStats[s]) shopStats[s] = { buy: 0, profit: 0, count: 0 };
+                // ✨ 店铺和 IP 的嵌套逻辑
+                let s = r.shop || '未知店铺';
+                let ipName = r.ip || '其他IP';
+                
+                if(!shopStats[s]) shopStats[s] = { buy: 0, profit: 0, count: 0, ips: {} };
                 shopStats[s].buy += parseFloat(r.buy || 0);
                 if(r.status === '已转单') shopStats[s].profit += parseFloat(r.profit || 0);
                 shopStats[s].count++;
+                
+                // 记录店铺内部各个 IP 的数据
+                if(!shopStats[s].ips[ipName]) shopStats[s].ips[ipName] = { buy: 0, profit: 0, count: 0 };
+                shopStats[s].ips[ipName].buy += parseFloat(r.buy || 0);
+                if(r.status === '已转单') shopStats[s].ips[ipName].profit += parseFloat(r.profit || 0);
+                shopStats[s].ips[ipName].count++;
             }
         });
 
@@ -1683,21 +1780,99 @@ function renderCategoryAndShopAnalysis() {
             document.getElementById('biTurnover').innerText = `暂无售出`;
         }
 
-        const generateUI = (statsObj) => {
-            let sorted = Object.entries(statsObj).sort((a,b) => b[1].buy - a[1].buy);
-            if(sorted.length === 0) return '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:10px;">暂无数据，快去导入表格吧！</div>';
-            let html = '';
-            sorted.forEach(([name, data]) => {
+        // ✨ --- 以下是升级版的 UI 生成逻辑 --- ✨
+
+        // 1. 渲染品类列表（带点击事件和毛利率）
+        let catHtml = '';
+        let sortedCats = Object.entries(catStats).sort((a,b) => b[1].buy - a[1].buy);
+        if(sortedCats.length === 0) {
+            catHtml = '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:10px;">暂无数据，快去导入表格吧！</div>';
+        } else {
+            sortedCats.forEach(([name, data]) => {
                 let pColor = data.profit > 0 ? 'var(--exp-color)' : (data.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                 let proSign = data.profit > 0 ? '+' : '';
-                html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.5);"><div style="flex:1;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">${name} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span></div></div><div style="text-align:right;"><div style="font-size:12px; color:var(--text-light);">压本 ￥${data.buy.toFixed(2)}</div><div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">赚 ￥${proSign}${data.profit.toFixed(2)}</div></div></div>`;
+                let avgMargin = data.buy > 0 ? (data.profit / data.buy * 100).toFixed(1) : 0;
+
+                catHtml += `
+                <div onclick="openCatDetail('${name}')" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.5); cursor:pointer;">
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">
+                            ${name} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:12px; color:var(--text-light);">压本 ￥${data.buy.toFixed(2)}</div>
+                        <div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">
+                            赚 ￥${proSign}${data.profit.toFixed(2)} 
+                            <span style="font-size:10px; opacity:0.7;">(${avgMargin}%)</span>
+                        </div>
+                    </div>
+                </div>`;
             });
-            return html;
-        };
-        catList.innerHTML = generateUI(catStats); shopList.innerHTML = generateUI(shopStats);
+        }
+        catList.innerHTML = catHtml;
+
+        // 2. 渲染店铺列表（带 IP 折叠和毛利率）
+        let shopHtml = '';
+        let sortedShops = Object.entries(shopStats).sort((a,b) => b[1].buy - a[1].buy);
+        if(sortedShops.length === 0) {
+             shopHtml = '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:10px;">暂无数据，快去导入表格吧！</div>';
+        } else {
+            sortedShops.forEach(([shopName, data], idx) => {
+                let pColor = data.profit > 0 ? 'var(--exp-color)' : (data.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
+                let proSign = data.profit > 0 ? '+' : '';
+                let hasMultipleIPs = Object.keys(data.ips).length > 0;
+                let avgMargin = data.buy > 0 ? (data.profit / data.buy * 100).toFixed(1) : 0;
+                
+                shopHtml += `
+                <div style="border-bottom:1px dashed rgba(255,255,255,0.5);">
+                    <div onclick="if(${hasMultipleIPs}) { let el = document.getElementById('ipList_${idx}'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; cursor:${hasMultipleIPs ? 'pointer' : 'default'};">
+                        <div style="flex:1;">
+                            <div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">
+                                ${shopName} ${hasMultipleIPs ? '▼' : ''} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:12px; color:var(--text-light);">压本 ￥${data.buy.toFixed(2)}</div>
+                            <div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">
+                                赚 ￥${proSign}${data.profit.toFixed(2)} 
+                                <span style="font-size:10px; opacity:0.7;">(${avgMargin}%)</span>
+                            </div>
+                        </div>
+                    </div>`;
+                    
+                if (hasMultipleIPs) {
+                    shopHtml += `<div id="ipList_${idx}" style="display:none; padding-left:15px; margin-bottom:10px; border-left:3px solid rgba(255,255,255,0.4);">`;
+                    let sortedIPs = Object.entries(data.ips).sort((a,b) => b[1].buy - a[1].buy);
+                    sortedIPs.forEach(([ip, ipData]) => {
+                        let ipPColor = ipData.profit > 0 ? 'var(--exp-color)' : (ipData.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
+                        let ipProSign = ipData.profit > 0 ? '+' : '';
+                        let ipAvgMargin = ipData.buy > 0 ? (ipData.profit / ipData.buy * 100).toFixed(1) : 0;
+                        
+                        shopHtml += `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:12px;">
+                                <div style="color:var(--text-main); font-weight:bold;">↳ ${ip} (${ipData.count}件)</div>
+                                <div style="text-align:right; color:var(--text-light);">
+                                    本 ￥${ipData.buy.toFixed(2)} | <span style="color:${ipPColor}; font-weight:bold;">润 ￥${ipProSign}${ipData.profit.toFixed(2)} (${ipAvgMargin}%)</span>
+                                </div>
+                            </div>`;
+                    });
+                    shopHtml += `</div>`;
+                }
+                shopHtml += `</div>`;
+            });
+        }
+        shopList.innerHTML = shopHtml;
     }
                 
 </script>
 <div id="anchoredDropdown" class="frosted-dropdown" style="display:none;"></div>
+<div id="category-detail-modal" class="glass-panel" style="display:none; position:fixed; top:15%; left:6%; right:6%; max-height:70%; z-index:306; padding:20px; border-radius:25px; flex-direction:column; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:2px dashed rgba(255,255,255,0.6); padding-bottom:10px;">
+            <h3 style="margin:0; color:var(--accent-dark); font-weight:900;" id="catModalTitle">🏷️ 品类明细</h3>
+            <span onclick="document.getElementById('category-detail-modal').style.display='none'; document.getElementById('overlay-top').style.display='none';" style="color:var(--text-light); font-weight:bold; cursor:pointer; font-size:18px;">✕</span>
+        </div>
+        <div id="catModalList" style="flex:1; overflow-y:auto; padding-right:5px;"></div>
+    </div>
 </body>
 </html>
