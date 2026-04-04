@@ -620,42 +620,6 @@
         document.querySelectorAll('.frosted-picker').forEach(el => el.style.display = 'none');
         updateStatsUI();
     }
-    function updateChart(dataObj) { 
-        if(!dataObj) dataObj = processStatsData(); 
-        const ctx = document.getElementById('myChart').getContext('2d'); 
-        if(myChartInstance) myChartInstance.destroy(); 
-        Chart.defaults.font.family = "-apple-system, sans-serif";
-        Chart.defaults.color = '#8D6E63'; Chart.defaults.font.weight = 'bold';
-        const dates = Object.keys(dataObj.timeline).sort(); 
-        if(currentChartType === 'pie') { 
-            let catData = {}; 
-            const pinkPalette = ['#F4B8B8', '#F8BBD0', '#FFCDD2', '#EF9A9A', '#FF8A80']; 
-            const greenPalette = ['#A8D5BA', '#C8E6C9', '#B2DFDB', '#80CBC4', '#4DB6AC']; 
-            db.forEach(r => { 
-                if (r.date && r.date.startsWith(dataObj.matchStr)) { 
-                    if (currentPieType === 'expense' && r.type === '日常' && r.detail === '支出') { 
-                        let cat = r.category || '其他'; catData[cat] = (catData[cat] || 0) + r.amt; 
-                    } else if (currentPieType === 'income') { 
-                        if (r.type === '日常' && r.detail === '收入') { 
-                            let cat = r.category || '其他'; catData[cat] = (catData[cat] || 0) + r.amt; 
-                        } else if (r.type === '转单' && r.status === '已转单') { 
-                            catData['转单'] = (catData['转单'] || 0) + parseFloat(r.profit || 0); 
-                        } 
-                    } 
-                } 
-            }); 
-            myChartInstance = new Chart(ctx, { 
-                type: 'doughnut', 
-                data: { labels: Object.keys(catData), datasets: [{ data: Object.values(catData), backgroundColor: currentPieType === 'expense' ? pinkPalette : greenPalette, borderWidth: 2, borderColor: '#ffffff' }] }, 
-                options: { 
-                    responsive: true, maintainAspectRatio: false, radius: '80%', layout: { padding: 10 },
-                    plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } }, cutout: '65%' 
-                } 
-            }); 
-        } else { 
-            myChartInstance = new Chart(ctx, { type: currentChartType, data: { labels: dates.map(d=>d.substring(5)), datasets: [{ label: '支出', data: dates.map(d=>dataObj.timeline[d].exp), backgroundColor: '#F4B8B8', borderColor: '#F4B8B8', borderWidth: 2, tension: 0.3 }, { label: '收入', data: dates.map(d=>dataObj.timeline[d].inc), backgroundColor: '#A8D5BA', borderColor: '#A8D5BA', borderWidth: 2, tension: 0.3 }, { label: '利润', data: dates.map(d=>dataObj.timeline[d].pro), backgroundColor: '#DDA77B', borderColor: '#DDA77B', borderWidth: 2, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } } } }); 
-        } 
-    }
     // 3. 选中日期后的处理
     function selectFromPicker(range, value, event) {
         event.stopPropagation();
@@ -918,15 +882,6 @@
         document.getElementById('anchoredDropdown').style.display = 'none'; 
         window.currentSelectTargetId = null; // 选完也要清空记忆
     };
-    window.selectCustomOption = function(value, event) {
-        if(event) event.stopPropagation();
-        if (window.currentSelectTargetId) {
-            let targetInput = document.getElementById(window.currentSelectTargetId);
-        // 提取 "预售中" 存进输入框
-            targetInput.value = value.split(' ')[1] || value.split(' ')[0] || value; 
-        }
-        document.getElementById('anchoredDropdown').style.display = 'none'; // 选完瞬间消失
-    };
     function addGu() { 
         const b = parseFloat(document.getElementById('bP').value); 
         const s = parseFloat(document.getElementById('sP').value) || 0; 
@@ -973,46 +928,7 @@
         const om = document.getElementById('order-edit-modal'); 
         if(om) om.style.display = 'none';
     };
-
-    // 2. ✨ 新增的透明框交互逻辑
-    let editingOrderIndex = -1;
-
-    function openOrderEdit(idx) {
-        editingOrderIndex = idx;
-        const r = db[idx];
-        
-        // 自动填入这件商品的信息
-        document.getElementById('oeName').value = r.title || r.id;
-        document.getElementById('oeBuy').value = r.buy || 0;
-        document.getElementById('oeSell').value = r.sell || '';
-        
-        let sSelect = document.getElementById('oeStatus');
-        if(r.status === '预售中') sSelect.selectedIndex = 0;
-        else if(r.status === '已转单') sSelect.selectedIndex = 1;
-        else if(r.status === '已退款') sSelect.selectedIndex = 2;
-
-        document.getElementById('overlay-top').style.display = 'block';
-        document.getElementById('order-edit-modal').style.display = 'flex';
-    }
-    function saveOrderEdit() {
-        if(editingOrderIndex === -1) return;
-        const r = db[editingOrderIndex];
-        
-        // 把你修改的内容存回数据库
-        r.title = document.getElementById('oeName').value;
-        r.buy = parseFloat(document.getElementById('oeBuy').value || 0);
-        r.sell = parseFloat(document.getElementById('oeSell').value || 0);
-        
-        // 解析状态
-        let statusText = document.getElementById('oeStatus').value;
-        r.status = statusText;
-        
-        // 自动计算利润
-        r.profit = (r.sell - r.buy).toFixed(2);
-        
-        saveAll(); // 这里面已经包含倒序排列了
-        closeTopModals();
-    }
+    
     function openInteractiveCalendar(type) { renderInteractiveCalendar(type); document.getElementById('overlay').style.display = 'block'; document.getElementById('calendar-modal').style.display = 'block'; }
     function switchDateRange(range) {
         currentRange = range;
@@ -1711,13 +1627,6 @@ function handleCSV(file) {
         saveAll(); 
         closeTopModals();
     }
-    
-    const originalCloseTopModals = closeTopModals;
-    closeTopModals = function() {
-        originalCloseTopModals(); 
-        const om = document.getElementById('order-edit-modal'); 
-        if(om) om.style.display = 'none';
-    };
 
     // 🧠 终极CFO大屏：负责渲染整个第 3 页
     function renderCategoryAndShopAnalysis() {
