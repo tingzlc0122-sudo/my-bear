@@ -284,6 +284,68 @@
         </div>
     </div>
 
+    <div id="pageAnalysis" class="page">
+        <div class="card glass-panel" style="background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4)); margin-bottom: 15px;">
+            <div style="font-size: 13px; color: var(--text-light); font-weight: bold; margin-bottom: 15px;">💼 谷子生意思维导报</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <div style="font-size: 11px; color: var(--text-light);">累计变现利润</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--exp-color);" id="biTotalProfit">￥0.00</div>
+                </div>
+                <div>
+                    <div style="font-size: 11px; color: var(--text-light);">当前在途资金 (压本)</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main);" id="biTotalCapital">￥0.00</div>
+                </div>
+                <div>
+                    <div style="font-size: 11px; color: var(--text-light);">平均回报率 (ROI)</div>
+                    <div style="font-size: 16px; font-weight: bold; color: var(--accent-dark);" id="biROI">0%</div>
+                </div>
+                <div>
+                    <div style="font-size: 11px; color: var(--text-light);">平均周转 / 预估年化</div>
+                    <div style="font-size: 16px; font-weight: bold; color: var(--accent-main);" id="biTurnover">0天 / 0%</div>
+                </div>
+            </div>
+        </div>
+        <div class="card glass-panel">
+            <div class="card-title">🏷️ 品类投资与回报分析</div>
+            <div id="categoryAnalysisList"><div style="text-align:center; font-size:12px; color:var(--text-light);">暂无数据</div></div>
+        </div>
+        <div class="card glass-panel" style="margin-top: 15px;">
+            <div class="card-title">🏪 店铺进货与 IP 分析</div>
+            <div id="shopAnalysisList"><div style="text-align:center; font-size:12px; color:var(--text-light);">暂无数据</div></div>
+        </div>
+    </div>
+
+    <div id="order-edit-modal" class="glass-panel" style="display:none; position:fixed; top:25%; left:8%; right:8%; z-index:305; padding:22px; border-radius:25px; flex-direction:column; background:rgba(255,255,255,0.85); backdrop-filter:blur(20px); box-shadow:0 10px 40px rgba(0,0,0,0.1);">
+        <div style="font-weight:bold; color:var(--accent-dark); margin-bottom:15px; font-size:16px;">✏️ 订单状态与财务核算</div>
+        <input type="text" id="oeName" placeholder="商品名称" style="font-weight:bold; font-size:15px; margin-bottom:15px;">
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+                <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">买入实付 (￥)</div>
+                <input type="number" id="oeBuy">
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">闲鱼售价 (￥)</div>
+                <input type="number" id="oeSell">
+            </div>
+        </div>
+        <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">当前操作状态</div>
+        <select id="oeStatus" style="margin-bottom:10px;">
+            <option value="预售中">⏳ 预售中 (占用本金)</option>
+            <option value="已转单">✅ 已转单 (核算利润)</option>
+            <option value="已退款">❌ 已退款 (资金回流)</option>
+        </select>
+        
+        <div id="oeSellDateBox" style="display:none; margin-bottom:15px;">
+            <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">实际售出/回款日期 (算周转率用)</div>
+            <input type="date" id="oeSellDate">
+        </div>
+        
+        <div style="display:flex; gap:10px; margin-top:5px;">
+            <button class="btn-light" style="flex:1; margin:0; border-radius:20px; padding:12px;" onclick="closeTopModals()">取消</button>
+            <button class="btn-main" style="flex:1; margin:0; border-radius:20px; padding:12px;" onclick="saveOrderEdit()">保存并核算</button>
+        </div>
+    </div>
     <div id="pageStats" class="page">
         <div class="card glass-panel">
             <div class="stats-segment" id="timeRangeSegment">
@@ -351,6 +413,34 @@
         </div>
     </div>
 
+    <div id="order-edit-modal" class="glass-panel" style="display:none; position:fixed; top:25%; left:8%; right:8%; z-index:305; padding:22px; border-radius:25px; flex-direction:column; background:rgba(255,255,255,0.85); backdrop-filter:blur(20px); box-shadow:0 10px 40px rgba(0,0,0,0.1);">
+        <div style="font-weight:bold; color:var(--accent-dark); margin-bottom:15px; font-size:16px;">✏️ 修改谷子状态</div>
+        
+        <input type="text" id="oeName" placeholder="商品名称" style="font-weight:bold; font-size:15px;">
+        
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+                <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">买入实付 (￥)</div>
+                <input type="number" id="oeBuy">
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">闲鱼售价 (￥)</div>
+                <input type="number" id="oeSell">
+            </div>
+        </div>
+        
+        <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">订单当前状态</div>
+        <select id="oeStatus" style="margin-bottom:20px;">
+            <option value="预售中">⏳ 预售中 (占用本金)</option>
+            <option value="已转单">✅ 已转单 (核算利润)</option>
+            <option value="已退款">❌ 已退款 (资金回流)</option>
+        </select>
+        
+        <div style="display:flex; gap:10px;">
+            <button class="btn-light" style="flex:1; margin:0; border-radius:20px; padding:12px;" onclick="closeTopModals()">取消</button>
+            <button class="btn-main" style="flex:1; margin:0; border-radius:20px; padding:12px;" onclick="saveOrderEdit()">保存修改</button>
+        </div>
+    </div>
     <div id="overlay" onclick="closeAllModals()"></div>
     <div id="overlay-top" onclick="closeTopModals()"></div>
 
@@ -676,7 +766,7 @@
                 
                 gl.innerHTML += `
                 <div class="swipe-container-x">
-                    <div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})">
+                    <div class="swipe-content glass-panel" onclick="openOrderEdit(${idx})">
                         <div style="flex:1; padding-right:10px;">
                             <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
                                 <span style="font-size:10px; background:rgba(141,110,99,0.1); padding:2px 4px; border-radius:4px; vertical-align:top; margin-right:4px;">${r.status}</span>${displayTitle}${hasMediaIcon}
@@ -920,6 +1010,53 @@
         if(document.getElementById('pageStats').classList.contains('active')) updateStatsUI(); 
         let analysisPage = document.getElementById('pageAnalysis');
         if(analysisPage && analysisPage.classList.contains('active')) renderCategoryAndShopAnalysis();
+    }
+        // 1. 关弹窗的时候，记得把新的订单修改框也关掉
+    const originalCloseTopModals = closeTopModals;
+    closeTopModals = function() {
+        originalCloseTopModals(); // 调用你原本的代码
+        const om = document.getElementById('order-edit-modal'); 
+        if(om) om.style.display = 'none';
+    };
+
+    // 2. ✨ 新增的透明框交互逻辑
+    let editingOrderIndex = -1;
+
+    function openOrderEdit(idx) {
+        editingOrderIndex = idx;
+        const r = db[idx];
+        
+        // 自动填入这件商品的信息
+        document.getElementById('oeName').value = r.title || r.id;
+        document.getElementById('oeBuy').value = r.buy || 0;
+        document.getElementById('oeSell').value = r.sell || '';
+        
+        let sSelect = document.getElementById('oeStatus');
+        if(r.status === '预售中') sSelect.selectedIndex = 0;
+        else if(r.status === '已转单') sSelect.selectedIndex = 1;
+        else if(r.status === '已退款') sSelect.selectedIndex = 2;
+
+        document.getElementById('overlay-top').style.display = 'block';
+        document.getElementById('order-edit-modal').style.display = 'flex';
+    }
+    function saveOrderEdit() {
+        if(editingOrderIndex === -1) return;
+        const r = db[editingOrderIndex];
+        
+        // 把你修改的内容存回数据库
+        r.title = document.getElementById('oeName').value;
+        r.buy = parseFloat(document.getElementById('oeBuy').value || 0);
+        r.sell = parseFloat(document.getElementById('oeSell').value || 0);
+        
+        // 解析状态
+        let statusText = document.getElementById('oeStatus').value;
+        r.status = statusText;
+        
+        // 自动计算利润
+        r.profit = (r.sell - r.buy).toFixed(2);
+        
+        saveAll(); // 这里面已经包含倒序排列了
+        closeTopModals();
     }
     function openInteractiveCalendar(type) { renderInteractiveCalendar(type); document.getElementById('overlay').style.display = 'block'; document.getElementById('calendar-modal').style.display = 'block'; }
     function switchDateRange(range) {
@@ -1562,6 +1699,130 @@ function handleCSV(file) {
         saveAll();
         rdr();
         alert(`✅ 已成功解析并导入 ${importCount} 个谷子商品！`);
+    }
+    
+    // 🧠 终极控制台：负责弹窗和日期联动
+    let editingOrderIndex = -1;
+    function openOrderEdit(idx) {
+        editingOrderIndex = idx;
+        const r = db[idx];
+        
+        document.getElementById('oeName').value = r.title || r.id;
+        document.getElementById('oeBuy').value = r.buy || 0;
+        document.getElementById('oeSell').value = r.sell || '';
+        
+        let sSelect = document.getElementById('oeStatus');
+        let dateBox = document.getElementById('oeSellDateBox');
+        let dateInput = document.getElementById('oeSellDate');
+
+        if(r.status === '预售中') sSelect.selectedIndex = 0;
+        else if(r.status === '已转单') sSelect.selectedIndex = 1;
+        else if(r.status === '已退款') sSelect.selectedIndex = 2;
+
+        dateInput.value = r.sellDate || getTodayString();
+        dateBox.style.display = (r.status === '已转单') ? 'block' : 'none';
+
+        sSelect.onchange = function() { dateBox.style.display = (this.value === '已转单') ? 'block' : 'none'; };
+
+        document.getElementById('overlay-top').style.display = 'block';
+        document.getElementById('order-edit-modal').style.display = 'flex';
+    }
+
+    // 🧠 终极核算中心：保存修改并计算周转天数
+    function saveOrderEdit() {
+        if(editingOrderIndex === -1) return;
+        const r = db[editingOrderIndex];
+        
+        r.title = document.getElementById('oeName').value;
+        r.buy = parseFloat(document.getElementById('oeBuy').value || 0);
+        r.sell = parseFloat(document.getElementById('oeSell').value || 0);
+        
+        let statusText = document.getElementById('oeStatus').value;
+        r.status = statusText;
+        
+        // 核心财务逻辑记录
+        if (statusText === '已转单') {
+            r.sellDate = document.getElementById('oeSellDate').value;
+            let tBuy = new Date(r.date).getTime();
+            let tSell = new Date(r.sellDate).getTime();
+            let days = Math.max(1, Math.ceil((tSell - tBuy) / (1000 * 3600 * 24))); // 至少算1天
+            r.holdDays = days;
+        } else {
+            r.sellDate = null;
+            r.holdDays = null;
+        }
+        
+        r.profit = (r.sell - r.buy).toFixed(2);
+        saveAll(); 
+        closeTopModals();
+    }
+    
+    const originalCloseTopModals = closeTopModals;
+    closeTopModals = function() {
+        originalCloseTopModals(); 
+        const om = document.getElementById('order-edit-modal'); 
+        if(om) om.style.display = 'none';
+    };
+
+    // 🧠 终极CFO大屏：负责渲染整个第 3 页
+    function renderCategoryAndShopAnalysis() {
+        const catList = document.getElementById('categoryAnalysisList');
+        const shopList = document.getElementById('shopAnalysisList');
+        if(!catList || !shopList) return;
+
+        let catStats = {}; let shopStats = {};
+        let totalProfit = 0, totalInvestedInSold = 0, currentCapital = 0;
+        let totalHoldDays = 0, soldCount = 0;
+
+        db.forEach(r => {
+            if(r.type === '转单') {
+                if(r.status === '预售中') {
+                    currentCapital += parseFloat(r.buy || 0);
+                } else if(r.status === '已转单') {
+                    let p = parseFloat(r.profit || 0); let b = parseFloat(r.buy || 0);
+                    totalProfit += p; totalInvestedInSold += b; soldCount++;
+                    if(r.holdDays) totalHoldDays += r.holdDays;
+                }
+
+                let c = r.category || '未分类';
+                if(!catStats[c]) catStats[c] = { buy: 0, profit: 0, count: 0 };
+                catStats[c].buy += parseFloat(r.buy || 0); 
+                if(r.status === '已转单') catStats[c].profit += parseFloat(r.profit || 0); 
+                catStats[c].count++; 
+
+                let s = r.shop || r.ip || '未知来源';
+                if(!shopStats[s]) shopStats[s] = { buy: 0, profit: 0, count: 0 };
+                shopStats[s].buy += parseFloat(r.buy || 0);
+                if(r.status === '已转单') shopStats[s].profit += parseFloat(r.profit || 0);
+                shopStats[s].count++;
+            }
+        });
+
+        // 写入大屏四大指标
+        document.getElementById('biTotalProfit').innerText = '￥' + totalProfit.toFixed(2);
+        document.getElementById('biTotalCapital').innerText = '￥' + currentCapital.toFixed(2);
+        let roi = totalInvestedInSold > 0 ? (totalProfit / totalInvestedInSold) * 100 : 0;
+        document.getElementById('biROI').innerText = roi.toFixed(1) + '%';
+        if (soldCount > 0) {
+            let avgDays = totalHoldDays / soldCount;
+            let annualized = roi * (365 / avgDays);
+            document.getElementById('biTurnover').innerText = `${Math.round(avgDays)}天 / ${annualized.toFixed(0)}%`;
+        } else {
+            document.getElementById('biTurnover').innerText = `暂无售出`;
+        }
+
+        const generateUI = (statsObj) => {
+            let sorted = Object.entries(statsObj).sort((a,b) => b[1].buy - a[1].buy);
+            if(sorted.length === 0) return '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:10px;">暂无数据，快去导入表格吧！</div>';
+            let html = '';
+            sorted.forEach(([name, data]) => {
+                let pColor = data.profit > 0 ? 'var(--exp-color)' : (data.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
+                let proSign = data.profit > 0 ? '+' : '';
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.5);"><div style="flex:1;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">${name} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span></div></div><div style="text-align:right;"><div style="font-size:12px; color:var(--text-light);">压本 ￥${data.buy.toFixed(2)}</div><div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">赚 ￥${proSign}${data.profit.toFixed(2)}</div></div></div>`;
+            });
+            return html;
+        };
+        catList.innerHTML = generateUI(catStats); shopList.innerHTML = generateUI(shopStats);
     }
                 
 </script>
