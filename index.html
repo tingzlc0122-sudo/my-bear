@@ -1076,112 +1076,6 @@
         document.getElementById('overlay-top').style.display = 'block';
         document.getElementById('category-detail-modal').style.display = 'flex';
     }
-        // ✨ 专门负责计算并画出“谷子数据页”的引擎
-    function renderCategoryAndShopAnalysis() {
-        const catList = document.getElementById('categoryAnalysisList');
-        const shopList = document.getElementById('shopAnalysisList');
-        if(!catList || !shopList) return;
-        let catStats = {};
-        let shopStats = {};
-        // 核心修改：让店铺数据包含一个 ips 子目录
-        db.forEach(r => {
-            if(r.type === '转单') {
-                if(r.status === '预售中') {
-                    currentCapital += parseFloat(r.buy || 0);
-                } else if(r.status === '已转单') {
-                    let p = parseFloat(r.profit || 0); let b = parseFloat(r.buy || 0);
-                    totalProfit += p; totalInvestedInSold += b; soldCount++;
-                    if(r.holdDays) totalHoldDays += r.holdDays;
-                }
-                let c = r.category || '未分类';
-                if(!catStats[c]) catStats[c] = { buy: 0, profit: 0, count: 0 };
-                catStats[c].buy += parseFloat(r.buy || 0); 
-                if(r.status === '已转单') catStats[c].profit += parseFloat(r.profit || 0); 
-                catStats[c].count++; 
-                // ✨ 店铺和 IP 的嵌套逻辑
-                let s = r.shop || '未知店铺';
-                let ipName = r.ip || '其他IP';
-                if(!shopStats[s]) shopStats[s] = { buy: 0, profit: 0, count: 0, ips: {} };
-                shopStats[s].buy += parseFloat(r.buy || 0);
-                if(r.status === '已转单') shopStats[s].profit += parseFloat(r.profit || 0);
-                shopStats[s].count++;
-                // 记录店铺内部各个 IP 的数据
-                if(!shopStats[s].ips[ipName]) shopStats[s].ips[ipName] = { buy: 0, profit: 0, count: 0 };
-                shopStats[s].ips[ipName].buy += parseFloat(r.buy || 0);
-                if(r.status === '已转单') shopStats[s].ips[ipName].profit += parseFloat(r.profit || 0);
-                shopStats[s].ips[ipName].count++;
-            }
-        });
-        const generateUI = (statsObj) => {
-            let sorted = Object.entries(statsObj).sort((a,b) => b[1].buy - a[1].buy);
-            if(sorted.length === 0) return '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:10px;">暂无数据，快去导入表格吧！</div>';
-            
-            let html = '';
-            sorted.forEach(([name, data]) => {
-                let pColor = data.profit > 0 ? 'var(--exp-color)' : (data.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
-                let proSign = data.profit > 0 ? '+' : '';
-          
-            html += `
-            <div onclick="openCatDetail('${name}')" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.5); cursor:pointer;">
-                <div style="flex:1;">
-                    <div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">
-                        ${name} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span>
-                    </div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-size:12px; color:var(--text-light);">压本 ￥${data.buy.toFixed(2)}</div>
-                    <div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">赚 ￥${proSign}${data.profit.toFixed(2)}</div>
-                </div>
-            </div>`;
-            });
-            return html;
-        };
-
-        catList.innerHTML = generateUI(catStats);
-        // ✨ 生成带折叠箭头的店铺/IP树状图
-        let shopHtml = '';
-        let sortedShops = Object.entries(shopStats).sort((a,b) => b[1].buy - a[1].buy);
-        
-        sortedShops.forEach(([shopName, data], idx) => {
-            let pColor = data.profit > 0 ? 'var(--exp-color)' : (data.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
-            let proSign = data.profit > 0 ? '+' : '';
-            let hasMultipleIPs = Object.keys(data.ips).length > 0;
-            
-            shopHtml += `
-            <div style="border-bottom:1px dashed rgba(255,255,255,0.5);">
-                <div onclick="if(${hasMultipleIPs}) { let el = document.getElementById('ipList_${idx}'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; cursor:${hasMultipleIPs ? 'pointer' : 'default'};">
-                    <div style="flex:1;">
-                        <div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">
-                            ${shopName} ${hasMultipleIPs ? '▼' : ''} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span>
-                        </div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:12px; color:var(--text-light);">压本 ￥${data.buy.toFixed(2)}</div>
-                        <div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">赚 ￥${proSign}${data.profit.toFixed(2)}</div>
-                    </div>
-                </div>`;
-                
-            // 折叠在里面的 IP 列表
-            if (hasMultipleIPs) {
-                shopHtml += `<div id="ipList_${idx}" style="display:none; padding-left:15px; margin-bottom:10px; border-left:3px solid rgba(255,255,255,0.4);">`;
-                let sortedIPs = Object.entries(data.ips).sort((a,b) => b[1].buy - a[1].buy);
-                sortedIPs.forEach(([ip, ipData]) => {
-                    let ipPColor = ipData.profit > 0 ? 'var(--exp-color)' : (ipData.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
-                    let ipProSign = ipData.profit > 0 ? '+' : '';
-                    shopHtml += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:12px;">
-                            <div style="color:var(--text-main); font-weight:bold;">↳ ${ip} (${ipData.count}件)</div>
-                            <div style="text-align:right; color:var(--text-light);">
-                                本 ￥${ipData.buy.toFixed(2)} | <span style="color:${ipPColor}; font-weight:bold;">润 ￥${ipProSign}${ipData.profit.toFixed(2)}</span>
-                            </div>
-                        </div>`;
-                });
-                shopHtml += `</div>`;
-            }
-            shopHtml += `</div>`;
-        });
-        shopList.innerHTML = shopHtml || '<div style="text-align:center; font-size:12px; padding:10px;">暂无数据</div>';
-    }
     // ✨ 这是一个关键补丁：确保你选完日期后，数据会立刻跳动更新
     function updateStatsUI() {
         const data = processStatsData();
@@ -1684,24 +1578,20 @@ function parseTaobaoCSV(csvText) {
             let itemIP = '其他';
             for (let ip of ipList) { if (title.includes(ip) || lastShop.includes(ip)) { itemIP = ip; break; } }
             let cat = '其他';
-            for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
-            // ✨ 修复版查重：只认“订单尾号”和“商品名”，不再误伤同一天买的同价复数商品！
-            let isDuplicate = db.some(r => r.type === '转单' && r.id === shortId && r.title === title);
-            if (isDuplicate) {
-                continue; // 发现重复，直接跳过这个商品，不增加到数据库
-            }
-            // 1. 先生成订单尾号
-            let shortId = lastId.slice(-4);
-            if (shortId.includes('+') || shortId.includes('e')) {
-                shortId = '乱码' + Math.floor(Math.random() * 100);
-            }
-            // 2. ✨ 再进行查重：有了订单尾号，就不会报错啦！
-            let isDuplicate = db.some(r => r.type === '转单' && r.id === shortId && r.title === title);
-            if (isDuplicate) {
-                continue; // 发现重复，直接跳过
-            }
-            // 3. 存入数据库
-            db.unshift({
+        for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
+        // 1. 先生成订单尾号 (保留这里)
+        let shortId = lastId.slice(-4);
+        if (shortId.includes('+') || shortId.includes('e')) {
+            shortId = '乱码' + Math.floor(Math.random() * 100);
+        }
+        // 2. ✨ 再进行查重：有了订单尾号，就不会报错啦！(只保留下面这一个查重)
+        let isDuplicate = db.some(r => r.type === '转单' && r.id === shortId && r.title === title);
+        if (isDuplicate) {
+            continue; // 发现重复，直接跳过
+        }
+        // 3. 存入数据库
+        db.unshift({
+            
                 type: '转单', 
                 id: shortId, 
                 title: title,     // ✨ 重点新增：把商品长标题存进来！
