@@ -645,37 +645,54 @@
         let pS = 0, cS = 0; const dl = document.getElementById('dailyList'), gl = document.getElementById('guList'); dl.innerHTML = ''; gl.innerHTML = '';
         db.forEach((r, idx) => {
             const hasMediaIcon = r.imageBase64 ? ' <span style="font-size:12px;">🖼️</span>' : '';
+            // 渲染日常流水
             if(r.type === '日常') {
                 const isExp = r.detail === '支出'; const color = isExp ? 'var(--exp-color)' : (r.detail === '收入' ? 'var(--inc-color)' : 'var(--accent-dark)'); const sign = isExp ? '-' : (r.detail === '收入' ? '+' : '='); 
                 let stickerHtml = ''; if(r.category && CATEGORY_STICKER_MAP[r.category]) { const cfg = CATEGORY_STICKER_MAP[r.category]; stickerHtml = getStickerHtml(cfg[0], cfg[1], true); } else { stickerHtml = isExp ? getStickerHtml('colExp', '🐰', true) : getStickerHtml('colInc', '🐻', true); }
                 dl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:2px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.date} ${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:16px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
-            } else {
+            } 
+            // ✨ 渲染转单流水（全新改版：左商品，右盈亏比对）
+            else {
                 if(r.status === '已转单') pS += parseFloat(r.profit); if(r.status === '预售中') cS += r.buy;
-                gl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">#${r.id} <span style="font-size:10px; background:rgba(255,255,255,0.5); padding:2px 6px; border-radius:6px; vertical-align:middle;">${r.status}</span>${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light); margin-top:4px;">${r.date} | 买 ${r.buy} → 售 ${r.sell}</div></div><div style="color:var(--exp-color); font-weight:bold; font-size:16px;">+${r.profit}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
+                
+                // 提取商品全名，如果太长会自动截断成两行
+                let displayTitle = r.title ? r.title : (r.remark || `订单 #${r.id}`);
+                // 价格与利润的排版
+                let displaySell = r.sell > 0 ? r.sell : '-.-';
+                let profitColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
+                
+                gl.innerHTML += `
+                <div class="swipe-container-x">
+                    <div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})">
+                        <div style="flex:1; padding-right:10px;">
+                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                                <span style="font-size:10px; background:rgba(141,110,99,0.1); padding:2px 4px; border-radius:4px; vertical-align:top; margin-right:4px;">${r.status}</span>${displayTitle}${hasMediaIcon}
+                            </div>
+                            <div style="font-size:11px; color:var(--text-light);">
+                                ${r.date} | ${r.ip} | ${r.category}
+                            </div>
+                        </div>
+                        <div style="text-align:right; min-width:60px;">
+                            <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
+                            <div style="font-size:11px; color:var(--text-light); text-decoration:line-through; margin-top:2px;">买 ￥${r.buy}</div>
+                            <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
+                        </div>
+                    </div>
+                    <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
+                </div>`;
             }
         });   
         document.getElementById('topProfit').innerText = '￥' + pS.toFixed(2); document.getElementById('topCapital').innerText = '￥' + cS.toFixed(2); document.getElementById('topSaving').innerText = '￥' + curSav.toFixed(2);
-            // ✨ 新增：动态提取出场率 Top 10 的品类
+        
+        // 动态提取下拉提示...
         const catDatalist = document.getElementById('dynamicCatList');
         if (catDatalist) {
             let catCounts = {};
-            // 遍历所有转单记录，统计品类出现次数
-            db.forEach(r => {
-                if (r.type === '转单' && r.category) {
-                    catCounts[r.category] = (catCounts[r.category] || 0) + 1;
-                }
-            });
-            // 按出现次数从高到低排序，截取前 10 名
+            db.forEach(r => { if (r.type === '转单' && r.category) catCounts[r.category] = (catCounts[r.category] || 0) + 1; });
             let topCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(item => item[0]);
-            
-            // 如果你的数据库还是空的，给几个初始默认值
             if (topCats.length === 0) topCats = ['吧唧', '色纸', '挂件', '立牌', '娃娃', '戒指'];
-            
-            // 把这前 10 名塞进下拉提示框里
             catDatalist.innerHTML = '';
-            topCats.forEach(cat => {
-                catDatalist.innerHTML += `<option value="${cat}"></option>`;
-            });
+            topCats.forEach(cat => { catDatalist.innerHTML += `<option value="${cat}"></option>`; });
         }
     }
 
@@ -850,16 +867,19 @@
     };
     function addGu() { 
         const b = parseFloat(document.getElementById('bP').value); 
-        const s = parseFloat(document.getElementById('sP').value) || 0; // 预售时售价可为空
+        const s = parseFloat(document.getElementById('sP').value) || 0; 
         if(!b) return alert('买入实付金额必须填写哦！'); 
+        
+        const inputName = document.getElementById('oId').value || '未命名商品';
         
         db.unshift({ 
             type: '转单', 
-            id: document.getElementById('oId').value || '单据', 
+            id: inputName.slice(-4), 
+            title: inputName,    // ✨ 重点新增：保存手动输入的名字
             buy: b, 
             sell: s, 
             status: document.getElementById('gS').value, 
-            category: document.getElementById('gCat').value, // ✨ 把品类存入数据库
+            category: document.getElementById('gCat').value, 
             profit: (s - b).toFixed(2), 
             date: getTodayString() 
         }); 
@@ -1438,12 +1458,13 @@ function handleCSV(file) {
             }
 
             db.unshift({
-                type: '转单',
-                id: shortId,
-                buy: price,
-                sell: 0,
+                type: '转单', 
+                id: shortId, 
+                title: title,     // ✨ 重点新增：把商品长标题存进来！
+                buy: price, 
+                sell: 0, 
                 status: '预售中', 
-                category: cat,
+                category: cat, 
                 ip: itemIP,       
                 shop: lastShop,   
                 profit: "0.00",
