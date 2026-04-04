@@ -258,7 +258,7 @@
 
     <div class="card glass-panel big-bubble">
         <div class="card-title">
-            🧾 转单流水 
+            🧾 转单流水 <span id="guTotalCount" style="color: var(--accent-main); font-size: 13px; font-weight: 900; margin-left: 5px;">(0条)</span> 
             <span style="font-size: 11px; color:var(--text-light);">
                 <span onclick="if(confirm('⚠️ 确定要清空下面所有的谷子订单吗？（不影响日常记账）')) { db = db.filter(r => r.type !== '转单'); saveAll(); location.reload(); }" style="color:#FF5252; cursor:pointer; font-weight:bold; margin-right:10px; background: rgba(255,82,82,0.1); padding: 3px 8px; border-radius: 10px;">🗑️一键清空</span>
                 左滑删除 / 点击修改
@@ -705,6 +705,10 @@
             }
         });   
         document.getElementById('topProfit').innerText = '￥' + pS.toFixed(2); document.getElementById('topCapital').innerText = '￥' + cS.toFixed(2); document.getElementById('topSaving').innerText = '￥' + curSav.toFixed(2);
+        // ✨ 计算并显示转单总条数
+        let guCount = db.filter(r => r.type === '转单').length;
+        let countEl = document.getElementById('guTotalCount');
+        if(countEl) countEl.innerText = `(共 ${guCount} 条)`;
     }
 
     function openSheet(type) {
@@ -1480,7 +1484,7 @@ function handleCSV(file) {
     }
 
     // ✨ 核心 2：满血版解析引擎（集成全量词库 + 智能记忆 + 乱码纠错）
-    function parseTaobaoCSV(csvText) {
+function parseTaobaoCSV(csvText) {
         const rows = csvText.split('\n');
         if(rows.length < 2) return;
 
@@ -1545,7 +1549,11 @@ function handleCSV(file) {
             for (let ip of ipList) { if (title.includes(ip) || lastShop.includes(ip)) { itemIP = ip; break; } }
             let cat = '其他';
             for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
-
+            // ✨ 防重复神器：检查名字、价格、日期是否完全一样
+            let isDuplicate = db.some(r => r.type === '转单' && r.title === title && r.buy === price && r.date === lastDate);
+            if (isDuplicate) {
+                continue; // 发现重复，直接跳过这个商品，不增加到数据库
+            }
             let shortId = lastId.slice(-4);
             if (shortId.includes('+') || shortId.includes('e')) {
                 shortId = '乱码' + Math.floor(Math.random() * 100);
@@ -1574,7 +1582,7 @@ function handleCSV(file) {
     
     // 🧠 终极控制台：负责弹窗和日期联动
     let editingOrderIndex = -1;
-    function openOrderEdit(idx) {
+function openOrderEdit(idx) {
         editingOrderIndex = idx;
         const r = db[idx];
         
@@ -1600,7 +1608,7 @@ function handleCSV(file) {
     }
 
     // 🧠 终极核算中心：保存修改并计算周转天数
-    function saveOrderEdit() {
+function saveOrderEdit() {
         if(editingOrderIndex === -1) return;
         const r = db[editingOrderIndex];
         
@@ -1629,7 +1637,7 @@ function handleCSV(file) {
     }
 
     // 🧠 终极CFO大屏：负责渲染整个第 3 页
-    function renderCategoryAndShopAnalysis() {
+function renderCategoryAndShopAnalysis() {
         const catList = document.getElementById('categoryAnalysisList');
         const shopList = document.getElementById('shopAnalysisList');
         if(!catList || !shopList) return;
