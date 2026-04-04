@@ -181,7 +181,7 @@
 </head>
 <body>
 
-         <div class="header glass-panel" id="mainHeader">
+    <div class="header glass-panel" id="mainHeader">
          <h2 id="mainTitle">Evan.兔</h2>
         
          <img src="https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/header-rabbit.jpg" class="header-img">
@@ -206,7 +206,7 @@
     </div> 
     <div id="pageBear" class="page active">
 
-        <div class="three-col-grid">
+    <div class="three-col-grid">
             <div class="col-btn glass-panel">
                 <div class="col-top-area" onclick="openInteractiveCalendar('支出')">
                     <div class="col-icon-wrapper" id="col-sticker-exp"></div>
@@ -256,7 +256,7 @@
     <button class="btn-main" onclick="addGu()">保存转单记录</button>
         </div>
 
-        <div class="card glass-panel big-bubble">
+    <div class="card glass-panel big-bubble">
         <div class="card-title">
             🧾 转单流水 
             <span style="font-size: 11px; color:var(--text-light);">
@@ -265,6 +265,22 @@
             </span>
         </div>
         <div id="guList" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <div id="pageAnalysis" class="page">
+        <div class="card glass-panel">
+            <div class="card-title">🏷️ 商品品类投资回报分析</div>
+            <div id="categoryAnalysisList">
+                <div style="text-align:center; font-size:12px; color:var(--text-light); padding:10px;">暂无数据，请先录入订单</div>
+            </div>
+        </div>
+
+        <div class="card glass-panel" style="margin-top: 15px;">
+            <div class="card-title">🏪 店铺进货与 IP 分析</div>
+            <div id="shopAnalysisList">
+                <div style="text-align:center; font-size:12px; color:var(--text-light); padding:10px;">暂无数据，请先录入订单</div>
+            </div>
         </div>
     </div>
 
@@ -294,7 +310,7 @@
             </div>
         </div>
 
-        <div class="card glass-panel">
+    <div class="card glass-panel">
             <div class="view-toggle"><span id="viewBtnChart" class="active" onclick="switchViewMode('chart')">📉 概览</span><span id="viewBtnCal" onclick="switchViewMode('cal')">📅 热力图</span></div>
             <div id="chartSection">
                 <div class="stats-segment" style="margin-bottom: 10px;"><div class="stats-seg-btn active" onclick="switchChartType('bar')">对比</div><div class="stats-seg-btn" onclick="switchChartType('line')">趋势</div><div class="stats-seg-btn" onclick="switchChartType('pie')">画像</div></div>
@@ -303,14 +319,6 @@
             </div>
             <div id="calSection" style="display: none;"><div class="cal-week-row"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div><div class="cal-grid" id="calendarGrid"></div></div>
         </div>
-
-        <div class="card glass-panel" style="margin-top: 15px;">
-            <div class="card-title">🔥 选品转化率 (好卖指数)</div>
-            <div id="conversionRateList" style="margin-top: 15px;">
-                <div style="text-align:center; font-size:12px; color:var(--text-light);">录入转单数据后将自动生成分析图表</div>
-            </div>
-        </div>
-    </div>
 
     <div id="pageNovel" class="page">
         <div style="padding-bottom: 20px;">
@@ -327,16 +335,19 @@
 
     <div class="tab-bar glass-panel" id="mainTabBar">
         <div class="tab-item active" onclick="showP('B')">
-            <div class="tab-icon-wrapper" id="tab-sticker-daily" style="width:40px; height:40px;"></div>日常生活
+            <div class="tab-icon-wrapper" id="tab-sticker-daily" style="width:36px; height:36px;"></div>日常生活
         </div>
         <div class="tab-item" onclick="showP('R')">
-            <div class="tab-icon-wrapper" id="tab-sticker-rabbit" style="width:40px; height:40px;"></div>转单本金
+            <div class="tab-icon-wrapper" id="tab-sticker-rabbit" style="width:36px; height:36px;"></div>转单录入
+        </div>
+        <div class="tab-item" onclick="showP('A')">
+            <div class="tab-icon-wrapper" id="tab-sticker-analysis" style="width:36px; height:36px;"></div>谷子数据
         </div>
         <div class="tab-item" onclick="showP('S')">
-            <div class="tab-icon-wrapper" id="tab-sticker-stats" style="width:40px; height:40px;"></div>收支统计
+            <div class="tab-icon-wrapper" id="tab-sticker-stats" style="width:36px; height:36px;"></div>日常统计
         </div>
         <div class="tab-item" onclick="showP('N')">
-            <div class="tab-icon-wrapper" id="tab-sticker-novel" style="width:40px; height:40px;"></div>灵光一闪
+            <div class="tab-icon-wrapper" id="tab-sticker-novel" style="width:36px; height:36px;"></div>灵光一闪
         </div>
     </div>
 
@@ -621,9 +632,10 @@
         document.getElementById('col-sticker-dep').innerHTML = getStickerHtml('colDep', '🏦');
         document.querySelectorAll('.col-icon-wrapper img').forEach(img => { img.style.width = '40px'; img.style.height = '40px'; });
         
-    // ✨ 底部导航栏交替比心（在这里找回了收支统计的图标！）
+        // ✨ 底部导航栏贴图（加上了中间全新的分析图标）
         document.getElementById('tab-sticker-daily').innerHTML  = getStickerHtml('tabDaily',  '🐻');
         document.getElementById('tab-sticker-rabbit').innerHTML = getStickerHtml('tabRabbit', '🐰');
+        document.getElementById('tab-sticker-analysis').innerHTML= getStickerHtml('tabAnalysis', '📈'); // 这里是新增的
         document.getElementById('tab-sticker-stats').innerHTML  = getStickerHtml('tabStats',  '📊');
         document.getElementById('tab-sticker-novel').innerHTML  = getStickerHtml('tabNovel',  '💡');
     }
@@ -731,27 +743,42 @@
         document.getElementById('overlay').style.display = 'block'; 
         setTimeout(() => { document.getElementById('bottom-sheet').style.transform = 'translateY(0)'; }, 10);
     }
-
-    // ✨ 同步修改：切换到灵感页时隐藏顶部数据
+    // ✨ 升级版：支持 5 个页面的导航中枢
     function showP(p) {
         document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-        const targetId = p==='B'?'pageBear':(p==='R'?'pageRabbit':(p==='N'?'pageNovel':'pageStats'));
+        
+        // 解析页面对应关系
+        let targetId = 'pageBear';
+        if(p === 'R') targetId = 'pageRabbit';
+        if(p === 'A') targetId = 'pageAnalysis'; // ✨ 指向你新建的谷子数据大屏
+        if(p === 'S') targetId = 'pageStats';
+        if(p === 'N') targetId = 'pageNovel';
+        
         document.getElementById(targetId).classList.add('active');
         
-    // 隐藏/显示顶部金钱数据块
+        // 是否隐藏顶部金钱版块
         const headerStats = document.querySelector('.stat-grid');
         headerStats.style.display = (p === 'N') ? 'none' : 'grid';
 
+        // 处理底下 5 个按钮的高亮状态
         const tabItems = document.querySelectorAll('.tab-item');
         tabItems.forEach(el => el.classList.remove('active'));
+        
         if(p === 'B') tabItems[0].classList.add('active');
         if(p === 'R') tabItems[1].classList.add('active');
-        if(p === 'S') tabItems[2].classList.add('active');
-        if(p === 'N') tabItems[3].classList.add('active');
+        if(p === 'A') tabItems[2].classList.add('active'); // ✨ 中间新按钮的高亮
+        if(p === 'S') tabItems[3].classList.add('active');
+        if(p === 'N') tabItems[4].classList.add('active');
         
+        // 灵感页专属绿色主题
         if(p === 'N') { document.body.classList.add('theme-green'); document.getElementById('novelFab').style.display = 'flex'; renderNovels(); } 
         else { document.body.classList.remove('theme-green'); document.getElementById('novelFab').style.display = 'none'; }
+        
+        // ✨ 重点：切到哪个页面，就刷新哪个页面的专属数据
         if(p === 'S') updateStatsUI();
+        if(p === 'A') renderCategoryAndShopAnalysis(); // 切到分析页时，激活咱们刚刚写好的谷子运算引擎
+        
+        // 记住当前页，下次刷新不迷路
         localStorage.setItem('evan_current_tab', p);
     }
 
@@ -948,6 +975,60 @@
         
         return { timeline: dayData, matchStr: matchStr }; 
     }
+        // ✨ 专门负责计算并画出“谷子数据页”的引擎
+    function renderCategoryAndShopAnalysis() {
+        const catList = document.getElementById('categoryAnalysisList');
+        const shopList = document.getElementById('shopAnalysisList');
+        if(!catList || !shopList) return;
+
+        let catStats = {};
+        let shopStats = {};
+
+        db.forEach(r => {
+            if(r.type === '转单') {
+                let c = r.category || '未分类';
+                if(!catStats[c]) catStats[c] = { buy: 0, profit: 0, count: 0 };
+                catStats[c].buy += parseFloat(r.buy || 0); 
+                if(r.status === '已转单') catStats[c].profit += parseFloat(r.profit || 0); 
+                catStats[c].count++; 
+
+                let s = r.shop || r.ip || '未知来源';
+                if(!shopStats[s]) shopStats[s] = { buy: 0, profit: 0, count: 0 };
+                shopStats[s].buy += parseFloat(r.buy || 0);
+                if(r.status === '已转单') shopStats[s].profit += parseFloat(r.profit || 0);
+                shopStats[s].count++;
+            }
+        });
+
+        const generateUI = (statsObj) => {
+            let sorted = Object.entries(statsObj).sort((a,b) => b[1].buy - a[1].buy);
+            if(sorted.length === 0) return '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:10px;">暂无数据，快去导入表格吧！</div>';
+            
+            let html = '';
+            sorted.forEach(([name, data]) => {
+                let pColor = data.profit > 0 ? 'var(--exp-color)' : (data.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
+                let proSign = data.profit > 0 ? '+' : '';
+                
+                html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.5);">
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">
+                            ${name} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:12px; color:var(--text-light);">压本 ￥${data.buy.toFixed(2)}</div>
+                        <div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">赚 ￥${proSign}${data.profit.toFixed(2)}</div>
+                    </div>
+                </div>`;
+            });
+            return html;
+        };
+
+        catList.innerHTML = generateUI(catStats);
+        shopList.innerHTML = generateUI(shopStats);
+    }
+
     // ✨ 这是一个关键补丁：确保你选完日期后，数据会立刻跳动更新
     function updateStatsUI() {
         const data = processStatsData();
