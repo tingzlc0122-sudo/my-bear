@@ -258,7 +258,7 @@
 
     <div class="card glass-panel big-bubble">
         <div class="card-title">
-            🧾 转单流水 <span id="guTotalCount" style="color: var(--accent-main); font-size: 13px; font-weight: 900; margin-left: 5px;">(0条)</span> 
+            🧾 转单流水 <span id="guTotalCount" style="background: var(--exp-color); color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; vertical-align: middle; margin-left: 5px; box-shadow: 0 2px 5px rgba(244,184,184,0.5);">0</span>
             <span style="font-size: 11px; color:var(--text-light);">
                 <span onclick="if(confirm('⚠️ 确定要清空下面所有的谷子订单吗？（不影响日常记账）')) { db = db.filter(r => r.type !== '转单'); saveAll(); location.reload(); }" style="color:#FF5252; cursor:pointer; font-weight:bold; margin-right:10px; background: rgba(255,82,82,0.1); padding: 3px 8px; border-radius: 10px;">🗑️一键清空</span>
                 左滑删除 / 点击修改
@@ -274,19 +274,19 @@
             <div style="font-size: 13px; color: var(--text-light); font-weight: bold; margin-bottom: 15px;">💼 谷子生意思维导报</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div>
-                    <div style="font-size: 11px; color: var(--text-light);">累计变现利润</div>
+                    <div style="font-size: 11px; color: var(--text-light); margin-bottom: 8px;">累计变现利润</div>
                     <div style="font-size: 20px; font-weight: 900; color: var(--exp-color);" id="biTotalProfit">￥0.00</div>
                 </div>
                 <div>
-                    <div style="font-size: 11px; color: var(--text-light);">当前在途资金 (压本)</div>
+                    <div style="font-size: 11px; color: var(--text-light); margin-bottom: 8px;">当前在途资金 (压本)</div>
                     <div style="font-size: 20px; font-weight: 900; color: var(--text-main);" id="biTotalCapital">￥0.00</div>
                 </div>
                 <div>
-                    <div style="font-size: 11px; color: var(--text-light);">平均回报率 (ROI)</div>
+                    <div style="font-size: 11px; color: var(--text-light); margin-bottom: 8px;">平均回报率 (ROI)</div>
                     <div style="font-size: 16px; font-weight: bold; color: var(--accent-dark);" id="biROI">0%</div>
                 </div>
                 <div>
-                    <div style="font-size: 11px; color: var(--text-light);">平均周转 / 预估年化</div>
+                    <div style="font-size: 11px; color: var(--text-light); margin-bottom: 8px;">平均周转 / 预估年化</div>
                     <div style="font-size: 16px; font-weight: bold; color: var(--accent-main);" id="biTurnover">0天 / 0%</div>
                 </div>
             </div>
@@ -711,10 +711,10 @@
             }
         });   
         document.getElementById('topProfit').innerText = '￥' + pS.toFixed(2); document.getElementById('topCapital').innerText = '￥' + cS.toFixed(2); document.getElementById('topSaving').innerText = '￥' + curSav.toFixed(2);
-        // ✨ 计算并显示转单总条数
+        // ✨ 计算并显示转单总条数（纯数字版）
         let guCount = db.filter(r => r.type === '转单').length;
         let countEl = document.getElementById('guTotalCount');
-        if(countEl) countEl.innerText = `(共 ${guCount} 条)`;
+        if(countEl) countEl.innerText = guCount;
     }
 
     function openSheet(type) {
@@ -1611,14 +1611,19 @@ function parseTaobaoCSV(csvText) {
             let title = cols[titleIdx] || '';
             let price = parseFloat(cols[priceIdx]?.replace(/["￥\s]/g, '')) || 0;
             
-            if (price <= 0) continue;
+            // ✨ 修复神坑：允许 0 元的商品导入（因为可能是店铺金支付），但过滤掉真正的赠品和邮费链接！
+            if (price <= 0) {
+                if (title.includes('赠品') || title.includes('邮费') || title.includes('补邮')) {
+                    continue; // 是真废品，扔掉
+                }
+            }
 
             let itemIP = '其他';
             for (let ip of ipList) { if (title.includes(ip) || lastShop.includes(ip)) { itemIP = ip; break; } }
             let cat = '其他';
             for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
-            // ✨ 防重复神器：检查名字、价格、日期是否完全一样
-            let isDuplicate = db.some(r => r.type === '转单' && r.title === title && r.buy === price && r.date === lastDate);
+            // ✨ 修复版查重：只认“订单尾号”和“商品名”，不再误伤同一天买的同价复数商品！
+            let isDuplicate = db.some(r => r.type === '转单' && r.id === shortId && r.title === title);
             if (isDuplicate) {
                 continue; // 发现重复，直接跳过这个商品，不增加到数据库
             }
