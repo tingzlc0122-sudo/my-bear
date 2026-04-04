@@ -1286,16 +1286,13 @@ function switchPieType(type) {
         btns[1].classList.toggle('active', type === 'income');
         updateStatsUI(); // 刷新一下
     }
- // ✨ 全新：CSV 批量导入引擎
+         // ✨ 全新：CSV 批量导入引擎
     const dropZone = document.getElementById('csvDropZone');
     const fileInput = document.getElementById('csvFileInput');
     const dropText = document.getElementById('dropZoneText');
 
     if(dropZone && fileInput) {
-        // 点击触发文件选择
         dropZone.onclick = () => fileInput.click();
-
-        // 拖拽交互效果
         dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
         dropZone.ondragleave = () => dropZone.classList.remove('dragover');
         dropZone.ondrop = (e) => {
@@ -1303,149 +1300,60 @@ function switchPieType(type) {
             dropZone.classList.remove('dragover');
             if (e.dataTransfer.files.length) handleCSV(e.dataTransfer.files[0]);
         };
-
-        // 选中文件后触发
         fileInput.onchange = (e) => {
             if (e.target.files.length) handleCSV(e.target.files[0]);
         };
     }
-// ✨ 新增：全局解析状态锁
-window.isParsing = false;
 
-// ✨ 防手抖拦截：如果在解析时试图刷新或关闭页面，浏览器会强行弹窗拦截！
-window.addEventListener('beforeunload', function (e) {
+    // ✨ 全局解析状态锁
+    window.isParsing = false;
+    window.addEventListener('beforeunload', function (e) {
         if (window.isParsing) {
             e.preventDefault();
             e.returnValue = '⚠️ 正在拼命解析订单中，现在刷新会导致数据丢失哦！';
         }
     });
+
+    // ✨ 核心 1：处理编码，彻底终结中文乱码
 function handleCSV(file) {
         const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
         const isCSV = file.name.endsWith('.csv');
-
-        if(!isExcel && !isCSV) return window.showToast('⚠️ 只能上传 CSV 或 Excel 格式的文件！');
+        if(!isExcel && !isCSV) { alert('⚠️ 格式不支持哦'); return; }
         
-        // 🚨 新增：强制检查 Excel 插件！如果没加载成功，直接拦截并弹窗报错！
+        // 强制检查 Excel 插件
         if (isExcel && typeof XLSX === 'undefined') {
-            alert('🚨 致命错误：Excel解析插件没有加载成功！\n请检查 HTML 代码最顶部的 <head> 里，有没有正确贴上那段带有 cdnjs 的 <script> 标签！');
+            alert('🚨 致命错误：Excel解析插件没有加载成功！');
             return; 
         }
 
-        const dropText = document.getElementById('dropZoneText');
-        const fileInput = document.getElementById('csvFileInput');
-        const dropZone = document.getElementById('csvDropZone');
-        
-        window.isParsing = true; 
-        dropZone.style.pointerEvents = 'none'; 
-        dropText.innerHTML = `⏳ 正在疯狂解析: ${file.name}...<br><span style="font-size:12px; color:#D32F2F;">(解析完成前请绝对不要刷新页面！)</span>`;
+        window.isParsing = true;
+        if(dropZone) dropZone.style.pointerEvents = 'none'; 
+        if(dropText) dropText.innerHTML = `⏳ 正在通过“兔兔翻译机”深度解码中...`;
         
         const reader = new FileReader();
-        
         reader.onload = function(e) {
             setTimeout(() => {
                 try {
                     if (isExcel) {
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, {type: 'array'});
-                        const firstSheetName = workbook.SheetNames[0]; 
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        const csvText = XLSX.utils.sheet_to_csv(worksheet);
+                        const csvText = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]]);
                         parseTaobaoCSV(csvText); 
                     } else {
-                        parseTaobaoCSV(e.target.result);
+                        // 🎯 强制 GBK 解码，解决表格里的中文乱码
+                        const decoder = new TextDecoder('gbk'); 
+                        const csvText = decoder.decode(e.target.result);
+                        parseTaobaoCSV(csvText);
                     }
                 } catch(err) {
-                    console.error(err);
-                    alert('❌ 解析文件时内部崩溃了！请截图此界面联系你的 AI 助手。');
+                    alert('❌ 文件读取失败，可能文件损坏了');
                 } finally {
                     window.isParsing = false;
-                    dropZone.style.pointerEvents = 'auto'; 
-                    fileInput.value = ''; 
-                    setTimeout(() => { dropText.innerHTML = '📥 拖拽淘宝 Excel/CSV 到此<br>或点击上传'; }, 2000);
+                    if(dropZone) dropZone.style.pointerEvents = 'auto'; 
+                    if(fileInput) fileInput.value = ''; 
+                    setTimeout(() => { if(dropText) dropText.innerHTML = '📥 拖拽表格到此上传'; }, 2000);
                 }
-            }, 100); 
-        };
-        
-        if (isExcel) reader.readAsArrayBuffer(file);
-        else reader.readAsText(file, 'UTF-8'); 
-    }
-function parseTaobaoCSV(csvText) {
-        const rows = csvText.split('\n');
-        if(rows.length < 2) return window.showToast('⚠️ 文件为空或格式错误！');
-
-        const ipList = [
-            '恋与深空', '恋与制作人', '光与夜之恋', '未定事件簿', '时空中的绘旅人', '世界之外', '代号鸢', 
-            '花亦山心之月', '摇光录', '食物语', '无期迷途', '第五人格', '绝对演绎', '掌门太忙',
-            '无限暖暖', '闪耀暖暖', '奇迹暖暖', '百面千相',
-            '偶像梦幻祭', 'es2', 'Ensemble Stars', '世界计划', 'pjsk', '初音未来', '吉伊卡哇', 'chiikawa', 
-            '排球少年', '蓝色监狱', '咒术回战', '名侦探柯南', '葬送的芙莉莲', '孤独摇滚', '间谍过家家', '鬼灭之刃',
-            '原神', '星穹铁道', '星铁', '崩坏3', '明日方舟', '重返未来'
-        ];
-        const guziKeywords = ['吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '指娃', '戒指', '拍立得', '盲盒', '手办', '特典', '流沙', '预售', '透卡', '镭射票', '麻将', '痛包', '周边'];
-
-        let headerRowIdx = -1;
-        for(let i = 0; i < Math.min(15, rows.length); i++) {
-            if(rows[i].includes('订单号') && rows[i].includes('实付金额')) {
-                headerRowIdx = i;
-                break;
-            }
-        }
-
-        if(headerRowIdx === -1) {
-            alert('❌ 找遍了前15行都没看到【订单号】和【实付金额】！请检查文件是否正确。');
-            return;
-        }
-
-        const headers = rows[headerRowIdx].split(',');
-        // ✨ 新增：itemPriceIdx 用来抓取单件【商品金额】
-        let idIdx = -1, titleIdx = -1, priceIdx = -1, itemPriceIdx = -1, dateIdx = -1, statusIdx = -1, shopIdx = -1;
-
-        headers.forEach((h, i) => {
-            if(h.includes('订单号')) idIdx = i;
-            if(h.includes('商品名称')) titleIdx = i;
-            if(h.includes('实付金额')) priceIdx = i;
-            if(h.includes('商品金额') || h.includes('子订单金额')) itemPriceIdx = i; 
-            if(h.includes('订单提交时间')) dateIdx = i;
-            if(h.includes('订单状态')) statusIdx = i; 
-            if(h.includes('店铺名称')) shopIdx = i; 
-        });
-
-        if(idIdx === -1 || priceIdx === -1) {
-            alert('❌ 找到了表头，但匹配字段索引失败了！');
-            return;
-        }
-
-        let importCount = 0, skipCount = 0, refundSkipCount = 0, dailySkipCount = 0;
-    // ✨ 核心 1：处理编码，彻底终结中文乱码
-    function handleCSV(file) {
-        const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
-        const isCSV = file.name.endsWith('.csv');
-        if(!isExcel && !isCSV) return window.showToast('⚠️ 格式不支持哦');
-        
-        const dropText = document.getElementById('dropZoneText');
-        window.isParsing = true;
-        dropText.innerHTML = `⏳ 正在深度解析全量词库中...`;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                if (isExcel) {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const csvText = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]]);
-                    parseTaobaoCSV(csvText); 
-                } else {
-                    // 🎯 强制 GBK 解码，解决表格里的中文乱码
-                    const decoder = new TextDecoder('gbk'); 
-                    const csvText = decoder.decode(e.target.result);
-                    parseTaobaoCSV(csvText);
-                }
-            } catch(err) {
-                window.showToast('❌ 文件读取失败');
-            } finally {
-                window.isParsing = false;
-                setTimeout(() => { dropText.innerHTML = '📥 拖拽表格到此上传'; }, 2000);
-            }
+            }, 100);
         };
         
         if (isExcel || isCSV) reader.readAsArrayBuffer(file);
@@ -1456,19 +1364,12 @@ function parseTaobaoCSV(csvText) {
         const rows = csvText.split('\n');
         if(rows.length < 2) return;
 
-        // ==========================================
-        // 📚 满血版超级词库 (已全部找回)
-        // ==========================================
         const ipList = [
-            // 国乙 & 热门女性向手游
             '恋与深空', '恋与制作人', '光与夜之恋', '未定事件簿', '时空中的绘旅人', '世界之外', '代号鸢', 
             '花亦山心之月', '摇光录', '食物语', '无期迷途', '第五人格', '绝对演绎', '掌门太忙',
-            // 叠纸全家桶
             '无限暖暖', '闪耀暖暖', '奇迹暖暖', '百面千相',
-            // 日系大热/偶像企划/女性向重灾区
             '偶像梦幻祭', 'es2', 'Ensemble Stars', '世界计划', 'pjsk', '初音未来', '吉伊卡哇', 'chiikawa', 
             '排球少年', '蓝色监狱', '咒术回战', '名侦探柯南', '葬送的芙莉莲', '孤独摇滚', '间谍过家家', '鬼灭之刃',
-            // 泛二次元顶流大厂
             '原神', '星穹铁道', '星铁', '崩坏3', '明日方舟', '重返未来'
         ];
         
@@ -1476,8 +1377,6 @@ function parseTaobaoCSV(csvText) {
             '吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '指娃', '戒指', '拍立得', 
             '盲盒', '手办', '特典', '流沙', '预售', '透卡', '镭射票', '麻将', '痛包', '周边'
         ];
-
-        // ==========================================
 
         let headerRowIdx = -1;
         for(let i = 0; i < Math.min(15, rows.length); i++) {
@@ -1507,7 +1406,6 @@ function parseTaobaoCSV(csvText) {
             const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if(cols.length < 5) continue;
 
-            // 🧠 记忆逻辑：处理合并单元格，如果这行没单号，就沿用上一行的信息
             let rawId = cols[idIdx]?.replace(/["=\s']/g, '');
             if (rawId && rawId.length > 5) {
                 lastId = rawId;
@@ -1516,29 +1414,23 @@ function parseTaobaoCSV(csvText) {
                 lastShop = cols[shopIdx] || '';
             }
 
-            // 过滤无效订单（如交易关闭或退款）
             if (!lastId || lastStatus.includes('关闭') || lastStatus.includes('退款')) continue;
 
             let title = cols[titleIdx] || '';
             let price = parseFloat(cols[priceIdx]?.replace(/["￥\s]/g, '')) || 0;
             
-            // 跳过金额无效的行
             if (price <= 0) continue;
 
-            // 识别分类与 IP
             let itemIP = '其他';
             for (let ip of ipList) { if (title.includes(ip) || lastShop.includes(ip)) { itemIP = ip; break; } }
             let cat = '其他';
             for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
 
-            // 🛑 处理 e+18 科学计数法导致的重复 ID 拦截
             let shortId = lastId.slice(-4);
             if (shortId.includes('+') || shortId.includes('e')) {
-                // 如果单号乱码了，用随机后缀防止被系统“防重机制”拦截
                 shortId = '乱码' + Math.floor(Math.random() * 100);
             }
 
-            // 存入数据库
             db.unshift({
                 type: '转单',
                 id: shortId,
@@ -1556,9 +1448,9 @@ function parseTaobaoCSV(csvText) {
 
         saveAll();
         rdr();
-        window.showToast(`✅ 已成功解析并导入 ${importCount} 个谷子商品！`);
+        alert(`✅ 已成功解析并导入 ${importCount} 个谷子商品！`);
     }
-
+                
 </script>
 <div id="anchoredDropdown" class="frosted-dropdown" style="display:none;"></div>
 
