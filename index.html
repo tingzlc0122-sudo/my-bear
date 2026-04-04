@@ -333,7 +333,7 @@
     </div>
     <div class="novel-fab" id="novelFab" onclick="openNovelModal('add')">＋</div>
 
-    <div class="tab-bar glass-panel" id="mainTabBar">
+        <div class="tab-bar glass-panel" id="mainTabBar">
         <div class="tab-item active" onclick="showP('B')">
             <div class="tab-icon-wrapper" id="tab-sticker-daily" style="width:36px; height:36px;"></div>日常生活
         </div>
@@ -625,20 +625,22 @@
     function closeTopModals() { document.getElementById('day-detail-modal').style.display = 'none'; document.getElementById('remark-modal').style.display = 'none'; document.getElementById('record-edit-modal').style.display = 'none'; document.getElementById('novel-modal').style.display = 'none'; document.getElementById('css-editor-modal').style.display = 'none'; document.getElementById('overlay-top').style.display = 'none'; }
 
     function initializeStickers() {
-        document.getElementById('sticker-deposit').innerHTML = getStickerHtml('topDeposit', '🏦');
-        document.getElementById('sticker-profit').innerHTML  = getStickerHtml('topProfit',  '❤️');
-        document.getElementById('sticker-capital').innerHTML = getStickerHtml('topCapital', '🐰');
-        document.getElementById('col-sticker-exp').innerHTML = getStickerHtml('colExp', '🐰');
-        document.getElementById('col-sticker-inc').innerHTML = getStickerHtml('colInc', '🐻');
-        document.getElementById('col-sticker-dep').innerHTML = getStickerHtml('colDep', '🏦');
+        const safeSet = (id, html) => { let el = document.getElementById(id); if(el) el.innerHTML = html; };
+        
+        safeSet('sticker-deposit', getStickerHtml('topDeposit', '🏦'));
+        safeSet('sticker-profit', getStickerHtml('topProfit', '❤️'));
+        safeSet('sticker-capital', getStickerHtml('topCapital', '🐰'));
+        safeSet('col-sticker-exp', getStickerHtml('colExp', '🐰'));
+        safeSet('col-sticker-inc', getStickerHtml('colInc', '🐻'));
+        safeSet('col-sticker-dep', getStickerHtml('colDep', '🏦'));
+        
         document.querySelectorAll('.col-icon-wrapper img').forEach(img => { img.style.width = '40px'; img.style.height = '40px'; });
         
-        // ✨ 底部导航栏贴图（加上了中间全新的分析图标）
-        document.getElementById('tab-sticker-daily').innerHTML  = getStickerHtml('tabDaily',  '🐻');
-        document.getElementById('tab-sticker-rabbit').innerHTML = getStickerHtml('tabRabbit', '🐰');
-        document.getElementById('tab-sticker-analysis').innerHTML= getStickerHtml('tabAnalysis', '📈'); // 这里是新增的
-        document.getElementById('tab-sticker-stats').innerHTML  = getStickerHtml('tabStats',  '📊');
-        document.getElementById('tab-sticker-novel').innerHTML  = getStickerHtml('tabNovel',  '💡');
+        safeSet('tab-sticker-daily', getStickerHtml('tabDaily', '🐻'));
+        safeSet('tab-sticker-rabbit', getStickerHtml('tabRabbit', '🐰'));
+        safeSet('tab-sticker-analysis', getStickerHtml('tabAnalysis', '📈')); 
+        safeSet('tab-sticker-stats', getStickerHtml('tabStats', '📊'));
+        safeSet('tab-sticker-novel', getStickerHtml('tabNovel', '💡'));
     }
 
     function renderNovels() {
@@ -658,19 +660,17 @@
         let pS = 0, cS = 0; const dl = document.getElementById('dailyList'), gl = document.getElementById('guList'); dl.innerHTML = ''; gl.innerHTML = '';
         db.forEach((r, idx) => {
             const hasMediaIcon = r.imageBase64 ? ' <span style="font-size:12px;">🖼️</span>' : '';
-            // 渲染日常流水
+            
             if(r.type === '日常') {
                 const isExp = r.detail === '支出'; const color = isExp ? 'var(--exp-color)' : (r.detail === '收入' ? 'var(--inc-color)' : 'var(--accent-dark)'); const sign = isExp ? '-' : (r.detail === '收入' ? '+' : '='); 
                 let stickerHtml = ''; if(r.category && CATEGORY_STICKER_MAP[r.category]) { const cfg = CATEGORY_STICKER_MAP[r.category]; stickerHtml = getStickerHtml(cfg[0], cfg[1], true); } else { stickerHtml = isExp ? getStickerHtml('colExp', '🐰', true) : getStickerHtml('colInc', '🐻', true); }
                 dl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:2px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.date} ${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:16px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
             } 
-            // ✨ 渲染转单流水（全新改版：左商品，右盈亏比对）
             else {
                 if(r.status === '已转单') pS += parseFloat(r.profit); if(r.status === '预售中') cS += r.buy;
                 
-                // 提取商品全名，如果太长会自动截断成两行
-                let displayTitle = r.title ? r.title : (r.remark || `订单 #${r.id}`);
-                // 价格与利润的排版
+                // ✨ 只要商品名称，如果为空就显示未知商品，彻底抛弃订单号！
+                let displayTitle = r.title ? r.title : '未知商品';
                 let displaySell = r.sell > 0 ? r.sell : '-.-';
                 let profitColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                 
@@ -687,7 +687,7 @@
                         </div>
                         <div style="text-align:right; min-width:60px;">
                             <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
-                            <div style="font-size:11px; color:var(--text-light); text-decoration:line-through; margin-top:2px;">买 ￥${r.buy}</div>
+                            <div style="font-size:11px; color:var(--text-light); margin-top:2px;">买 ￥${r.buy}</div>
                             <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
                         </div>
                     </div>
@@ -696,17 +696,6 @@
             }
         });   
         document.getElementById('topProfit').innerText = '￥' + pS.toFixed(2); document.getElementById('topCapital').innerText = '￥' + cS.toFixed(2); document.getElementById('topSaving').innerText = '￥' + curSav.toFixed(2);
-        
-        // 动态提取下拉提示...
-        const catDatalist = document.getElementById('dynamicCatList');
-        if (catDatalist) {
-            let catCounts = {};
-            db.forEach(r => { if (r.type === '转单' && r.category) catCounts[r.category] = (catCounts[r.category] || 0) + 1; });
-            let topCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(item => item[0]);
-            if (topCats.length === 0) topCats = ['吧唧', '色纸', '挂件', '立牌', '娃娃', '戒指'];
-            catDatalist.innerHTML = '';
-            topCats.forEach(cat => { catDatalist.innerHTML += `<option value="${cat}"></option>`; });
-        }
     }
 
     function openSheet(type) {
@@ -916,7 +905,22 @@
         document.getElementById('bP').value = ''; 
         document.getElementById('sP').value = ''; 
     }
-    function saveAll() { localStorage.setItem('evan_rabbit_v4', JSON.stringify(db)); rdr(); if(document.getElementById('pageStats').classList.contains('active')) updateStatsUI(); }
+    function saveAll() { 
+        // ✨ 自动按时间从近到远排序（最新购买的在最上面）
+        db.sort((a, b) => {
+            let tA = new Date(a.date + 'T' + (a.timeStr || '00:00:00')).getTime();
+            let tB = new Date(b.date + 'T' + (b.timeStr || '00:00:00')).getTime();
+            return tB - tA;
+        });
+
+        localStorage.setItem('evan_rabbit_v4', JSON.stringify(db)); 
+        rdr(); 
+        
+        // 自动刷新统计大屏
+        if(document.getElementById('pageStats').classList.contains('active')) updateStatsUI(); 
+        let analysisPage = document.getElementById('pageAnalysis');
+        if(analysisPage && analysisPage.classList.contains('active')) renderCategoryAndShopAnalysis();
+    }
     function openInteractiveCalendar(type) { renderInteractiveCalendar(type); document.getElementById('overlay').style.display = 'block'; document.getElementById('calendar-modal').style.display = 'block'; }
     function switchDateRange(range) {
         currentRange = range;
