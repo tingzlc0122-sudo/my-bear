@@ -437,29 +437,50 @@
     
     <div id="remark-modal"><div id="remarkText">备注内容</div></div>
 
-    <div id="record-edit-modal" class="glass-panel" style="display: none; position: fixed; top: 8%; left: 5%; right: 5%; bottom: 8%; border-radius: 30px; z-index: 305; padding: 15px 20px; overflow: hidden; animation: popIn 0.2s; flex-direction: column;">
-        <div class="cal-modal-header" style="padding-bottom:5px; margin-bottom: 10px;">
+    <div id="record-edit-modal" class="glass-panel" style="display: none; position: fixed; top: 8%; left: 5%; right: 5%; max-height: 84%; border-radius: 30px; z-index: 305; padding: 20px; overflow-y: auto; animation: popIn 0.2s; flex-direction: column;">
+        <div class="cal-modal-header" style="padding-bottom:5px; margin-bottom: 15px;">
             <h3 class="cal-modal-title">🏷️ 明细与手账</h3>
-            <button id="btnEnableRecordEdit" onclick="enableRecordEdit()" style="background: var(--accent-pill); color: var(--accent-dark); border: none; padding: 5px 15px; border-radius: 15px; font-weight: bold; cursor: pointer; margin-right: 10px;">✏️ 修改</button>
             <div class="cal-modal-close" onclick="closeTopModals()">✕</div>
         </div>
-        <div style="display: flex; gap: 8px; margin-bottom: 5px;">
-            <input type="text" id="editRemark" class="readonly-mode" placeholder="备注" style="flex:2;">
-            <input type="number" id="editAmt" class="readonly-mode" style="flex:1;">
-        </div>
-        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
-            <input type="date" id="editDate" class="readonly-mode" style="padding:10px;">
-            <input type="time" id="editTime" class="readonly-mode" style="padding:10px;">
-        </div>
-        <div style="text-align: center; font-size: 11px; color: var(--accent-dark); font-weight: bold; margin-bottom: 5px; opacity: 0.7;">◀ 左右滑动：日记 / 图片 ▶</div>
-        <div class="swipe-container" style="overflow-x: auto; overflow-y: hidden;">
-            <div class="swipe-item"><div class="diary-container"><textarea id="editDiary" class="diary-paper readonly-mode" placeholder="今天发生了什么？"></textarea></div></div>
-            <div class="swipe-item">
-                <div class="media-box" id="mediaImageBox"><img id="displayImage" class="media-img" style="display: none;"><div id="uploadPrompt" style="text-align:center;">📷</div><input type="file" id="imageUploader" accept="image/*" onchange="handleImageUpload(event)"></div>
-                <button id="btnUploadImg" class="btn-light" style="display:none; padding: 8px; font-size: 12px; margin-top: 5px; border-radius: 30px;" onclick="document.getElementById('imageUploader').click()">选择图片</button>
+
+    <div id="recordReadContainer" style="display: flex; flex-direction: column; flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div id="readRemark" style="font-size: 20px; font-weight: 900; color: var(--accent-dark);"></div>
+                <div id="readAmt" style="font-size: 22px; font-weight: 900;"></div>
             </div>
+            <div style="font-size: 12px; color: var(--text-light); margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.6); padding-bottom: 10px;">
+                <span id="readDate"></span> <span id="readTime"></span>
+            </div>
+            
+            <div id="readDiary" style="font-size: 15px; line-height: 1.8; color: var(--text-main); white-space: pre-wrap; margin-bottom: 15px; min-height: 50px;"></div>
+            
+            <img id="readImage" style="display: none; max-width: 100%; border-radius: 15px; margin-bottom: 15px; border: 2px dashed rgba(255,255,255,0.5);">
+            
+            <button class="btn-pill-edit" onclick="enableRecordEdit()" style="margin-top: auto;">✏️ 修改</button>
         </div>
-        <button id="btnSaveRecord" class="btn-main" style="display:none; margin-top: 15px; border-radius: 30px;" onclick="saveRecordEdit()">保存修改</button>
+
+        <div id="recordEditContainer" style="display: none; flex-direction: column; flex: 1;">
+            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                <input type="text" id="editRemark" placeholder="备注" style="flex:2;">
+                <input type="number" id="editAmt" style="flex:1;" placeholder="金额">
+            </div>
+            <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+                <input type="date" id="editDate" style="padding:10px;">
+                <input type="time" id="editTime" style="padding:10px;">
+            </div>
+            
+            <div class="diary-container" style="margin-bottom: 15px; min-height: 120px;">
+                <textarea id="editDiary" class="diary-paper" placeholder="今天发生了什么？"></textarea>
+            </div>
+            
+            <div class="media-box" id="mediaImageBox" style="min-height: 100px; margin-bottom: 15px; cursor: pointer;" onclick="document.getElementById('imageUploader').click()">
+                <img id="displayImage" class="media-img" style="display: none; max-height: 150px;">
+                <div id="uploadPrompt" style="text-align:center; padding: 20px;">📷 点击更换/上传图片</div>
+                <input type="file" id="imageUploader" accept="image/*" onchange="handleImageUpload(event)" style="display: none;">
+            </div>
+            
+            <button class="btn-main" style="border-radius: 30px;" onclick="saveRecordEdit()">保存修改</button>
+        </div>
     </div>
     
     <div id="css-editor-modal" class="novel-modal glass-panel" style="display: none; height: 85vh; top: 7%; z-index: 400;">
@@ -1849,39 +1870,59 @@ function saveOrderEdit() {
         shopList.innerHTML = shopHtml;
     }
 // ✨ 防误触弹窗逻辑
-function openRecordEdit(idx) { 
-        editingRecordIndex = idx; const r = db[idx]; 
+// ✨ 打开记录：默认进入纯净浏览模式
+    function openRecordEdit(idx) { 
+        editingRecordIndex = idx; 
+        const r = db[idx]; 
         
-        // 填入数据
-        document.getElementById('editRemark').value = r.remark || r.id; 
-        document.getElementById('editAmt').value = r.amt || r.profit || r.buy; 
+        // 1. 填入【浏览模式】的数据 (全是纯文本)
+        document.getElementById('readRemark').innerText = r.remark || r.id || '无备注';
+        const amtEl = document.getElementById('readAmt');
+        if (r.type === '日常' && r.detail === '支出') {
+            amtEl.innerText = '-' + (r.amt || 0);
+            amtEl.style.color = 'var(--exp-color)';
+        } else if (r.type === '日常' && r.detail === '收入') {
+            amtEl.innerText = '+' + (r.amt || 0);
+            amtEl.style.color = 'var(--inc-color)';
+        } else {
+            amtEl.innerText = r.amt || r.profit || r.buy || 0;
+            amtEl.style.color = 'var(--accent-dark)';
+        }
+        document.getElementById('readDate').innerText = r.date || getTodayString();
+        document.getElementById('readTime').innerText = r.timeStr || '';
+        document.getElementById('readDiary').innerText = r.diaryText || '没有记录日记哦~';
+        
+        const readImg = document.getElementById('readImage');
+        if (r.imageBase64) { readImg.src = r.imageBase64; readImg.style.display = 'block'; } 
+        else { readImg.style.display = 'none'; }
+
+        // 2. 后台悄悄准备好【编辑模式】的数据
+        document.getElementById('editRemark').value = r.remark || r.id || ''; 
+        document.getElementById('editAmt').value = r.amt || r.profit || r.buy || ''; 
         document.getElementById('editDate').value = r.date || getTodayString(); 
         document.getElementById('editTime').value = r.timeStr || getTimeString(); 
         document.getElementById('editDiary').value = r.diaryText || ''; 
         
-        // 图片处理
-        const imgEl = document.getElementById('displayImage'); 
-        if (r.imageBase64) { imgEl.src = r.imageBase64; imgEl.style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; } 
-        else { imgEl.style.display = 'none'; document.getElementById('uploadPrompt').style.display = 'block'; } 
+        const editImg = document.getElementById('displayImage'); 
+        if (r.imageBase64) { 
+            editImg.src = r.imageBase64; editImg.style.display = 'block'; 
+            document.getElementById('uploadPrompt').style.display = 'none'; 
+        } else { 
+            editImg.style.display = 'none'; document.getElementById('uploadPrompt').style.display = 'block'; 
+        } 
         
-        // ✨ 每次打开默认是只读模式
-        const inputs = ['editRemark', 'editAmt', 'editDate', 'editTime', 'editDiary'];
-        inputs.forEach(id => document.getElementById(id).classList.add('readonly-mode'));
-        document.getElementById('btnSaveRecord').style.display = 'none';
-        document.getElementById('btnUploadImg').style.display = 'none';
-        document.getElementById('btnEnableRecordEdit').style.display = 'inline-block';
+        // 3. 强制显示浏览模式，隐藏编辑模式
+        document.getElementById('recordReadContainer').style.display = 'flex';
+        document.getElementById('recordEditContainer').style.display = 'none';
 
         document.getElementById('overlay-top').style.display = 'block'; 
         document.getElementById('record-edit-modal').style.display = 'flex'; 
     }
 
+    // ✨ 点击“修改”按钮：翻转到编辑模式
     function enableRecordEdit() {
-        // ✨ 点击修改后，解除封印
-        const inputs = ['editRemark', 'editAmt', 'editDate', 'editTime', 'editDiary'];
-        inputs.forEach(id => document.getElementById(id).classList.remove('readonly-mode'));
-        document.getElementById('btnSaveRecord').style.display = 'block';
-        document.getElementById('btnUploadImg').style.display = 'block';
-        document.getElementById('btnEnableRecordEdit').style.display = 'none';
+        document.getElementById('recordReadContainer').style.display = 'none';
+        document.getElementById('recordEditContainer').style.display = 'flex';
     }
 
     // ✨ 丝滑的左右滑动导航
