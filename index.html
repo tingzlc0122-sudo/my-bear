@@ -711,10 +711,10 @@
         let pS = 0, cS = 0; 
         const dl = document.getElementById('dailyList');
         const gl = document.getElementById('guList'); 
-        dl.innerHTML = ''; 
-        gl.innerHTML = '';
+        if(dl) dl.innerHTML = ''; 
+        if(gl) gl.innerHTML = '';
 
-        // 🔍 抓取搜索框里的文字（如果有的话）
+        // 🔍 抓取搜索框里的文字
         const searchInputEl = document.getElementById('guSearchInput');
         const searchTerm = searchInputEl ? searchInputEl.value.trim().toLowerCase() : '';
 
@@ -732,13 +732,13 @@
                 } else { 
                     stickerHtml = isExp ? getStickerHtml('colExp', '🐰', true) : getStickerHtml('colInc', '🐻', true); 
                 }
-                dl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:2px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.date} ${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:16px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
+                if(dl) dl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:2px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.date} ${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:16px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
             } 
             else {
                 if(r.status === '已转单') pS += parseFloat(r.profit); 
                 if(r.status === '预售中') cS += r.buy;
                 
-                // ✨ 搜索拦截逻辑：如果输入了搜索词，且商品名称、品类、状态都不包含搜索词，就直接跳过不显示
+                // ✨ 搜索拦截逻辑：如果不符合搜索词，直接跳过渲染
                 if (searchTerm) {
                     const titleMatch = r.title && r.title.toLowerCase().includes(searchTerm);
                     const catMatch = r.category && r.category.toLowerCase().includes(searchTerm);
@@ -750,9 +750,22 @@
                 let displaySell = r.sell > 0 ? r.sell : '-.-';
                 let profitColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                 
-                gl.innerHTML += `
+                // ✨ 找回批量管理模式：动态生成复选框和切换点击事件
+                let checkboxHtml = '';
+                let clickEvent = `openOrderEdit(${idx})`; 
+                
+                if (typeof isGuManaging !== 'undefined' && isGuManaging) {
+                    let isChecked = selectedGuSet.has(idx);
+                    let checkBg = isChecked ? 'var(--accent-main)' : 'rgba(255,255,255,0.4)';
+                    let checkBorder = isChecked ? 'var(--accent-main)' : 'rgba(255,255,255,0.8)';
+                    checkboxHtml = `<div style="width:18px; height:18px; border-radius:50%; border:2px solid ${checkBorder}; background:${checkBg}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; margin-right:12px; flex-shrink:0; transition:0.2s;">${isChecked ? '✓' : ''}</div>`;
+                    clickEvent = `toggleGuSelect(${idx})`; 
+                }
+
+                if(gl) gl.innerHTML += `
                 <div class="swipe-container-x">
-                    <div class="swipe-content glass-panel" onclick="openOrderEdit(${idx})">
+                    <div class="swipe-content glass-panel" onclick="${clickEvent}" style="display:flex; align-items:center;">
+                        ${checkboxHtml}
                         <div style="flex:1; padding-right:10px;">
                             <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
                                 <span style="font-size:10px; background:rgba(141,110,99,0.1); padding:2px 4px; border-radius:4px; vertical-align:top; margin-right:4px;">${r.status}</span>${displayTitle}${hasMediaIcon}
@@ -771,9 +784,18 @@
                 </div>`;
             }
         });   
-        document.getElementById('topProfit').innerText = '￥' + pS.toFixed(2); 
-        document.getElementById('topCapital').innerText = '￥' + cS.toFixed(2); 
-        document.getElementById('topSaving').innerText = '￥' + curSav.toFixed(2);
+        
+        let topProfitEl = document.getElementById('topProfit');
+        if(topProfitEl) topProfitEl.innerText = '￥' + pS.toFixed(2); 
+        let topCapEl = document.getElementById('topCapital');
+        if(topCapEl) topCapEl.innerText = '￥' + cS.toFixed(2); 
+        let topSavEl = document.getElementById('topSaving');
+        if(topSavEl) topSavEl.innerText = '￥' + curSav.toFixed(2);
+
+        // ✨ 找回丢失的转单总条数徽章更新代码
+        let guCount = db.filter(r => r.type === '转单').length;
+        let countEl = document.getElementById('guTotalCount');
+        if(countEl) countEl.innerText = guCount;
     }
 
     function openSheet(type) {
@@ -1564,8 +1586,7 @@ function handleCSV(file) {
         if (isExcel || isCSV) reader.readAsArrayBuffer(file);
     }
 
-    // ✨ 核心 2：满血版解析引擎（集成全量词库 + 智能记忆 + 乱码纠错）
-function parseTaobaoCSV(csvText) {
+    function parseTaobaoCSV(csvText) {
         const rows = csvText.split('\n');
         if(rows.length < 2) return;
 
@@ -1585,7 +1606,7 @@ function parseTaobaoCSV(csvText) {
 
         let headerRowIdx = -1;
         for(let i = 0; i < Math.min(15, rows.length); i++) {
-            if(rows[i].includes('订单号') && (rows[i].includes('实付金额') || rows[i].includes('实付'))) {
+            if(rows[i].includes('订单号')) {
                 headerRowIdx = i;
                 break;
             }
@@ -1593,64 +1614,82 @@ function parseTaobaoCSV(csvText) {
         if(headerRowIdx === -1) return alert('❌ 无法识别表头，请确认是否为导出的订单表');
 
         const headers = rows[headerRowIdx].split(',');
-        let idIdx = -1, titleIdx = -1, priceIdx = -1, dateIdx = -1, statusIdx = -1, shopIdx = -1;
+        let idIdx = -1, titleIdx = -1, priceIdx = -1, itemPriceIdx = -1, dateIdx = -1, statusIdx = -1, shopIdx = -1;
+        
         headers.forEach((h, i) => {
             const head = h.trim();
             if(head.includes('订单号')) idIdx = i;
-            if(head.includes('商品名称')) titleIdx = i;
-            if(head.includes('商品金额') || head.includes('实付金额')) priceIdx = i;
-            if(head.includes('订单提交时间')) dateIdx = i;
-            if(head.includes('订单状态')) statusIdx = i;
-            if(head.includes('店铺名称')) shopIdx = i;
+            if(head.includes('商品名称') || head.includes('标题')) titleIdx = i;
+            // 记录主订单实付
+            if(head === '买家实际支付金额' || head === '实付金额' || head.includes('实付')) priceIdx = i;
+            // 记录子订单商品原价（用来兜底）
+            if(head === '商品价格' || head === '商品金额' || head.includes('价格')) itemPriceIdx = i;
+            if(head.includes('订单创建时间') || head.includes('订单提交时间') || head.includes('提交时间')) dateIdx = i;
+            if(head.includes('订单状态') || head.includes('状态')) statusIdx = i;
+            if(head.includes('店铺名称') || head.includes('店铺')) shopIdx = i;
         });
+
+        // 容错：如果根本没找到实付金额那一列，直接去抓商品单价列
+        if (priceIdx === -1) priceIdx = itemPriceIdx;
 
         let lastId = '', lastDate = '', lastStatus = '', lastShop = '';
         let importCount = 0;
 
         for(let i = headerRowIdx + 1; i < rows.length; i++) {
+            // 解决 CSV 逗号分割问题
             const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if(cols.length < 5) continue;
 
             let rawId = cols[idIdx]?.replace(/["=\s']/g, '');
             if (rawId && rawId.length > 5) {
                 lastId = rawId;
-                lastDate = cols[dateIdx]?.substring(0,10) || getTodayString();
-                lastStatus = cols[statusIdx] || '';
-                lastShop = cols[shopIdx] || '';
+                lastDate = cols[dateIdx]?.substring(0,10).replace(/["=\s']/g, '') || getTodayString();
+                lastStatus = cols[statusIdx]?.replace(/["=\s']/g, '') || '';
+                let currentShop = cols[shopIdx]?.replace(/["=\s']/g, '');
+                if (currentShop) lastShop = currentShop;
             }
 
             if (!lastId || lastStatus.includes('关闭') || lastStatus.includes('退款')) continue;
 
-            let title = cols[titleIdx] || '';
-            let price = parseFloat(cols[priceIdx]?.replace(/["=￥\s']/g, '')) || 0;
+            let title = cols[titleIdx]?.replace(/"/g, '') || '';
             
-            // ✨ 修复神坑：允许 0 元的商品导入（因为可能是店铺金支付），但过滤掉真正的赠品和邮费链接！
+            // ✨ 核心修复：处理淘宝隐藏的等号，并加入子订单金额兜底机制
+            let priceStr = cols[priceIdx]?.replace(/["=￥\s']/g, '');
+            let price = parseFloat(priceStr);
+            
+            // 如果实付金额是 NaN 或者空（淘宝子订单的实付通常是空的），去抓这一行的商品原价！
+            if (isNaN(price) || priceStr === '' || price === 0) {
+                if (itemPriceIdx !== -1) {
+                    price = parseFloat(cols[itemPriceIdx]?.replace(/["=￥\s']/g, '')) || 0;
+                } else {
+                    price = 0;
+                }
+            }
+            
             if (price <= 0) {
-                if (title.includes('赠品') || title.includes('邮费') || title.includes('补邮')) {
-                    continue; // 是真废品，扔掉
+                // 排除真正的运费和赠品
+                if (title.includes('赠品') || title.includes('邮费') || title.includes('补邮') || title.includes('定金')) {
+                    continue; 
                 }
             }
 
             let itemIP = '其他';
             for (let ip of ipList) { if (title.includes(ip) || lastShop.includes(ip)) { itemIP = ip; break; } }
             let cat = '其他';
-        for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
-        // 1. 先生成订单尾号 (保留这里)
-        let shortId = lastId.slice(-4);
-        if (shortId.includes('+') || shortId.includes('e')) {
-            shortId = '乱码' + Math.floor(Math.random() * 100);
-        }
-        // 2. ✨ 再进行查重：有了订单尾号，就不会报错啦！(只保留下面这一个查重)
-        let isDuplicate = db.some(r => r.type === '转单' && r.id === shortId && r.title === title);
-        if (isDuplicate) {
-            continue; // 发现重复，直接跳过
-        }
-        // 3. 存入数据库
-        db.unshift({
-            
+            for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
+
+            let shortId = lastId.length > 8 ? lastId.slice(-8) : lastId;
+            if (shortId.includes('+') || shortId.includes('e') || shortId.includes('E')) {
+                shortId = 'E' + (price % 100).toFixed(0) + Math.floor(Math.random() * 10);
+            }
+
+            let isDuplicate = db.some(r => r.type === '转单' && r.id === shortId && r.title === title);
+            if (isDuplicate) continue;
+
+            db.unshift({
                 type: '转单', 
                 id: shortId, 
-                title: title,     // ✨ 重点新增：把商品长标题存进来！
+                title: title,
                 buy: price, 
                 sell: 0, 
                 status: '预售中', 
@@ -1940,17 +1979,48 @@ function saveOrderEdit() {
         document.getElementById('recordEditContainer').style.display = 'flex';
     }
 
-    // ✨ 丝滑的左右滑动导航
+    // ✨ 顶级丝滑左右滑动导航 (带原生的 X/Y 轴防误触计算)
     let touchStartX = 0;
-    let touchEndX = 0;
+    let touchStartY = 0; // 新增：记录垂直起点的 Y 轴
     
     document.addEventListener('touchstart', e => {
         touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
     }, {passive: true});
 
     document.addEventListener('touchend', e => {
-        touchEndX = e.changedTouches[0].screenX;
-        handleSwipeNavigation(e);
+        let touchEndX = e.changedTouches[0].screenX;
+        let touchEndY = e.changedTouches[0].screenY;
+        
+        // 1. 算出水平和垂直分别滑了多远
+        let deltaX = touchEndX - touchStartX;
+        let deltaY = touchEndY - touchStartY;
+        
+        // 2. 核心魔法：如果上下滑动的距离大于左右滑动，说明你在看列表，直接取消翻页判定！
+        if (Math.abs(deltaY) > Math.abs(deltaX)) {
+            return;
+        }
+
+        // 3. 避开页面里自带的横向滚动区域（比如明细模块的日记/图片）
+        if (e.target.closest('.swipe-container-x') || 
+            e.target.closest('.swipe-container') || 
+            e.target.closest('.cal-week-row') || 
+            e.target.closest('.cal-grid') ||
+            e.target.closest('canvas')) {
+            return;
+        }
+
+        const pages = ['B', 'R', 'A', 'S', 'N'];
+        let currentTab = localStorage.getItem('evan_current_tab') || 'B';
+        let currentIndex = pages.indexOf(currentTab);
+
+        // 4. 把触发门槛从 80px 降到 45px，只要判定是横向划动，轻轻一拨就翻页！
+        if (deltaX < -45) { // 👈 向左滑 -> 去下一个页面
+            if (currentIndex < pages.length - 1) showP(pages[currentIndex + 1]);
+        }
+        if (deltaX > 45) {  // 👉 向右滑 -> 去上一个页面
+            if (currentIndex > 0) showP(pages[currentIndex - 1]);
+        }
     }, {passive: true});
 
     function handleSwipeNavigation(e) {
