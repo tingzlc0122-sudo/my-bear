@@ -1596,12 +1596,12 @@ function handleCSV(file) {
             '无限暖暖', '闪耀暖暖', '奇迹暖暖', '百面千相',
             '偶像梦幻祭', 'es2', 'Ensemble Stars', '世界计划', 'pjsk', '初音未来', '吉伊卡哇', 'chiikawa', 
             '排球少年', '蓝色监狱', '咒术回战', '名侦探柯南', '葬送的芙莉莲', '孤独摇滚', '间谍过家家', '鬼灭之刃',
-            '原神', '星穹铁道', '星铁', '崩坏3', '明日方舟', '重返未来'
+            '原神', '星穹铁道', '星铁', '崩坏3', '明日方舟', '重返未来', 'miHoYo', '米哈游', '叠纸'
         ];
         
         const guziKeywords = [
             '吧唧', '徽章', '色纸', '挂件', '立牌', '娃娃', '娃衣', '指娃', '戒指', '拍立得', 
-            '盲盒', '手办', '特典', '流沙', '预售', '透卡', '镭射票', '麻将', '痛包', '周边'
+            '盲盒', '手办', '特典', '流沙', '预售', '透卡', '镭射票', '麻将', '痛包', '周边', '食玩'
         ];
 
         let headerRowIdx = -1;
@@ -1620,23 +1620,19 @@ function handleCSV(file) {
             const head = h.trim();
             if(head.includes('订单号')) idIdx = i;
             if(head.includes('商品名称') || head.includes('标题')) titleIdx = i;
-            // 记录主订单实付
             if(head === '买家实际支付金额' || head === '实付金额' || head.includes('实付')) priceIdx = i;
-            // 记录子订单商品原价（用来兜底）
             if(head === '商品价格' || head === '商品金额' || head.includes('价格')) itemPriceIdx = i;
             if(head.includes('订单创建时间') || head.includes('订单提交时间') || head.includes('提交时间')) dateIdx = i;
             if(head.includes('订单状态') || head.includes('状态')) statusIdx = i;
             if(head.includes('店铺名称') || head.includes('店铺')) shopIdx = i;
         });
 
-        // 容错：如果根本没找到实付金额那一列，直接去抓商品单价列
         if (priceIdx === -1) priceIdx = itemPriceIdx;
 
         let lastId = '', lastDate = '', lastStatus = '', lastShop = '';
         let importCount = 0;
 
         for(let i = headerRowIdx + 1; i < rows.length; i++) {
-            // 解决 CSV 逗号分割问题
             const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if(cols.length < 5) continue;
 
@@ -1651,13 +1647,14 @@ function handleCSV(file) {
 
             if (!lastId || lastStatus.includes('关闭') || lastStatus.includes('退款')) continue;
 
-            let title = cols[titleIdx]?.replace(/"/g, '') || '';
+            let title = cols[titleIdx]?.replace(/"/g, '').trim() || '';
             
-            // ✨ 核心修复：处理淘宝隐藏的等号，并加入子订单金额兜底机制
+            // ✨ 救命补丁 1：跳过所有没有商品名字的行！（淘宝父订单通常是空的，直接干掉）
+            if (!title) continue;
+
             let priceStr = cols[priceIdx]?.replace(/["=￥\s']/g, '');
             let price = parseFloat(priceStr);
             
-            // 如果实付金额是 NaN 或者空（淘宝子订单的实付通常是空的），去抓这一行的商品原价！
             if (isNaN(price) || priceStr === '' || price === 0) {
                 if (itemPriceIdx !== -1) {
                     price = parseFloat(cols[itemPriceIdx]?.replace(/["=￥\s']/g, '')) || 0;
@@ -1667,7 +1664,6 @@ function handleCSV(file) {
             }
             
             if (price <= 0) {
-                // 排除真正的运费和赠品
                 if (title.includes('赠品') || title.includes('邮费') || title.includes('补邮') || title.includes('定金')) {
                     continue; 
                 }
@@ -1677,6 +1673,11 @@ function handleCSV(file) {
             for (let ip of ipList) { if (title.includes(ip) || lastShop.includes(ip)) { itemIP = ip; break; } }
             let cat = '其他';
             for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
+
+            // ✨ 救命补丁 2：如果它既不属于你的 IP，名字里也没有“吧唧、色纸”等关键词，绝对是买的衣服零食，直接踢出去！
+            if (itemIP === '其他' && cat === '其他') {
+                continue; 
+            }
 
             let shortId = lastId.length > 8 ? lastId.slice(-8) : lastId;
             if (shortId.includes('+') || shortId.includes('e') || shortId.includes('E')) {
@@ -1704,7 +1705,7 @@ function handleCSV(file) {
 
         saveAll();
         rdr();
-        alert(`✅ 已成功解析并导入 ${importCount} 个谷子商品！`);
+        alert(`✅ 过滤拦截完毕！精准导入 ${importCount} 个谷子商品！`);
     }
     
     // 🧠 终极控制台：负责弹窗和日期联动
