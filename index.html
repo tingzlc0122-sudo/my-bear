@@ -811,42 +811,57 @@
         document.getElementById('overlay').style.display = 'block'; 
         setTimeout(() => { document.getElementById('bottom-sheet').style.transform = 'translateY(0)'; }, 10);
     }
-    // ✨ 升级版：支持 5 个页面的导航中枢
+    // ✨ 顶级导航中枢（带有方向感知能力）
+    let currentTabIdx = -1; // 记忆当前页面的位置
+
     function showP(p) {
-        document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+        // 定义五个页面的固定顺序
+        const pages = ['B', 'R', 'A', 'S', 'N'];
+        const newTabIdx = pages.indexOf(p);
         
-        // 解析页面对应关系
+        // 1. 判断滑动方向，决定播放哪种神仙动画
+        let animClass = 'fade-in-scale'; // 默认情况：直接点击导航栏时的缩放淡入
+        if (currentTabIdx !== -1 && currentTabIdx !== newTabIdx) {
+            if (newTabIdx > currentTabIdx) {
+                animClass = 'slide-in-left';  // 往右边的页面翻，画面从右侧滑入
+            } else {
+                animClass = 'slide-in-right'; // 往左边的页面翻，画面从左侧滑入
+            }
+        }
+        currentTabIdx = newTabIdx;
+
+        // 2. 清理所有页面的旧状态
+        document.querySelectorAll('.page').forEach(el => {
+            el.classList.remove('active', 'slide-in-left', 'slide-in-right', 'fade-in-scale');
+        });
+        
+        // 3. 激活新页面，并贴上计算好的绝美动画
         let targetId = 'pageBear';
         if(p === 'R') targetId = 'pageRabbit';
-        if(p === 'A') targetId = 'pageAnalysis'; // ✨ 指向你新建的谷子数据大屏
+        if(p === 'A') targetId = 'pageAnalysis'; 
         if(p === 'S') targetId = 'pageStats';
         if(p === 'N') targetId = 'pageNovel';
         
-        document.getElementById(targetId).classList.add('active');
+        document.getElementById(targetId).classList.add('active', animClass);
         
-        // 是否隐藏顶部金钱版块
+        // --- ⬇️ 下面保持你原本的逻辑完全不变 ⬇️ ---
         const headerStats = document.querySelector('.stat-grid');
-        headerStats.style.display = (p === 'N') ? 'none' : 'grid';
+        if(headerStats) headerStats.style.display = (p === 'N') ? 'none' : 'grid';
 
-        // 处理底下 5 个按钮的高亮状态
         const tabItems = document.querySelectorAll('.tab-item');
         tabItems.forEach(el => el.classList.remove('active'));
-        
         if(p === 'B') tabItems[0].classList.add('active');
         if(p === 'R') tabItems[1].classList.add('active');
-        if(p === 'A') tabItems[2].classList.add('active'); // ✨ 中间新按钮的高亮
+        if(p === 'A') tabItems[2].classList.add('active');
         if(p === 'S') tabItems[3].classList.add('active');
         if(p === 'N') tabItems[4].classList.add('active');
         
-        // 灵感页专属绿色主题
         if(p === 'N') { document.body.classList.add('theme-green'); document.getElementById('novelFab').style.display = 'flex'; renderNovels(); } 
-        else { document.body.classList.remove('theme-green'); document.getElementById('novelFab').style.display = 'none'; }
+        else { document.body.classList.remove('theme-green'); const fab=document.getElementById('novelFab'); if(fab) fab.style.display = 'none'; }
         
-        // ✨ 重点：切到哪个页面，就刷新哪个页面的专属数据
         if(p === 'S') updateStatsUI();
-        if(p === 'A') renderCategoryAndShopAnalysis(); // 切到分析页时，激活咱们刚刚写好的谷子运算引擎
+        if(p === 'A') renderCategoryAndShopAnalysis();
         
-        // 记住当前页，下次刷新不迷路
         localStorage.setItem('evan_current_tab', p);
     }
 
