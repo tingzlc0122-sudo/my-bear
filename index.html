@@ -1558,11 +1558,10 @@ function handleCSV(file) {
         if(dropText) dropText.innerHTML = `⏳ 正在通过“兔兔翻译机”深度解码中...`;
         
         const reader = new FileReader();
-            reader.onload = (e) => {
+                        reader.onload = (e) => {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
                 if (jsonData.length === 0) {
@@ -1570,15 +1569,14 @@ function handleCSV(file) {
                     return;
                 }
 
-                // --- 专门用来把 "￥69.28" 变成纯数字 69.28 的小工具 ---
+                // 提取纯数字的工具（解决 ￥ 符号导致计算出错的问题）
                 const parseMoney = (val) => {
                     if (!val) return 0;
-                    // 把除了数字和负号小数点的其他符号（比如￥）全拔掉
                     return parseFloat(String(val).replace(/[^\d.-]/g, '')) || 0;
                 };
 
-                const orderMap = {}; 
-                let lastOrderId = null; 
+                const orderMap = {};
+                let lastOrderId = null; // 用于应对淘宝导出时同订单多行只在首行显示订单号的问题
 
                 jsonData.forEach(row => {
                     let oId = row['订单号'] ? String(row['订单号']).trim() : null;
@@ -1589,40 +1587,57 @@ function handleCSV(file) {
                         lastOrderId = oId;
                     }
 
-                    if (!oId) return; 
+                    if (!oId) return;
 
                     if (!orderMap[oId]) {
+                        // 初始化这个订单的“进货单”
                         orderMap[oId] = {
                             date: row['订单提交时间'] ? row['订单提交时间'].split(' ')[0] : new Date().toISOString().split('T')[0],
                             shop: row['店铺名称'] || '淘宝',
-                            // 这里用上了新写的 parseMoney 函数，完美避开 ￥ 符号的坑
-                            actualPay: parseMoney(row['实付金额']), 
-                            itemSum: 0,
-                            name: row['商品名称'] || ''
+                            actualPay: parseMoney(row['实付金额']), // 抓取这一大单的最终实付款
+                            items: [], // 购物车：用来塞这个订单里的所有商品和它的单价
+                            itemsSum: 0 // 兜底：万一实付没抓到，把单品加起来
                         };
                     }
-                    // 商品金额也同样过滤掉 ￥ 符号再去累加
-                    orderMap[oId].itemSum += parseMoney(row['商品金额']); 
+
+                    // 抓取当前行的商品名和商品金额
+                    // 比如：【预售】夏彦徽章，16.18
+                    let itemName = row['商品名称'] || '未知商品';
+                    // 名字太长可以截取一下，这里按原样保留
+                    let itemPrice = parseMoney(row['商品金额']);
+                    
+                    // 把商品和金额拼在一起，放进这个订单的购物车里
+                    orderMap[oId].items.push(`${itemName}(￥${itemPrice})`);
+                    orderMap[oId].itemsSum += itemPrice;
                 });
 
-                const finalData = Object.values(orderMap).map(order => {
-                    const finalAmount = order.actualPay > 0 ? order.actualPay : order.itemSum;
+                // 把整理好的订单转化成账本记录
+                const finalRecords = Object.values(orderMap).map(order => {
+                    // 最终金额：有实付用实付，没实付用商品累计总价
+                    const finalAmount = order.actualPay > 0 ? order.actualPay : order.itemsSum;
                     
+                    // 用加号把所有商品连起来
+                    // 单个商品就是："商品A(￥10)"
+                    // 多个商品就是："商品A(￥10) + 商品B(￥20)"
+                    const itemDetails = order.items.join(' + ');
+
                     return {
                         id: Date.now() + Math.random(),
                         date: order.date,
                         type: '支出',
-                        category: '购物',
+                        category: '转单进货', // 分类可以自己改
                         amount: Number(finalAmount.toFixed(2)),
-                        remark: `淘宝:${order.shop}-${order.name}`,
+                        // 备注栏：完全按照你的商业逻辑，没有订单号，只有店铺、商品明细、单品价格
+                        remark: `${order.shop} | ${itemDetails}`,
                         source: '淘宝导入'
                     };
                 });
 
-                this.list = [...this.list, ...finalData];
+                // 批量存入账本
+                this.list = [...this.list, ...finalRecords];
                 this.saveData(); 
                 if (this.renderChart) this.renderChart(); 
-                alert(`搞定了！共识别 ${finalData.length} 笔独立订单，已成功导入。`);
+                alert(`业务解析完成！共导入 ${finalRecords.length} 笔转单进货记录！`);
             };
         
         if (isExcel || isCSV) reader.readAsArrayBuffer(file);
