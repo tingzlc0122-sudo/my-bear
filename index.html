@@ -1542,12 +1542,11 @@ function switchPieType(type) {
     });
 
     // ✨ 核心 1：处理编码，彻底终结中文乱码
-function handleCSV(file) {
+    function handleCSV(file) {
         const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
         const isCSV = file.name.endsWith('.csv');
         if(!isExcel && !isCSV) { alert('⚠️ 格式不支持哦'); return; }
         
-        // 强制检查 Excel 插件
         if (isExcel && typeof XLSX === 'undefined') {
             alert('🚨 致命错误：Excel解析插件没有加载成功！');
             return; 
@@ -1555,94 +1554,37 @@ function handleCSV(file) {
 
         window.isParsing = true;
         if(dropZone) dropZone.style.pointerEvents = 'none'; 
-        if(dropText) dropText.innerHTML = `⏳ 正在通过“兔兔翻译机”深度解码中...`;
+        if(dropText) dropText.innerHTML = `⏳ 正在深度解码中...`;
         
         const reader = new FileReader();
-                        reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-                if (jsonData.length === 0) {
-                    alert('Excel内没有数据');
-                    return;
-                }
-
-                // 提取纯数字的工具（解决 ￥ 符号导致计算出错的问题）
-                const parseMoney = (val) => {
-                    if (!val) return 0;
-                    return parseFloat(String(val).replace(/[^\d.-]/g, '')) || 0;
-                };
-
-                const orderMap = {};
-                let lastOrderId = null; // 用于应对淘宝导出时同订单多行只在首行显示订单号的问题
-
-                jsonData.forEach(row => {
-                    let oId = row['订单号'] ? String(row['订单号']).trim() : null;
-                    
-                    if (!oId) {
-                        oId = lastOrderId;
+        reader.onload = function(e) {
+            setTimeout(() => {
+                try {
+                    if (isExcel) {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const csvText = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]]);
+                        parseTaobaoCSV(csvText); 
                     } else {
-                        lastOrderId = oId;
+                        const decoder = new TextDecoder('gbk'); 
+                        const csvText = decoder.decode(e.target.result);
+                        parseTaobaoCSV(csvText);
                     }
-
-                    if (!oId) return;
-
-                    if (!orderMap[oId]) {
-                        // 初始化这个订单的“进货单”
-                        orderMap[oId] = {
-                            date: row['订单提交时间'] ? row['订单提交时间'].split(' ')[0] : new Date().toISOString().split('T')[0],
-                            shop: row['店铺名称'] || '淘宝',
-                            actualPay: parseMoney(row['实付金额']), // 抓取这一大单的最终实付款
-                            items: [], // 购物车：用来塞这个订单里的所有商品和它的单价
-                            itemsSum: 0 // 兜底：万一实付没抓到，把单品加起来
-                        };
-                    }
-
-                    // 抓取当前行的商品名和商品金额
-                    // 比如：【预售】夏彦徽章，16.18
-                    let itemName = row['商品名称'] || '未知商品';
-                    // 名字太长可以截取一下，这里按原样保留
-                    let itemPrice = parseMoney(row['商品金额']);
-                    
-                    // 把商品和金额拼在一起，放进这个订单的购物车里
-                    orderMap[oId].items.push(`${itemName}(￥${itemPrice})`);
-                    orderMap[oId].itemsSum += itemPrice;
-                });
-
-                // 把整理好的订单转化成账本记录
-                const finalRecords = Object.values(orderMap).map(order => {
-                    // 最终金额：有实付用实付，没实付用商品累计总价
-                    const finalAmount = order.actualPay > 0 ? order.actualPay : order.itemsSum;
-                    
-                    // 用加号把所有商品连起来
-                    // 单个商品就是："商品A(￥10)"
-                    // 多个商品就是："商品A(￥10) + 商品B(￥20)"
-                    const itemDetails = order.items.join(' + ');
-
-                    return {
-                        id: Date.now() + Math.random(),
-                        date: order.date,
-                        type: '支出',
-                        category: '转单进货', // 分类可以自己改
-                        amount: Number(finalAmount.toFixed(2)),
-                        // 备注栏：完全按照你的商业逻辑，没有订单号，只有店铺、商品明细、单品价格
-                        remark: `${order.shop} | ${itemDetails}`,
-                        source: '淘宝导入'
-                    };
-                });
-
-                // 批量存入账本
-                this.list = [...this.list, ...finalRecords];
-                this.saveData(); 
-                if (this.renderChart) this.renderChart(); 
-                alert(`业务解析完成！共导入 ${finalRecords.length} 笔转单进货记录！`);
-            };
+                } catch(err) {
+                    alert('❌ 文件读取失败，可能文件损坏了');
+                } finally {
+                    window.isParsing = false;
+                    if(dropZone) dropZone.style.pointerEvents = 'auto'; 
+                    if(fileInput) fileInput.value = ''; 
+                    setTimeout(() => { if(dropText) dropText.innerHTML = '📥 拖拽表格到此上传'; }, 2000);
+                }
+            }, 100);
+        };
         
         if (isExcel || isCSV) reader.readAsArrayBuffer(file);
     }
 
+    // ✨ 核心 2：业务解析（合并订单、计算利润进货模型）
     function parseTaobaoCSV(csvText) {
         const rows = csvText.split('\n');
         if(rows.length < 2) return;
@@ -1663,10 +1605,7 @@ function handleCSV(file) {
 
         let headerRowIdx = -1;
         for(let i = 0; i < Math.min(15, rows.length); i++) {
-            if(rows[i].includes('订单号')) {
-                headerRowIdx = i;
-                break;
-            }
+            if(rows[i].includes('订单号')) { headerRowIdx = i; break; }
         }
         if(headerRowIdx === -1) return alert('❌ 无法识别表头，请确认是否为导出的订单表');
 
@@ -1686,85 +1625,105 @@ function handleCSV(file) {
 
         if (priceIdx === -1) priceIdx = itemPriceIdx;
 
-        let lastId = '', lastDate = '', lastStatus = '', lastShop = '';
+        let lastId = '', lastDate = '', lastStatus = '', lastShop = '', lastActualPay = 0;
         let importCount = 0;
+        
+        // 专门用来装“一个订单里所有商品”的购物车容器
+        const orderMap = {}; 
 
         for(let i = headerRowIdx + 1; i < rows.length; i++) {
             const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if(cols.length < 5) continue;
 
             let rawId = cols[idIdx]?.replace(/["=\s']/g, '');
+            let currentActualPay = parseFloat(cols[priceIdx]?.replace(/["=￥\s']/g, '')) || 0;
+
+            // 淘宝的表格，只有主订单行有订单号
             if (rawId && rawId.length > 5) {
                 lastId = rawId;
                 lastDate = cols[dateIdx]?.substring(0,10).replace(/["=\s']/g, '') || getTodayString();
                 lastStatus = cols[statusIdx]?.replace(/["=\s']/g, '') || '';
                 let currentShop = cols[shopIdx]?.replace(/["=\s']/g, '');
                 if (currentShop) lastShop = currentShop;
+                lastActualPay = currentActualPay; 
             }
 
             if (!lastId || lastStatus.includes('关闭') || lastStatus.includes('退款')) continue;
 
             let title = cols[titleIdx]?.replace(/"/g, '').trim() || '';
-            
-            // ✨ 救命补丁 1：跳过所有没有商品名字的行！（淘宝父订单通常是空的，直接干掉）
-            if (!title) continue;
+            if (!title) continue; 
 
-            let priceStr = cols[priceIdx]?.replace(/["=￥\s']/g, '');
-            let price = parseFloat(priceStr);
-            
-            if (isNaN(price) || priceStr === '' || price === 0) {
-                if (itemPriceIdx !== -1) {
-                    price = parseFloat(cols[itemPriceIdx]?.replace(/["=￥\s']/g, '')) || 0;
-                } else {
-                    price = 0;
-                }
-            }
-            
-            if (price <= 0) {
-                if (title.includes('赠品') || title.includes('邮费') || title.includes('补邮') || title.includes('定金')) {
-                    continue; 
-                }
-            }
+            let itemPrice = parseFloat(cols[itemPriceIdx]?.replace(/["=￥\s']/g, '')) || 0;
+            if (itemPrice === 0) itemPrice = currentActualPay; // 如果商品本身没写价格，兜底用实付
 
-            let itemIP = '其他';
-            for (let ip of ipList) { if (title.includes(ip) || lastShop.includes(ip)) { itemIP = ip; break; } }
-            let cat = '其他';
-            for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
-
-            // ✨ 救命补丁 2：如果它既不属于你的 IP，名字里也没有“吧唧、色纸”等关键词，绝对是买的衣服零食，直接踢出去！
-            if (itemIP === '其他' && cat === '其他') {
+            // 踢走运费和赠品
+            if (itemPrice <= 0 && (title.includes('赠品') || title.includes('邮费') || title.includes('补邮') || title.includes('定金'))) {
                 continue; 
             }
 
+            let itemIP = '其他', cat = '其他';
+            for (let ip of ipList) { if (title.includes(ip) || lastShop.includes(ip)) { itemIP = ip; break; } }
+            for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
+            if (itemIP === '其他' && cat === '其他') continue; // 非谷子踢走
+
+            // 生成你系统里的短ID
             let shortId = lastId.length > 8 ? lastId.slice(-8) : lastId;
             if (shortId.includes('+') || shortId.includes('e') || shortId.includes('E')) {
-                shortId = 'E' + (price % 100).toFixed(0) + Math.floor(Math.random() * 10);
+                shortId = 'E' + (itemPrice % 100).toFixed(0) + Math.floor(Math.random() * 10);
             }
 
-            let isDuplicate = db.some(r => r.type === '转单' && r.id === shortId && r.title === title);
-            if (isDuplicate) continue;
+            // 初始化这个订单的“打包箱”
+            if (!orderMap[shortId]) {
+                orderMap[shortId] = {
+                    id: shortId,
+                    shop: lastShop,
+                    date: lastDate,
+                    actualPay: lastActualPay, 
+                    itemsSum: 0, 
+                    items: [], // 用来装商品名字的数组
+                    ip: itemIP,
+                    cat: cat
+                };
+            }
+
+            // 把这行商品和价格，塞进“打包箱”里
+            orderMap[shortId].items.push(`${title}(￥${itemPrice})`);
+            orderMap[shortId].itemsSum += itemPrice;
+        }
+
+        // 结算阶段：把所有打包箱转成你的转单记录
+        const finalOrders = Object.values(orderMap);
+        finalOrders.forEach(order => {
+            // 最关键的诉求：有实付取实付，实付为0取单品总和
+            const finalBuyPrice = order.actualPay > 0 ? order.actualPay : order.itemsSum;
+            
+            // 把商品用 + 号连起来
+            const combinedTitle = order.items.join(' + ');
+
+            let isDuplicate = db.some(r => r.type === '转单' && r.id === order.id && r.title === combinedTitle);
+            if (isDuplicate) return;
 
             db.unshift({
                 type: '转单', 
-                id: shortId, 
-                title: title,
-                buy: price, 
+                id: order.id, 
+                title: combinedTitle, // 界面显示：商品A(￥10) + 商品B(￥20)
+                buy: finalBuyPrice, 
                 sell: 0, 
                 status: '预售中', 
-                category: cat, 
-                ip: itemIP,       
-                shop: lastShop,   
+                category: order.cat, 
+                ip: order.ip,       
+                shop: order.shop,   
                 profit: "0.00",
-                date: lastDate 
+                date: order.date 
             });
             importCount++;
-        }
+        });
 
         saveAll();
         rdr();
-        alert(`✅ 过滤拦截完毕！精准导入 ${importCount} 个谷子商品！`);
+        alert(`✅ 业务解析完毕！成功合并多商品订单，实际新增 ${importCount} 个转单进货！`);
     }
-    
+
     // 🧠 终极控制台：负责弹窗和日期联动
     let editingOrderIndex = -1;
 function openOrderEdit(idx) {
