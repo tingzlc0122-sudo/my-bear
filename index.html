@@ -1558,30 +1558,72 @@ function handleCSV(file) {
         if(dropText) dropText.innerHTML = `⏳ 正在通过“兔兔翻译机”深度解码中...`;
         
         const reader = new FileReader();
-        reader.onload = function(e) {
-            setTimeout(() => {
-                try {
-                    if (isExcel) {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, {type: 'array'});
-                        const csvText = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]]);
-                        parseTaobaoCSV(csvText); 
-                    } else {
-                        // 🎯 强制 GBK 解码，解决表格里的中文乱码
-                        const decoder = new TextDecoder('gbk'); 
-                        const csvText = decoder.decode(e.target.result);
-                        parseTaobaoCSV(csvText);
-                    }
-                } catch(err) {
-                    alert('❌ 文件读取失败，可能文件损坏了');
-                } finally {
-                    window.isParsing = false;
-                    if(dropZone) dropZone.style.pointerEvents = 'auto'; 
-                    if(fileInput) fileInput.value = ''; 
-                    setTimeout(() => { if(dropText) dropText.innerHTML = '📥 拖拽表格到此上传'; }, 2000);
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                if (jsonData.length === 0) {
+                    alert('Excel内没有数据');
+                    return;
                 }
-            }, 100);
-        };
+
+                // --- 专门用来把 "￥69.28" 变成纯数字 69.28 的小工具 ---
+                const parseMoney = (val) => {
+                    if (!val) return 0;
+                    // 把除了数字和负号小数点的其他符号（比如￥）全拔掉
+                    return parseFloat(String(val).replace(/[^\d.-]/g, '')) || 0;
+                };
+
+                const orderMap = {}; 
+                let lastOrderId = null; 
+
+                jsonData.forEach(row => {
+                    let oId = row['订单号'] ? String(row['订单号']).trim() : null;
+                    
+                    if (!oId) {
+                        oId = lastOrderId;
+                    } else {
+                        lastOrderId = oId;
+                    }
+
+                    if (!oId) return; 
+
+                    if (!orderMap[oId]) {
+                        orderMap[oId] = {
+                            date: row['订单提交时间'] ? row['订单提交时间'].split(' ')[0] : new Date().toISOString().split('T')[0],
+                            shop: row['店铺名称'] || '淘宝',
+                            // 这里用上了新写的 parseMoney 函数，完美避开 ￥ 符号的坑
+                            actualPay: parseMoney(row['实付金额']), 
+                            itemSum: 0,
+                            name: row['商品名称'] || ''
+                        };
+                    }
+                    // 商品金额也同样过滤掉 ￥ 符号再去累加
+                    orderMap[oId].itemSum += parseMoney(row['商品金额']); 
+                });
+
+                const finalData = Object.values(orderMap).map(order => {
+                    const finalAmount = order.actualPay > 0 ? order.actualPay : order.itemSum;
+                    
+                    return {
+                        id: Date.now() + Math.random(),
+                        date: order.date,
+                        type: '支出',
+                        category: '购物',
+                        amount: Number(finalAmount.toFixed(2)),
+                        remark: `淘宝:${order.shop}-${order.name}`,
+                        source: '淘宝导入'
+                    };
+                });
+
+                this.list = [...this.list, ...finalData];
+                this.saveData(); 
+                if (this.renderChart) this.renderChart(); 
+                alert(`搞定了！共识别 ${finalData.length} 笔独立订单，已成功导入。`);
+            };
         
         if (isExcel || isCSV) reader.readAsArrayBuffer(file);
     }
