@@ -838,79 +838,6 @@
         // 🎨 渲染日常明细大屏 (今天直接摊开，以前的日期折叠)
         if (dl) {
             let todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
-            let sortedDates = Object.keys(dailyGroups).sort((a, b) => b.localeCompare(a)); 
-            let finalDailyHtml = '';
-
-            if (sortedDates.length === 0) {
-                dl.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:15px;">暂无日常记账记录</div>';
-            } else {
-                sortedDates.forEach(d => {
-                    let g = dailyGroups[d];
-                    let isToday = (d === todayStr);
-                    let titleDate = isToday ? '📅 今天' : `📅 ${d}`;
-                    let summary = `<span style="color:var(--exp-color);">支 ￥${g.exp.toFixed(2)}</span>` + (g.inc > 0 ? ` <span style="color:var(--text-light);">|</span> <span style="color:var(--inc-color);">收 ￥${g.inc.toFixed(2)}</span>` : '');
-                    let contentId = 'daily_group_' + d.replace(/-/g, '');
-
-                    if (isToday) {
-                        finalDailyHtml += `
-                        <div style="margin-bottom: 15px;">
-                            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:var(--text-light); margin-bottom:10px; padding:0 4px; border-bottom: 1px dashed rgba(0,0,0,0.05); padding-bottom: 6px;">
-                                <span>${titleDate}</span>
-                                <span>${summary}</span>
-                            </div>
-                            <div style="display:flex; flex-direction:column; gap:8px;">
-                                ${g.html}
-                            </div>
-                        </div>`;
-                    } else {
-                        finalDailyHtml += `
-                        <div style="margin-bottom: 10px; background:rgba(255,255,255,0.4); border-radius:12px; border:1px solid rgba(255,255,255,0.6); overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                            <div onclick="let el=document.getElementById('${contentId}'); let arrow=document.getElementById('arrow_${contentId}'); if(el.style.display==='none'){el.style.display='flex'; arrow.style.transform='rotate(180deg)';}else{el.style.display='none'; arrow.style.transform='rotate(0deg)';}" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer;">
-                                <div style="font-size:13px; font-weight:bold; color:var(--accent-dark);">${titleDate}</div>
-                                <div style="font-size:11px; font-weight:bold;">${summary} <span id="arrow_${contentId}" style="display:inline-block; color:var(--text-light); margin-left:6px; transition:0.2s;">▼</span></div>
-                            </div>
-                            <div id="${contentId}" style="display:none; flex-direction:column; gap:8px; padding:0 10px 10px 10px; border-top:1px dashed rgba(255,255,255,0.4);">
-                                ${g.html}
-                            </div>
-                        </div>`;
-                    }
-                });
-                dl.innerHTML = finalDailyHtml;
-            }
-        }
-
-        // 🎨 渲染转单流水大屏 (强制显示三个框！)
-        if (gl) {
-            let finalHtml = '';
-            
-            // 预售框：有数据塞数据，没数据给提示
-            finalHtml += `<div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(255,138,101,0.3); padding-right: 6px;"><div style="font-size:14px; font-weight:900; color:#FF8A65; margin-bottom: 12px; display:flex; align-items:center;">⏳ 预售中 (待出掉) <span style="background:rgba(255,138,101,0.15); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countPresale} 单</span></div><div style="display:flex; flex-direction:column; gap:8px; max-height: 380px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">${countPresale > 0 ? htmlPresale : '<div style="text-align:center; padding:15px; color:var(--text-light); font-size:12px;">这里空空如也</div>'}</div></div>`;
-            
-            // 已转单框
-            finalHtml += `<div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(77,182,172,0.3); padding-right: 6px;"><div style="font-size:14px; font-weight:900; color:var(--inc-color); margin-bottom: 12px; display:flex; align-items:center;">✅ 已转单 (利润库) <span style="background:rgba(77,182,172,0.15); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countSold} 单</span></div><div style="display:flex; flex-direction:column; gap:8px; max-height: 300px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">${countSold > 0 ? htmlSold : '<div style="text-align:center; padding:15px; color:var(--text-light); font-size:12px;">暂无盈利记录</div>'}</div></div>`;
-            
-            // 退款框
-            finalHtml += `<div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(141,110,99,0.2); padding-right: 6px;"><div style="font-size:14px; font-weight:900; color:var(--text-light); margin-bottom: 12px; display:flex; align-items:center;">❌ 已退款 (回本金) <span style="background:rgba(0,0,0,0.05); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countRefund} 单</span></div><div style="display:flex; flex-direction:column; gap:8px; max-height: 250px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">${countRefund > 0 ? htmlRefund : '<div style="text-align:center; padding:15px; color:var(--text-light); font-size:12px;">暂无退款记录</div>'}</div></div>`;
-            
-            gl.innerHTML = finalHtml;
-        }
-        
-        let topProfitEl = document.getElementById('topProfit');
-        if(topProfitEl) topProfitEl.innerText = '￥' + pS.toFixed(2); 
-        let topCapEl = document.getElementById('topCapital');
-        if(topCapEl) topCapEl.innerText = '￥' + cS.toFixed(2); 
-        let topSavEl = document.getElementById('topSaving');
-        if(topSavEl) topSavEl.innerText = '￥' + curSav.toFixed(2);
-
-        let guCount = db.filter(r => r.type === '转单').length;
-        let countEl = document.getElementById('guTotalCount');
-        if(countEl) countEl.innerText = guCount;
-    }
-        });   
-        
-        // 🎨 渲染日常明细大屏 (今天直接摊开，以前的日期折叠)
-        if (dl) {
-            let todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
             let sortedDates = Object.keys(dailyGroups).sort((a, b) => b.localeCompare(a)); // 日期从新到老排序
             let finalDailyHtml = '';
 
@@ -978,6 +905,7 @@
         let countEl = document.getElementById('guTotalCount');
         if(countEl) countEl.innerText = guCount;
     }
+        
 
     function openSheet(type) {
         currentSheetType = type; 
