@@ -736,7 +736,7 @@
 
     const CATEGORY_STICKER_MAP = { '吃饭': ['meal', '🍔'], '购物': ['shopping', '🛒'], '交通': ['traffic', '🚗'], '生活开支': ['living', '🏠'], '其他支出': ['casual', '🐰'], '兼职': ['job', '💰'], '生活费': ['allowance','🧧'], '其他收入': ['otherInc', '🐻'] };
 
-    // ✨ 界面刷新与流水漏斗引擎 (确保索引不乱，保留了原版所有的搜索和多选功能)
+    // ✨ 界面刷新与流水漏斗引擎 (加入日常明细按日期折叠功能)
     function rdr() {
         let pS = 0, cS = 0; 
         const dl = document.getElementById('dailyList');
@@ -747,7 +747,8 @@
         const searchInputEl = document.getElementById('guSearchInput');
         const searchTerm = searchInputEl ? searchInputEl.value.trim().toLowerCase() : '';
 
-        // 准备三个状态抽屉
+        // 日常和转单的分类容器
+        let dailyGroups = {}; // 用来按日期打包日常流水
         let htmlPresale = ''; let countPresale = 0;
         let htmlSold = '';    let countSold = 0;
         let htmlRefund = '';  let countRefund = 0;
@@ -755,6 +756,7 @@
         db.forEach((r, idx) => {
             const hasMediaIcon = r.imageBase64 ? ' <span style="font-size:12px;">🖼️</span>' : '';
             
+            // ☕️ 1. 日常记账：按日期打包
             if(r.type === '日常') {
                 const isExp = r.detail === '支出'; 
                 const color = isExp ? 'var(--exp-color)' : (r.detail === '收入' ? 'var(--inc-color)' : 'var(--accent-dark)'); 
@@ -766,14 +768,23 @@
                 } else { 
                     stickerHtml = isExp ? getStickerHtml('colExp', '🐰', true) : getStickerHtml('colInc', '🐻', true); 
                 }
-                if(dl) dl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:2px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.date} ${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:16px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
+                
+                // 生产单条日常流水的 HTML
+                let singleDailyHtml = `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})" style="padding:10px 12px;"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:4px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:14px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:15px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
+                
+                // 存进对应日期的箱子里
+                if (!dailyGroups[r.date]) {
+                    dailyGroups[r.date] = { html: '', exp: 0, inc: 0 };
+                }
+                dailyGroups[r.date].html += singleDailyHtml;
+                if (isExp) dailyGroups[r.date].exp += parseFloat(r.amt || 0);
+                if (r.detail === '收入') dailyGroups[r.date].inc += parseFloat(r.amt || 0);
             } 
+            // 📦 2. 转单流水：状态分流保持不变
             else {
-                // 安全计算金额，防止 NaN
                 if(r.status === '已转单') pS += parseFloat(r.profit || 0); 
                 if(r.status === '预售中') cS += parseFloat(r.buy || 0);
                 
-                // 搜索功能拦截
                 if (searchTerm) {
                     const titleMatch = r.title && r.title.toLowerCase().includes(searchTerm);
                     const catMatch = r.category && r.category.toLowerCase().includes(searchTerm);
@@ -785,7 +796,6 @@
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                 let profitColor = parseFloat(r.profit) > 0 ? 'var(--exp-color)' : (parseFloat(r.profit) < 0 ? '#4DB6AC' : 'var(--text-light)');
                 
-                // 多选功能拦截
                 let checkboxHtml = '';
                 let clickEvent = `openOrderEdit(${idx})`; 
                 if (typeof isGuManaging !== 'undefined' && isGuManaging) {
@@ -817,7 +827,6 @@
                     <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
                 </div>`;
 
-                // 准确丢进对应的抽屉
                 if (r.status === '预售中') { htmlPresale += singleItemHtml; countPresale++; }
                 else if (r.status === '已转单') { htmlSold += singleItemHtml; countSold++; }
                 else if (r.status === '已退款') { htmlRefund += singleItemHtml; countRefund++; }
@@ -825,51 +834,61 @@
             }
         });   
         
-        // 🌟 核心修改：三个支持“独立内滚”的高级卡片
+        // 🎨 渲染日常明细大屏 (今天直接摊开，以前的日期折叠)
+        if (dl) {
+            let todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
+            let sortedDates = Object.keys(dailyGroups).sort((a, b) => b.localeCompare(a)); // 日期从新到老排序
+            let finalDailyHtml = '';
+
+            if (sortedDates.length === 0) {
+                dl.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:15px;">暂无日常记账记录</div>';
+            } else {
+                sortedDates.forEach(d => {
+                    let g = dailyGroups[d];
+                    let isToday = (d === todayStr);
+                    let titleDate = isToday ? '📅 今天' : `📅 ${d}`;
+                    let summary = `<span style="color:var(--exp-color);">支 ￥${g.exp.toFixed(2)}</span>` + (g.inc > 0 ? ` <span style="color:var(--text-light);">|</span> <span style="color:var(--inc-color);">收 ￥${g.inc.toFixed(2)}</span>` : '');
+                    let contentId = 'daily_group_' + d.replace(/-/g, '');
+
+                    if (isToday) {
+                        // 今天的直接展开
+                        finalDailyHtml += `
+                        <div style="margin-bottom: 15px;">
+                            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:var(--text-light); margin-bottom:10px; padding:0 4px; border-bottom: 1px dashed rgba(0,0,0,0.05); padding-bottom: 6px;">
+                                <span>${titleDate}</span>
+                                <span>${summary}</span>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:8px;">
+                                ${g.html}
+                            </div>
+                        </div>`;
+                    } else {
+                        // 以前的打包折叠，点一下才打开
+                        finalDailyHtml += `
+                        <div style="margin-bottom: 10px; background:rgba(255,255,255,0.4); border-radius:12px; border:1px solid rgba(255,255,255,0.6); overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                            <div onclick="let el=document.getElementById('${contentId}'); let arrow=document.getElementById('arrow_${contentId}'); if(el.style.display==='none'){el.style.display='flex'; arrow.style.transform='rotate(180deg)';}else{el.style.display='none'; arrow.style.transform='rotate(0deg)';}" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer;">
+                                <div style="font-size:13px; font-weight:bold; color:var(--accent-dark);">${titleDate}</div>
+                                <div style="font-size:11px; font-weight:bold;">${summary} <span id="arrow_${contentId}" style="display:inline-block; color:var(--text-light); margin-left:6px; transition:0.2s;">▼</span></div>
+                            </div>
+                            <div id="${contentId}" style="display:none; flex-direction:column; gap:8px; padding:0 10px 10px 10px; border-top:1px dashed rgba(255,255,255,0.4);">
+                                ${g.html}
+                            </div>
+                        </div>`;
+                    }
+                });
+                dl.innerHTML = finalDailyHtml;
+            }
+        }
+
+        // 🎨 渲染转单流水大屏 (高级卡片与内滚动)
         if (gl) {
             if (countPresale === 0 && countSold === 0 && countRefund === 0) {
                 gl.innerHTML = '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:15px;">暂无转单记录</div>';
             } else {
                 let finalHtml = '';
-                
-                // 框1：预售中（限制最大高度约占屏幕一半，内部丝滑滚动）
-                if (countPresale > 0) {
-                    finalHtml += `
-                    <div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(255,138,101,0.3); padding-right: 6px;">
-                        <div style="font-size:14px; font-weight:900; color:#FF8A65; margin-bottom: 12px; display:flex; align-items:center;">
-                            ⏳ 预售中 (待出掉) <span style="background:rgba(255,138,101,0.15); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countPresale} 单</span>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:8px; max-height: 380px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">
-                            ${htmlPresale}
-                        </div>
-                    </div>`;
-                }
-                
-                // 框2：已转单（同理，限制高度，独立滚动）
-                if (countSold > 0) {
-                    finalHtml += `
-                    <div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(77,182,172,0.3); padding-right: 6px;">
-                        <div style="font-size:14px; font-weight:900; color:var(--inc-color); margin-bottom: 12px; display:flex; align-items:center;">
-                            ✅ 已转单 (利润库) <span style="background:rgba(77,182,172,0.15); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countSold} 单</span>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:8px; max-height: 300px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">
-                            ${htmlSold}
-                        </div>
-                    </div>`;
-                }
-                
-                // 框3：已退款
-                if (countRefund > 0) {
-                    finalHtml += `
-                    <div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(141,110,99,0.2); padding-right: 6px;">
-                        <div style="font-size:14px; font-weight:900; color:var(--text-light); margin-bottom: 12px; display:flex; align-items:center;">
-                            ❌ 已退款 (回本金) <span style="background:rgba(0,0,0,0.05); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countRefund} 单</span>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:8px; max-height: 250px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">
-                            ${htmlRefund}
-                        </div>
-                    </div>`;
-                }
+                if (countPresale > 0) finalHtml += `<div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(255,138,101,0.3); padding-right: 6px;"><div style="font-size:14px; font-weight:900; color:#FF8A65; margin-bottom: 12px; display:flex; align-items:center;">⏳ 预售中 (待出掉) <span style="background:rgba(255,138,101,0.15); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countPresale} 单</span></div><div style="display:flex; flex-direction:column; gap:8px; max-height: 380px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">${htmlPresale}</div></div>`;
+                if (countSold > 0) finalHtml += `<div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(77,182,172,0.3); padding-right: 6px;"><div style="font-size:14px; font-weight:900; color:var(--inc-color); margin-bottom: 12px; display:flex; align-items:center;">✅ 已转单 (利润库) <span style="background:rgba(77,182,172,0.15); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countSold} 单</span></div><div style="display:flex; flex-direction:column; gap:8px; max-height: 300px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">${htmlSold}</div></div>`;
+                if (countRefund > 0) finalHtml += `<div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(141,110,99,0.2); padding-right: 6px;"><div style="font-size:14px; font-weight:900; color:var(--text-light); margin-bottom: 12px; display:flex; align-items:center;">❌ 已退款 (回本金) <span style="background:rgba(0,0,0,0.05); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countRefund} 单</span></div><div style="display:flex; flex-direction:column; gap:8px; max-height: 250px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">${htmlRefund}</div></div>`;
                 gl.innerHTML = finalHtml;
             }
         }
@@ -1934,8 +1953,7 @@ function openOrderEdit(idx) {
         updateMargin(); // 每次打开弹窗先算一遍
     }
 
-    // 🧠 终极核算中心：保存修改并计算周转天数
-function saveOrderEdit() {
+    function saveOrderEdit() {
         if(editingOrderIndex === -1) return;
         const r = db[editingOrderIndex];
         
@@ -1960,7 +1978,18 @@ function saveOrderEdit() {
         
         r.profit = (r.sell - r.buy).toFixed(2);
         saveAll(); 
-        closeTopModals();
+        
+        // ✨ 核心修复：坚决不调用粗暴的 closeTopModals()！
+        // 自动往上找修改框的本体并关闭它，保留底下的明细框
+        let editInput = document.getElementById('oeName');
+        if (editInput) {
+            let editModal = editInput.closest('div[style*="fixed"]');
+            if (editModal) editModal.style.display = 'none';
+        }
+        
+        // 刷新列表和大屏数据，让底下透出来的气泡金额瞬间变更是最新的
+        if (typeof rdr === 'function') rdr();
+        if (typeof renderCategoryAndShopAnalysis === 'function') renderCategoryAndShopAnalysis();
     }
 
     // ✨ 终极大屏核算中心 (精准计算，绝对不吞品类和店铺的数据)
