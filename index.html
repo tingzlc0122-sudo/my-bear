@@ -2381,7 +2381,7 @@ function handleSwipeNavigation(e) {
             event.target.value = ''; // 清空选择框，方便下次再选同一张图
         }
     }
-// ✨ 策略面板交互：点击弹出“单件/多件”专属订单明细
+    // ✨ 策略面板交互：点击弹出“单件/多件”专属订单明细
     function openBundleDetail(type) {
         const modal = document.getElementById('category-detail-modal');
         const titleEl = document.getElementById('catModalTitle');
@@ -2405,10 +2405,9 @@ function handleSwipeNavigation(e) {
                     let displaySell = r.sell > 0 ? r.sell : '-.-';
                     let statusColor = r.status === '已转单' ? 'var(--inc-color)' : (r.status === '已退款' ? 'var(--text-light)' : '#FF8A65');
                     
-                    // 修改这一行，去掉了隐藏弹窗的指令
+                    // ✨ 核心修复：把所有的 HTML 结构完完整整地包在一个反引号里，绝不中途打断！
                     listHtml += `
                     <div class="glass-panel" style="margin-bottom:10px; padding:12px; border-left: 4px solid ${statusColor};" onclick="openOrderEdit(${idx})">
-                    `;    
                         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
                             <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; flex:1; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; padding-right:10px;">
                                 ${r.title || '未知商品'}
