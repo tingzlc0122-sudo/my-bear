@@ -318,11 +318,18 @@
                 </div>
             </div>
         </div>
-            <div class="card glass-panel">
+
+        <div class="card glass-panel" style="margin-bottom: 15px;">
+            <div class="card-title">📦 销售策略 (单件直出 vs 多件打包)</div>
+            <div id="bundleAnalysisList"><div style="text-align:center; font-size:12px; color:var(--text-light);">加载中...</div></div>
+        </div>
+
+        <div class="card glass-panel" style="margin-bottom: 15px;">
             <div class="card-title">🏷️ 品类投资与回报分析</div>
             <div id="categoryAnalysisList"><div style="text-align:center; font-size:12px; color:var(--text-light);">暂无数据</div></div>
         </div>
-        <div class="card glass-panel" style="margin-top: 15px;">
+
+        <div class="card glass-panel">
             <div class="card-title">🏪 店铺进货与 IP 分析</div>
             <div id="shopAnalysisList"><div style="text-align:center; font-size:12px; color:var(--text-light);">暂无数据</div></div>
         </div>
@@ -729,6 +736,7 @@
 
     const CATEGORY_STICKER_MAP = { '吃饭': ['meal', '🍔'], '购物': ['shopping', '🛒'], '交通': ['traffic', '🚗'], '生活开支': ['living', '🏠'], '其他支出': ['casual', '🐰'], '兼职': ['job', '💰'], '生活费': ['allowance','🧧'], '其他收入': ['otherInc', '🐻'] };
 
+    // ✨ 界面刷新与流水漏斗引擎 (确保索引不乱，保留了原版所有的搜索和多选功能)
     function rdr() {
         let pS = 0, cS = 0; 
         const dl = document.getElementById('dailyList');
@@ -736,9 +744,13 @@
         if(dl) dl.innerHTML = ''; 
         if(gl) gl.innerHTML = '';
 
-        // 🔍 抓取搜索框里的文字
         const searchInputEl = document.getElementById('guSearchInput');
         const searchTerm = searchInputEl ? searchInputEl.value.trim().toLowerCase() : '';
+
+        // 准备三个状态抽屉
+        let htmlPresale = ''; let countPresale = 0;
+        let htmlSold = '';    let countSold = 0;
+        let htmlRefund = '';  let countRefund = 0;
 
         db.forEach((r, idx) => {
             const hasMediaIcon = r.imageBase64 ? ' <span style="font-size:12px;">🖼️</span>' : '';
@@ -757,10 +769,11 @@
                 if(dl) dl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:2px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.date} ${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:16px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
             } 
             else {
-                if(r.status === '已转单') pS += parseFloat(r.profit); 
-                if(r.status === '预售中') cS += r.buy;
+                // 安全计算金额，防止 NaN
+                if(r.status === '已转单') pS += parseFloat(r.profit || 0); 
+                if(r.status === '预售中') cS += parseFloat(r.buy || 0);
                 
-                // ✨ 搜索拦截逻辑：如果不符合搜索词，直接跳过渲染
+                // 搜索功能拦截
                 if (searchTerm) {
                     const titleMatch = r.title && r.title.toLowerCase().includes(searchTerm);
                     const catMatch = r.category && r.category.toLowerCase().includes(searchTerm);
@@ -769,13 +782,12 @@
                 }
 
                 let displayTitle = r.title ? r.title : '未知商品';
-                let displaySell = r.sell > 0 ? r.sell : '-.-';
-                let profitColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
+                let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
+                let profitColor = parseFloat(r.profit) > 0 ? 'var(--exp-color)' : (parseFloat(r.profit) < 0 ? '#4DB6AC' : 'var(--text-light)');
                 
-                // ✨ 找回批量管理模式：动态生成复选框和切换点击事件
+                // 多选功能拦截
                 let checkboxHtml = '';
                 let clickEvent = `openOrderEdit(${idx})`; 
-                
                 if (typeof isGuManaging !== 'undefined' && isGuManaging) {
                     let isChecked = selectedGuSet.has(idx);
                     let checkBg = isChecked ? 'var(--accent-main)' : 'rgba(255,255,255,0.4)';
@@ -784,13 +796,13 @@
                     clickEvent = `toggleGuSelect(${idx})`; 
                 }
 
-                if(gl) gl.innerHTML += `
+                let singleItemHtml = `
                 <div class="swipe-container-x">
                     <div class="swipe-content glass-panel" onclick="${clickEvent}" style="display:flex; align-items:center;">
                         ${checkboxHtml}
                         <div style="flex:1; padding-right:10px;">
                             <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
-                                <span style="font-size:10px; background:rgba(141,110,99,0.1); padding:2px 4px; border-radius:4px; vertical-align:top; margin-right:4px;">${r.status}</span>${displayTitle}${hasMediaIcon}
+                                ${displayTitle}${hasMediaIcon}
                             </div>
                             <div style="font-size:11px; color:var(--text-light);">
                                 ${r.date} | ${r.ip} | ${r.category}
@@ -804,8 +816,27 @@
                     </div>
                     <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
                 </div>`;
+
+                // 准确丢进对应的抽屉
+                if (r.status === '预售中') { htmlPresale += singleItemHtml; countPresale++; }
+                else if (r.status === '已转单') { htmlSold += singleItemHtml; countSold++; }
+                else if (r.status === '已退款') { htmlRefund += singleItemHtml; countRefund++; }
+                else { htmlPresale += singleItemHtml; countPresale++; } 
             }
         });   
+        
+        // 渲染抽屉UI
+        if (gl) {
+            if (countPresale === 0 && countSold === 0 && countRefund === 0) {
+                gl.innerHTML = '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:15px;">暂无转单记录</div>';
+            } else {
+                let finalHtml = '';
+                if (countPresale > 0) finalHtml += `<div style="font-size:13px; font-weight:900; color:#FF8A65; margin: 10px 0 10px 5px; border-bottom: 2px dashed rgba(255,138,101,0.3); padding-bottom: 5px;">⏳ 预售中 / 待出掉 (${countPresale})</div>` + htmlPresale;
+                if (countSold > 0) finalHtml += `<div style="font-size:13px; font-weight:900; color:var(--inc-color); margin: 20px 0 10px 5px; border-bottom: 2px dashed rgba(77,182,172,0.3); padding-bottom: 5px;">✅ 已转单 / 赚利润 (${countSold})</div>` + htmlSold;
+                if (countRefund > 0) finalHtml += `<div style="font-size:13px; font-weight:900; color:var(--text-light); margin: 20px 0 10px 5px; border-bottom: 2px dashed rgba(141,110,99,0.3); padding-bottom: 5px;">❌ 已退款 / 回本金 (${countRefund})</div>` + htmlRefund;
+                gl.innerHTML = finalHtml;
+            }
+        }
         
         let topProfitEl = document.getElementById('topProfit');
         if(topProfitEl) topProfitEl.innerText = '￥' + pS.toFixed(2); 
@@ -814,7 +845,6 @@
         let topSavEl = document.getElementById('topSaving');
         if(topSavEl) topSavEl.innerText = '￥' + curSav.toFixed(2);
 
-        // ✨ 找回丢失的转单总条数徽章更新代码
         let guCount = db.filter(r => r.type === '转单').length;
         let countEl = document.getElementById('guTotalCount');
         if(countEl) countEl.innerText = guCount;
@@ -1895,42 +1925,58 @@ function saveOrderEdit() {
         closeTopModals();
     }
 
-    // 🧠 终极CFO大屏：负责渲染整个第 3 页
-function renderCategoryAndShopAnalysis() {
+    // ✨ 终极大屏核算中心 (精准计算，绝对不吞品类和店铺的数据)
+    function renderCategoryAndShopAnalysis() {
         const catList = document.getElementById('categoryAnalysisList');
         const shopList = document.getElementById('shopAnalysisList');
+        const bundleList = document.getElementById('bundleAnalysisList'); 
+
         if(!catList || !shopList) return;
 
         let catStats = {}; let shopStats = {};
+        let bundleStats = {
+            '单件': { activeCap: 0, soldCost: 0, profit: 0, soldCount: 0, holdDays: 0, totalCount: 0 },
+            '多件': { activeCap: 0, soldCost: 0, profit: 0, soldCount: 0, holdDays: 0, totalCount: 0 }
+        };
+
         let totalProfit = 0, totalInvestedInSold = 0, currentCapital = 0;
         let totalHoldDays = 0, soldCount = 0;
 
         db.forEach(r => {
             if(r.type === '转单') {
+                // 1. 策略分析计算
+                let bKey = (r.title && r.title.includes('📦 包含多件商品')) ? '多件' : '单件';
+                bundleStats[bKey].totalCount++;
+
                 if(r.status === '预售中') {
                     currentCapital += parseFloat(r.buy || 0);
+                    bundleStats[bKey].activeCap += parseFloat(r.buy || 0); 
                 } else if(r.status === '已转单') {
                     let p = parseFloat(r.profit || 0); let b = parseFloat(r.buy || 0);
                     totalProfit += p; totalInvestedInSold += b; soldCount++;
-                    if(r.holdDays) totalHoldDays += r.holdDays;
+                    if(r.holdDays) totalHoldDays += parseFloat(r.holdDays || 0);
+                    
+                    bundleStats[bKey].soldCost += b;
+                    bundleStats[bKey].profit += p;
+                    bundleStats[bKey].soldCount++;
+                    if(r.holdDays) bundleStats[bKey].holdDays += parseFloat(r.holdDays || 0);
                 }
 
+                // 2. 品类分析计算
                 let c = r.category || '未分类';
                 if(!catStats[c]) catStats[c] = { buy: 0, profit: 0, count: 0 };
                 catStats[c].buy += parseFloat(r.buy || 0); 
                 if(r.status === '已转单') catStats[c].profit += parseFloat(r.profit || 0); 
                 catStats[c].count++; 
 
-                // ✨ 店铺和 IP 的嵌套逻辑
+                // 3. 店铺与IP分析计算
                 let s = r.shop || '未知店铺';
                 let ipName = r.ip || '其他IP';
-                
                 if(!shopStats[s]) shopStats[s] = { buy: 0, profit: 0, count: 0, ips: {} };
                 shopStats[s].buy += parseFloat(r.buy || 0);
                 if(r.status === '已转单') shopStats[s].profit += parseFloat(r.profit || 0);
                 shopStats[s].count++;
                 
-                // 记录店铺内部各个 IP 的数据
                 if(!shopStats[s].ips[ipName]) shopStats[s].ips[ipName] = { buy: 0, profit: 0, count: 0 };
                 shopStats[s].ips[ipName].buy += parseFloat(r.buy || 0);
                 if(r.status === '已转单') shopStats[s].ips[ipName].profit += parseFloat(r.profit || 0);
@@ -1938,22 +1984,75 @@ function renderCategoryAndShopAnalysis() {
             }
         });
 
-        // 写入大屏四大指标
+        // 写入头部总计
         document.getElementById('biTotalProfit').innerText = '￥' + totalProfit.toFixed(2);
         document.getElementById('biTotalCapital').innerText = '￥' + currentCapital.toFixed(2);
         let roi = totalInvestedInSold > 0 ? (totalProfit / totalInvestedInSold) * 100 : 0;
         document.getElementById('biROI').innerText = roi.toFixed(1) + '%';
         if (soldCount > 0) {
             let avgDays = totalHoldDays / soldCount;
-            let annualized = roi * (365 / avgDays);
+            let annualized = avgDays > 0 ? (roi * (365 / avgDays)) : 0;
             document.getElementById('biTurnover').innerText = `${Math.round(avgDays)}天 / ${annualized.toFixed(0)}%`;
         } else {
             document.getElementById('biTurnover').innerText = `暂无售出`;
         }
 
-        // ✨ --- 以下是升级版的 UI 生成逻辑 --- ✨
+        // 👑 渲染单/多件对比面板 (核心皇冠机制)
+        if (bundleList) {
+            let bundleHtml = '';
+            let statsArray = ['单件', '多件'].map(k => {
+                let d = bundleStats[k];
+                let avgDays = d.soldCount > 0 ? (d.holdDays / d.soldCount) : 0;
+                let bRoi = d.soldCost > 0 ? (d.profit / d.soldCost * 100) : 0;
+                let annualized = avgDays > 0 ? (bRoi * 365 / avgDays) : 0;
+                return { key: k, data: d, avgDays, bRoi, annualized };
+            });
 
-        // 1. 渲染品类列表（带点击事件和毛利率）
+            let maxAnnualized = Math.max(...statsArray.map(s => s.annualized));
+
+            statsArray.forEach(s => {
+                let k = s.key; let d = s.data; let avgDays = s.avgDays; let annualized = s.annualized;
+                let titleName = k === '单件' ? '🎯 单件单出' : '📦 多件打包';
+                let pColor = d.profit > 0 ? 'var(--exp-color)' : (d.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
+                let proSign = d.profit > 0 ? '+' : '';
+                
+                let isChampion = (annualized === maxAnnualized && annualized > 0);
+                let badgeColor = isChampion ? '#FF5252' : 'var(--accent-main)';
+                let badgeText = annualized > 0 ? `<span style="background:${badgeColor}; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.1);">${isChampion ? '👑 ' : ''}综合年化 ${annualized.toFixed(0)}%</span>` : '';
+                
+                bundleHtml += `
+                <div style="padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.5);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                        <div style="font-weight:bold; color:var(--accent-dark); font-size:14px; display:flex; align-items:center;">
+                            ${titleName} ${badgeText}
+                        </div>
+                        <div style="font-size:12px; color:var(--text-light); font-weight:bold;">已售 ${d.soldCount} / 共 ${d.totalCount}单</div>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.4); padding:12px 10px; border-radius:12px; border: 1px solid rgba(255,255,255,0.6);">
+                        <div style="text-align:center;">
+                            <div style="font-size:10px; color:var(--text-light); margin-bottom:4px;">当前压本</div>
+                            <div style="font-size:14px; font-weight:bold; color:var(--text-main);">￥${d.activeCap.toFixed(2)}</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:10px; color:var(--text-light); margin-bottom:4px;">实际利润</div>
+                            <div style="font-size:15px; font-weight:900; color:${pColor};">￥${proSign}${d.profit.toFixed(2)}</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:10px; color:var(--text-light); margin-bottom:4px;">平均周转</div>
+                            <div style="font-size:14px; font-weight:bold; color:var(--text-main);">${avgDays > 0 ? Math.round(avgDays) + '天' : '-'}</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:10px; color:var(--text-light); margin-bottom:4px;">预估年化</div>
+                            <div style="font-size:15px; font-weight:900; color:var(--accent-main);">${annualized > 0 ? annualized.toFixed(0) + '%' : '-'}</div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            bundleList.innerHTML = bundleHtml;
+        }
+
+        // 🏷️ 渲染品类列表 (绝对保留)
         let catHtml = '';
         let sortedCats = Object.entries(catStats).sort((a,b) => b[1].buy - a[1].buy);
         if(sortedCats.length === 0) {
@@ -1963,7 +2062,6 @@ function renderCategoryAndShopAnalysis() {
                 let pColor = data.profit > 0 ? 'var(--exp-color)' : (data.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                 let proSign = data.profit > 0 ? '+' : '';
                 let avgMargin = data.buy > 0 ? (data.profit / data.buy * 100).toFixed(1) : 0;
-
                 catHtml += `
                 <div onclick="openCatDetail('${name}')" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.5); cursor:pointer;">
                     <div style="flex:1;">
@@ -1972,7 +2070,7 @@ function renderCategoryAndShopAnalysis() {
                         </div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-size:12px; color:var(--text-light);">压本 ￥${data.buy.toFixed(2)}</div>
+                        <div style="font-size:12px; color:var(--text-light);">总本金 ￥${data.buy.toFixed(2)}</div>
                         <div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">
                             赚 ￥${proSign}${data.profit.toFixed(2)} 
                             <span style="font-size:10px; opacity:0.7;">(${avgMargin}%)</span>
@@ -1983,7 +2081,7 @@ function renderCategoryAndShopAnalysis() {
         }
         catList.innerHTML = catHtml;
 
-        // 2. 渲染店铺列表（带 IP 折叠和毛利率）
+        // 🏪 渲染店铺与IP列表 (绝对保留)
         let shopHtml = '';
         let sortedShops = Object.entries(shopStats).sort((a,b) => b[1].buy - a[1].buy);
         if(sortedShops.length === 0) {
@@ -2004,7 +2102,7 @@ function renderCategoryAndShopAnalysis() {
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-size:12px; color:var(--text-light);">压本 ￥${data.buy.toFixed(2)}</div>
+                            <div style="font-size:12px; color:var(--text-light);">总本金 ￥${data.buy.toFixed(2)}</div>
                             <div style="font-size:14px; color:${pColor}; font-weight:900; margin-top:2px;">
                                 赚 ￥${proSign}${data.profit.toFixed(2)} 
                                 <span style="font-size:10px; opacity:0.7;">(${avgMargin}%)</span>
@@ -2019,7 +2117,6 @@ function renderCategoryAndShopAnalysis() {
                         let ipPColor = ipData.profit > 0 ? 'var(--exp-color)' : (ipData.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                         let ipProSign = ipData.profit > 0 ? '+' : '';
                         let ipAvgMargin = ipData.buy > 0 ? (ipData.profit / ipData.buy * 100).toFixed(1) : 0;
-                        
                         shopHtml += `
                             <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:12px;">
                                 <div style="color:var(--text-main); font-weight:bold;">↳ ${ip} (${ipData.count}件)</div>
