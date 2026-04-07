@@ -825,43 +825,49 @@
             }
         });   
         
-        // 🌟 核心修改：拼装成三个独立的高级玻璃框（卡片），里面装气泡
+        // 🌟 核心修改：三个支持“独立内滚”的高级卡片
         if (gl) {
             if (countPresale === 0 && countSold === 0 && countRefund === 0) {
                 gl.innerHTML = '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:15px;">暂无转单记录</div>';
             } else {
                 let finalHtml = '';
                 
-                // 框1：预售中（主框）
+                // 框1：预售中（限制最大高度约占屏幕一半，内部丝滑滚动）
                 if (countPresale > 0) {
                     finalHtml += `
-                    <div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(255,138,101,0.3);">
+                    <div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(255,138,101,0.3); padding-right: 6px;">
                         <div style="font-size:14px; font-weight:900; color:#FF8A65; margin-bottom: 12px; display:flex; align-items:center;">
                             ⏳ 预售中 (待出掉) <span style="background:rgba(255,138,101,0.15); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countPresale} 单</span>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:8px;">${htmlPresale}</div>
+                        <div style="display:flex; flex-direction:column; gap:8px; max-height: 380px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">
+                            ${htmlPresale}
+                        </div>
                     </div>`;
                 }
                 
-                // 框2：已转单
+                // 框2：已转单（同理，限制高度，独立滚动）
                 if (countSold > 0) {
                     finalHtml += `
-                    <div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(77,182,172,0.3);">
+                    <div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(77,182,172,0.3); padding-right: 6px;">
                         <div style="font-size:14px; font-weight:900; color:var(--inc-color); margin-bottom: 12px; display:flex; align-items:center;">
                             ✅ 已转单 (利润库) <span style="background:rgba(77,182,172,0.15); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countSold} 单</span>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:8px;">${htmlSold}</div>
+                        <div style="display:flex; flex-direction:column; gap:8px; max-height: 300px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">
+                            ${htmlSold}
+                        </div>
                     </div>`;
                 }
                 
                 // 框3：已退款
                 if (countRefund > 0) {
                     finalHtml += `
-                    <div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(141,110,99,0.2);">
+                    <div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(141,110,99,0.2); padding-right: 6px;">
                         <div style="font-size:14px; font-weight:900; color:var(--text-light); margin-bottom: 12px; display:flex; align-items:center;">
                             ❌ 已退款 (回本金) <span style="background:rgba(0,0,0,0.05); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countRefund} 单</span>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:8px;">${htmlRefund}</div>
+                        <div style="display:flex; flex-direction:column; gap:8px; max-height: 250px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">
+                            ${htmlRefund}
+                        </div>
                     </div>`;
                 }
                 gl.innerHTML = finalHtml;
@@ -1159,7 +1165,7 @@
                 </div>`
             ).join('');
             
-            displayTitle = `📦 包含多件商品 (${items.length}件)</div><div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8);">${itemsHtml}</div><div style="display:inline-block;">`;
+            displayTitle = `📦 ${items.length}件</div><div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8);">${itemsHtml}</div><div style="display:inline-block;">`;
         }
 
         const shortId = 'M' + Date.now().toString().slice(-6); // 手动录入分配一个随机单号
@@ -1845,7 +1851,7 @@ function parseTaobaoCSV(csvText) {
                 ).join('');
                 
                 // 利用 </div> 强行打断你原本界面的 2 行省略号限制，让明细完整展示！
-                displayTitle = `📦 包含多件商品 (${order.items.length}件)</div><div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8);">${itemsHtml}</div><div style="display:inline-block;">`;
+                displayTitle = `📦 ${order.items.length}件</div><div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8);">${itemsHtml}</div><div style="display:inline-block;">`;
             }
 
             // 生成固定短ID防重复
@@ -1882,6 +1888,8 @@ function parseTaobaoCSV(csvText) {
     // 🧠 终极控制台：负责弹窗和日期联动
     let editingOrderIndex = -1;
 function openOrderEdit(idx) {
+        const modal = document.getElementById('guEditModal'); // 确认你的修改弹窗ID
+        if(modal) modal.style.zIndex = "400"; // 强行提到最前面
         editingOrderIndex = idx;
         const r = db[idx];
         
@@ -1975,7 +1983,7 @@ function renderCategoryAndShopAnalysis() {
         db.forEach(r => {
             if(r.type === '转单') {
                 // 1. 策略分析计算
-                let bKey = (r.title && r.title.includes('📦 包含多件商品')) ? '多件' : '单件';
+                let bKey = (r.title && r.title.includes('📦')) ? '多件' : '单件';
                 bundleStats[bKey].totalCount++;
 
                 if(r.status === '预售中') {
@@ -2361,16 +2369,17 @@ function handleSwipeNavigation(e) {
         db.forEach((r, idx) => {
             if (r.type === '转单') {
                 // 用我们之前的暗号来区分单件还是多件
-                let isBundle = r.title && r.title.includes('📦 包含多件商品');
+                let isBundle = r.title && r.title.includes('📦');
                 
                 if ((type === '多件' && isBundle) || (type === '单件' && !isBundle)) {
                     let pColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                     let displaySell = r.sell > 0 ? r.sell : '-.-';
                     let statusColor = r.status === '已转单' ? 'var(--inc-color)' : (r.status === '已退款' ? 'var(--text-light)' : '#FF8A65');
                     
-                    // 生成气泡列表
+                    // 修改这一行，去掉了隐藏弹窗的指令
                     listHtml += `
-                    <div class="glass-panel" style="margin-bottom:10px; padding:12px; border-left: 4px solid ${statusColor};" onclick="openOrderEdit(${idx}); document.getElementById('category-detail-modal').style.display='none';">
+                    <div class="glass-panel" style="margin-bottom:10px; padding:12px; border-left: 4px solid ${statusColor};" onclick="openOrderEdit(${idx})">
+                    `;    
                         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
                             <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; flex:1; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; padding-right:10px;">
                                 ${r.title || '未知商品'}
