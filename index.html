@@ -793,6 +793,7 @@
                 }
 
                 let displayTitle = r.title ? r.title : '未知商品';
+                displayTitle = displayTitle.replace('件</div><div', '件<div').replace('</div><div style="display:inline-block;">', '</div>');
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                 let profitColor = parseFloat(r.profit) > 0 ? 'var(--exp-color)' : (parseFloat(r.profit) < 0 ? '#4DB6AC' : 'var(--text-light)');
                 
@@ -847,7 +848,7 @@
                 sortedDates.forEach(d => {
                     let g = dailyGroups[d];
                     let isToday = (d === todayStr);
-                    let titleDate = isToday ? '📅 今天' : `📅 ${d}`;
+                    let titleDate = isToday ? '今天' : d;
                     let summary = `<span style="color:var(--exp-color);">支 ￥${g.exp.toFixed(2)}</span>` + (g.inc > 0 ? ` <span style="color:var(--text-light);">|</span> <span style="color:var(--inc-color);">收 ￥${g.inc.toFixed(2)}</span>` : '');
                     let contentId = 'daily_group_' + d.replace(/-/g, '');
 
@@ -1237,7 +1238,7 @@
                 </div>`
             ).join('');
             
-            displayTitle = `📦 ${items.length}件</div><div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8);">${itemsHtml}</div><div style="display:inline-block;">`;
+            displayTitle = `📦 ${items.length}件<div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8); font-weight:normal; line-height:1.4;">${itemsHtml}</div>`;
         }
 
         const shortId = 'M' + Date.now().toString().slice(-6); // 手动录入分配一个随机单号
@@ -1928,7 +1929,7 @@ function parseTaobaoCSV(csvText) {
                 ).join('');
                 
                 // 利用 </div> 强行打断你原本界面的 2 行省略号限制，让明细完整展示！
-                displayTitle = `📦 ${order.items.length}件</div><div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8);">${itemsHtml}</div><div style="display:inline-block;">`;
+                displayTitle = `📦 ${items.length}件<div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8); font-weight:normal; line-height:1.4;">${itemsHtml}</div>`;
             }
 
             // 生成固定短ID防重复
