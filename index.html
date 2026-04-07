@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -244,10 +245,32 @@
             <span id="dropZoneText">📥 拖拽淘宝 Excel/CSV 文件到此<br>或点击上传</span>
             <input type="file" id="csvFileInput" accept=".csv, .xlsx, .xls" style="display:none;">
             </div>
-            <button class="btn-light" onclick="parseClipPrompt()">✨ 智能提取订单剪切板</button>
-            <input type="text" id="oId" placeholder="订单号/宝贝名称">
-            <div style="display: flex; gap: 10px;"><input type="number" id="bP" placeholder="买入实付"><input type="number" id="sP" placeholder="闲鱼售价(预售可不填)"></div>
+            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                <button class="btn-light" style="flex: 1; margin-bottom: 0;" onclick="parseClipPrompt()">📋 粘贴文字提取</button>
+                <button class="btn-light" id="ocrBtn" style="flex: 1; margin-bottom: 0; background: var(--accent-pill);" onclick="document.getElementById('ocrInput').click()">📷 截图智能识别</button>
+                <input type="file" id="ocrInput" accept="image/*" style="display:none;" onchange="processOCRImage(event)">
+            </div>
+    <div id="manualItemsBox">
+                <div class="m-item-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="text" class="m-name" placeholder="商品名称 (如:夏彦吧唧)" style="flex: 2; margin-bottom: 0;">
+                    <input type="number" class="m-price" placeholder="原单价(￥)" style="flex: 1; margin-bottom: 0;">
+                </div>
+            </div>
             
+            <div style="text-align: right; margin-bottom: 15px;">
+                <span onclick="addManualItem()" style="background: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 12px; font-size: 12px; color: var(--accent-dark); cursor: pointer; font-weight: bold; border: 1px dashed var(--glass-border); box-shadow: 0 2px 5px rgba(0,0,0,0.05);">➕ 添 加 同 捆 商 品</span>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                <div style="flex:1;">
+                    <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">整单实付总计</div>
+                    <input type="number" id="bP" placeholder="买入实付">
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">闲鱼售价 (预售不填)</div>
+                    <input type="number" id="sP" placeholder="闲鱼售价">
+                </div>
+            </div>
             <input list="dynamicCatList" id="gCat" placeholder="商品品类 (如:吧唧,可直接手填)">
             <datalist id="dynamicCatList"></datalist>
             
@@ -1026,26 +1049,88 @@
         saveAll();
         toggleGuManage(); // 删完自动退出管理模式
     }
+    // 动态添加输入行的功能
+    function addManualItem() {
+        const box = document.getElementById('manualItemsBox');
+        const row = document.createElement('div');
+        row.className = 'm-item-row';
+        row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; animation: fadeIn 0.2s;';
+        row.innerHTML = `
+            <input type="text" class="m-name" placeholder="随单商品名称" style="flex: 2; margin-bottom: 0;">
+            <input type="number" class="m-price" placeholder="单价(￥)" style="flex: 1; margin-bottom: 0;">
+            <div onclick="this.parentElement.remove()" style="width: 40px; height: 42px; line-height: 42px; text-align: center; background: #FF5252; color: white; border-radius: 12px; cursor: pointer; font-weight: bold;">✕</div>
+        `;
+        box.appendChild(row);
+    }
+
+    // ✨ 升级版保存逻辑：完全对齐批量导入的排版
     function addGu() { 
-        const b = parseFloat(document.getElementById('bP').value); 
+        const b = parseFloat(document.getElementById('bP').value) || 0; 
         const s = parseFloat(document.getElementById('sP').value) || 0; 
-        if(!b) return alert('买入实付金额必须填写哦！'); 
-        const inputName = document.getElementById('oId').value || '未命名商品';
+        
+        // 1. 抓取页面上填写的全部商品
+        const rows = document.querySelectorAll('.m-item-row');
+        let items = [];
+        let itemsSum = 0;
+        
+        rows.forEach(row => {
+            const name = row.querySelector('.m-name').value.trim();
+            const price = parseFloat(row.querySelector('.m-price').value) || 0;
+            if (name) {
+                items.push({ name: name, price: price });
+                itemsSum += price;
+            }
+        });
+        
+        if (items.length === 0) return alert('至少要填写一个商品名称哦！');
+        
+        // 2. 金额核算：如果你没填实付款，它会自动把上面的单价加起来当实付款
+        const finalBuyPrice = b > 0 ? b : itemsSum;
+        if (finalBuyPrice <= 0) return alert('请填写买入实付或商品单价！');
+
+        // 3. ✨ 核心排版：和批量导入一样的视觉黑科技
+        let displayTitle = "";
+        if (items.length === 1) {
+            displayTitle = items[0].name; 
+        } else {
+            let itemsHtml = items.map(item => 
+                `<div style="display:flex; justify-content:space-between; margin-top:4px; font-size:11px; font-weight:normal; color:var(--text-main);">
+                    <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px;">• ${item.name}</span>
+                    <span style="color:var(--text-light); white-space:nowrap;">￥${item.price.toFixed(2)}</span>
+                </div>`
+            ).join('');
+            
+            displayTitle = `📦 包含多件商品 (${items.length}件)</div><div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8);">${itemsHtml}</div><div style="display:inline-block;">`;
+        }
+
+        const shortId = 'M' + Date.now().toString().slice(-6); // 手动录入分配一个随机单号
+
         db.unshift({ 
             type: '转单', 
-            id: inputName.slice(-4), 
-            title: inputName,    // ✨ 重点新增：保存手动输入的名字
-            buy: b, 
+            id: shortId, 
+            title: displayTitle,
+            buy: finalBuyPrice, 
             sell: s, 
             status: document.getElementById('gS').value, 
-            category: document.getElementById('gCat').value, 
-            profit: (s - b).toFixed(2), 
+            category: document.getElementById('gCat').value || '未分类', 
+            ip: '手动录入', 
+            shop: '手动/闲鱼',
+            profit: (s - finalBuyPrice).toFixed(2), 
             date: getTodayString() 
         }); 
+        
         saveAll(); 
-        document.getElementById('oId').value=''; 
+        
+        // 4. 清空表单，并恢复成只有一行输入的初始状态
+        document.getElementById('manualItemsBox').innerHTML = `
+            <div class="m-item-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" class="m-name" placeholder="商品名称 (如:夏彦吧唧)" style="flex: 2; margin-bottom: 0;">
+                <input type="number" class="m-price" placeholder="原单价(￥)" style="flex: 1; margin-bottom: 0;">
+            </div>
+        `;
         document.getElementById('bP').value = ''; 
         document.getElementById('sP').value = ''; 
+        document.getElementById('gCat').value = ''; 
     }
     function saveAll() { 
         // ✨ 自动按时间从近到远排序（最新购买的在最上面）
@@ -1542,7 +1627,7 @@ function switchPieType(type) {
     });
 
     // ✨ 核心 1：处理编码，彻底终结中文乱码
-    function handleCSV(file) {
+function handleCSV(file) {
         const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
         const isCSV = file.name.endsWith('.csv');
         if(!isExcel && !isCSV) { alert('⚠️ 格式不支持哦'); return; }
@@ -1584,8 +1669,8 @@ function switchPieType(type) {
         if (isExcel || isCSV) reader.readAsArrayBuffer(file);
     }
 
-    // ✨ 核心 2：业务解析（合并订单、计算利润进货模型）
-    function parseTaobaoCSV(csvText) {
+    // ✨ 核心 2：业务解析（彻底实现 Excel 合并单元格效果）
+function parseTaobaoCSV(csvText) {
         const rows = csvText.split('\n');
         if(rows.length < 2) return;
 
@@ -1628,7 +1713,7 @@ function switchPieType(type) {
         let lastId = '', lastDate = '', lastStatus = '', lastShop = '', lastActualPay = 0;
         let importCount = 0;
         
-        // 专门用来装“一个订单里所有商品”的购物车容器
+        // 核心购物车：以真正的长订单号为钥匙，绝不乱串
         const orderMap = {}; 
 
         for(let i = headerRowIdx + 1; i < rows.length; i++) {
@@ -1638,9 +1723,8 @@ function switchPieType(type) {
             let rawId = cols[idIdx]?.replace(/["=\s']/g, '');
             let currentActualPay = parseFloat(cols[priceIdx]?.replace(/["=￥\s']/g, '')) || 0;
 
-            // 淘宝的表格，只有主订单行有订单号
             if (rawId && rawId.length > 5) {
-                lastId = rawId;
+                lastId = rawId; 
                 lastDate = cols[dateIdx]?.substring(0,10).replace(/["=\s']/g, '') || getTodayString();
                 lastStatus = cols[statusIdx]?.replace(/["=\s']/g, '') || '';
                 let currentShop = cols[shopIdx]?.replace(/["=\s']/g, '');
@@ -1654,9 +1738,8 @@ function switchPieType(type) {
             if (!title) continue; 
 
             let itemPrice = parseFloat(cols[itemPriceIdx]?.replace(/["=￥\s']/g, '')) || 0;
-            if (itemPrice === 0) itemPrice = currentActualPay; // 如果商品本身没写价格，兜底用实付
+            if (itemPrice === 0) itemPrice = currentActualPay; 
 
-            // 踢走运费和赠品
             if (itemPrice <= 0 && (title.includes('赠品') || title.includes('邮费') || title.includes('补邮') || title.includes('定金'))) {
                 continue; 
             }
@@ -1664,50 +1747,63 @@ function switchPieType(type) {
             let itemIP = '其他', cat = '其他';
             for (let ip of ipList) { if (title.includes(ip) || lastShop.includes(ip)) { itemIP = ip; break; } }
             for (let kw of guziKeywords) { if (title.includes(kw)) { cat = kw; break; } }
-            if (itemIP === '其他' && cat === '其他') continue; // 非谷子踢走
+            if (itemIP === '其他' && cat === '其他') continue; 
 
-            // 生成你系统里的短ID
-            let shortId = lastId.length > 8 ? lastId.slice(-8) : lastId;
-            if (shortId.includes('+') || shortId.includes('e') || shortId.includes('E')) {
-                shortId = 'E' + (itemPrice % 100).toFixed(0) + Math.floor(Math.random() * 10);
-            }
-
-            // 初始化这个订单的“打包箱”
-            if (!orderMap[shortId]) {
-                orderMap[shortId] = {
-                    id: shortId,
+            // 存入购物车，单独保存商品名字和单价
+            if (!orderMap[lastId]) {
+                orderMap[lastId] = {
+                    rawId: lastId,
                     shop: lastShop,
                     date: lastDate,
                     actualPay: lastActualPay, 
                     itemsSum: 0, 
-                    items: [], // 用来装商品名字的数组
+                    items: [], // 数组：用来单独存放每一条商品
                     ip: itemIP,
                     cat: cat
                 };
             }
-
-            // 把这行商品和价格，塞进“打包箱”里
-            orderMap[shortId].items.push(`${title}(￥${itemPrice})`);
-            orderMap[shortId].itemsSum += itemPrice;
+            orderMap[lastId].items.push({ name: title, price: itemPrice });
+            orderMap[lastId].itemsSum += itemPrice;
         }
 
-        // 结算阶段：把所有打包箱转成你的转单记录
+        // 结算并排版
         const finalOrders = Object.values(orderMap);
         finalOrders.forEach(order => {
-            // 最关键的诉求：有实付取实付，实付为0取单品总和
+            // 合并实付款：像 Excel 一样，右侧只认这一个金额
             const finalBuyPrice = order.actualPay > 0 ? order.actualPay : order.itemsSum;
             
-            // 把商品用 + 号连起来
-            const combinedTitle = order.items.join(' + ');
+            let displayTitle = "";
+            if (order.items.length === 1) {
+                // 如果只有一个商品，正常显示
+                displayTitle = order.items[0].name; 
+            } else {
+                // 🌟 核心黑科技排版：如果有多个商品，生成独立的条目列表！
+                let itemsHtml = order.items.map(item => 
+                    `<div style="display:flex; justify-content:space-between; margin-top:4px; font-size:11px; font-weight:normal; color:var(--text-main);">
+                        <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px;">• ${item.name}</span>
+                        <span style="color:var(--text-light); white-space:nowrap;">￥${item.price.toFixed(2)}</span>
+                    </div>`
+                ).join('');
+                
+                // 利用 </div> 强行打断你原本界面的 2 行省略号限制，让明细完整展示！
+                displayTitle = `📦 包含多件商品 (${order.items.length}件)</div><div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8);">${itemsHtml}</div><div style="display:inline-block;">`;
+            }
 
-            let isDuplicate = db.some(r => r.type === '转单' && r.id === order.id && r.title === combinedTitle);
+            // 生成固定短ID防重复
+            let displayId = order.rawId.length > 8 ? order.rawId.slice(-8) : order.rawId;
+            if (displayId.includes('+') || displayId.includes('e') || displayId.includes('E')) {
+                displayId = 'E' + (finalBuyPrice * 100).toFixed(0) + order.items.length; 
+            }
+
+            // 防重复校验
+            let isDuplicate = db.some(r => r.type === '转单' && r.date === order.date && r.buy === finalBuyPrice && r.shop === order.shop && r.id === displayId);
             if (isDuplicate) return;
 
             db.unshift({
                 type: '转单', 
-                id: order.id, 
-                title: combinedTitle, // 界面显示：商品A(￥10) + 商品B(￥20)
-                buy: finalBuyPrice, 
+                id: displayId, 
+                title: displayTitle, 
+                buy: finalBuyPrice, // 这里的买入金额就是汇总的实付！
                 sell: 0, 
                 status: '预售中', 
                 category: order.cat, 
@@ -1721,7 +1817,7 @@ function switchPieType(type) {
 
         saveAll();
         rdr();
-        alert(`✅ 业务解析完毕！成功合并多商品订单，实际新增 ${importCount} 个转单进货！`);
+        alert(`✅ 导入成功！完全按照您的要求：按实际付款提取了 ${importCount} 笔独立订单！`);
     }
 
     // 🧠 终极控制台：负责弹窗和日期联动
@@ -1801,7 +1897,7 @@ function saveOrderEdit() {
     }
 
     // 🧠 终极CFO大屏：负责渲染整个第 3 页
-    function renderCategoryAndShopAnalysis() {
+function renderCategoryAndShopAnalysis() {
         const catList = document.getElementById('categoryAnalysisList');
         const shopList = document.getElementById('shopAnalysisList');
         if(!catList || !shopList) return;
@@ -1942,7 +2038,7 @@ function saveOrderEdit() {
     }
 // ✨ 防误触弹窗逻辑
 // ✨ 打开记录：默认进入纯净浏览模式
-    function openRecordEdit(idx) { 
+function openRecordEdit(idx) { 
         editingRecordIndex = idx; 
         const r = db[idx]; 
         
@@ -1991,7 +2087,7 @@ function saveOrderEdit() {
     }
 
     // ✨ 点击“修改”按钮：翻转到编辑模式
-    function enableRecordEdit() {
+function enableRecordEdit() {
         document.getElementById('recordReadContainer').style.display = 'none';
         document.getElementById('recordEditContainer').style.display = 'flex';
     }
@@ -2040,7 +2136,7 @@ function saveOrderEdit() {
         }
     }, {passive: true});
 
-    function handleSwipeNavigation(e) {
+function handleSwipeNavigation(e) {
         // 如果正在滑动横向滚动条、图表或者日历，就不要翻页
         if (e.target.closest('.swipe-container-x') || 
             e.target.closest('.swipe-container') || 
@@ -2061,6 +2157,57 @@ function saveOrderEdit() {
         // 向右滑 -> 去上一个页面
         if (touchEndX > touchStartX + 80) {
             if (currentIndex > 0) showP(pages[currentIndex - 1]);
+        }
+    }
+    // 📷 截图智能识别引擎
+    async function processOCRImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const btn = document.getElementById('ocrBtn');
+        const originalText = btn.innerText;
+        
+        // 变成加载状态，防止重复点击
+        btn.innerText = "⏳ 努力看图中...";
+        btn.style.pointerEvents = "none";
+        btn.style.opacity = "0.7";
+
+        try {
+            if (typeof Tesseract === 'undefined') {
+                alert('🚨 OCR 插件未加载，请检查网络或刷新页面！');
+                return;
+            }
+
+            // 调用引擎识别中文
+            // 注意：首次运行会下载语言包，可能会稍微需要几秒钟
+            const result = await Tesseract.recognize(file, 'chi_sim', {
+                logger: m => {
+                    // 可以再这里看到识别进度，我们这里直接更新到按钮上
+                    if(m.status === 'recognizing text') {
+                        btn.innerText = `⏳ 识别中 ${Math.round(m.progress * 100)}%`;
+                    }
+                }
+            });
+
+            const text = result.data.text;
+            
+            if (!text || text.trim() === '') {
+                alert('🐻 兔兔没在图片里看清任何文字哦，换张清晰点的试试？');
+                return;
+            }
+
+            // 🌟 核心：把识别出来的文字，直接扔给你原本写好的“剪切板提取弹窗”
+            document.getElementById('customPromptInput').value = text;
+            document.getElementById('customPromptModal').style.display = 'flex';
+
+        } catch (err) {
+            alert("❌ 识别失败了：" + err.message);
+        } finally {
+            // 恢复按钮状态
+            btn.innerText = originalText;
+            btn.style.pointerEvents = "auto";
+            btn.style.opacity = "1";
+            event.target.value = ''; // 清空选择框，方便下次再选同一张图
         }
     }
                 
