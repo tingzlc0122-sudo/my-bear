@@ -818,16 +818,14 @@
         rdr();
     }
 
-    // ✨ 2. 核心渲染引擎 (绝对完整版)
+    // ✨ 2. 核心渲染引擎 (已修复白屏死机 Bug)
     function rdr() {
-        let pS = 0, cS = 0; 
+        let pS = 0, cS = 0, curSav = 0; // ✨ 补上了丢失的“账户存款”变量！
         const dl = document.getElementById('dailyList');
         const gl = document.getElementById('guList'); 
-        if(dl) dl.innerHTML = ''; 
-        if(gl) gl.innerHTML = '';
+        if(dl) dl.innerHTML = ''; if(gl) gl.innerHTML = '';
 
-        const searchInputEl = document.getElementById('guSearchInput');
-        const searchTerm = searchInputEl ? searchInputEl.value.trim().toLowerCase() : '';
+        const searchTerm = document.getElementById('guSearchInput')?.value.trim().toLowerCase() || '';
 
         db.forEach((r, idx) => {
             const hasMediaIcon = r.imageBase64 ? ' <span style="font-size:12px;">🖼️</span>' : '';
@@ -836,6 +834,14 @@
                 const isExp = r.detail === '支出'; 
                 const color = isExp ? 'var(--exp-color)' : (r.detail === '收入' ? 'var(--inc-color)' : 'var(--accent-dark)'); 
                 const sign = isExp ? '-' : (r.detail === '收入' ? '+' : '='); 
+
+                // ✨ 把丢失的账户存款算法加回来
+                if (isExp) {
+                    curSav -= parseFloat(r.amt || 0);
+                } else if (r.detail === '收入') {
+                    curSav += parseFloat(r.amt || 0);
+                }
+
                 let stickerHtml = ''; 
                 if(r.category && CATEGORY_STICKER_MAP[r.category]) { 
                     const cfg = CATEGORY_STICKER_MAP[r.category]; 
@@ -847,75 +853,61 @@
                 if(dl) dl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:4px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:14px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:15px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
             } 
             else {
-                // --- 顶部数据核算逻辑 ---
-                if(r.status === '已转单') {
-                    pS += parseFloat(r.profit || 0); 
-                } else if(r.status === '预售中') {
-                    cS += parseFloat(r.buy || 0);
-                } else if(r.status === '已收定金') {
-                    // 定金回流：压在本金里的钱 = 买入价 - 已收定金
-                    cS += Math.max(0, parseFloat(r.buy || 0) - parseFloat(r.deposit || 0));
-                }
+                // 核算逻辑：加上定金的回流计算
+                if(r.status === '已转单') pS += parseFloat(r.profit || 0); 
+                if(r.status === '预售中') cS += parseFloat(r.buy || 0);
+                if(r.status === '已收定金') cS += Math.max(0, parseFloat(r.buy || 0) - parseFloat(r.deposit || 0));
                 
-                // --- 板块过滤逻辑：只显示当前选中的 Tab 状态 ---
+                // 只显示当前选中的 Tab 板块数据
                 if(r.status !== currentGuTab) return;
 
-                // --- 搜索过滤逻辑 ---
                 if (searchTerm) {
                     const titleMatch = r.title && r.title.toLowerCase().includes(searchTerm);
-                    const catMatch = r.category && r.category.toLowerCase().includes(searchTerm);
-                    if (!titleMatch && !catMatch) return; 
+                    if (!titleMatch) return; 
                 }
 
-                // 清洗名字
+                // 清洗名字：只要 📦 和 X件
                 let displayTitle = r.title ? r.title : '未知商品';
-                if (displayTitle.includes('<div')) {
-                    displayTitle = displayTitle.split('<div')[0]; 
-                }
+                if (displayTitle.includes('<div')) displayTitle = displayTitle.split('<div')[0];
                 displayTitle = displayTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
 
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                 let profitColor = parseFloat(r.profit) > 0 ? 'var(--exp-color)' : (parseFloat(r.profit) < 0 ? '#4DB6AC' : 'var(--text-light)');
                 
-                // 批量管理复选框
                 let checkboxHtml = '';
                 let clickEvent = `openOrderEdit(${idx})`; 
                 if (typeof isGuManaging !== 'undefined' && isGuManaging) {
                     let isChecked = selectedGuSet.has(idx);
                     let checkBg = isChecked ? 'var(--accent-main)' : 'rgba(255,255,255,0.4)';
-                    let checkBorder = isChecked ? 'var(--accent-main)' : 'rgba(255,255,255,0.8)';
-                    checkboxHtml = `<div style="width:18px; height:18px; border-radius:50%; border:2px solid ${checkBorder}; background:${checkBg}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; margin-right:12px; flex-shrink:0; transition:0.2s;">${isChecked ? '✓' : ''}</div>`;
+                    checkboxHtml = `<div style="width:18px; height:18px; border-radius:50%; border:2px solid var(--accent-main); background:${checkBg}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; margin-right:12px; flex-shrink:0;">${isChecked ? '✓' : ''}</div>`;
                     clickEvent = `toggleGuSelect(${idx})`; 
                 }
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold;">已回定金 ￥${r.deposit}</div>` : '';
 
-                // 渲染转单列表项
                 if(gl) gl.innerHTML += `
-                <div class="swipe-container-x" style="display: flex; flex-wrap: nowrap; width: 100%;">
-                    <div class="swipe-content glass-panel" onclick="${clickEvent}" style="display:flex; align-items:center; flex: 0 0 100%; min-width: 100%; box-sizing: border-box;">
+                <div class="swipe-container-x" style="display:flex; flex-wrap:nowrap; width:100%;">
+                    <div class="swipe-content glass-panel" onclick="${clickEvent}" style="display:flex; align-items:center; flex:0 0 100%; min-width:100%; box-sizing:border-box;">
                         ${checkboxHtml}
-                        <div style="flex:1; padding-right:10px; min-width: 0;">
-                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                        <div style="flex:1; padding-right:10px; min-width:0;">
+                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
                                 ${displayTitle}${hasMediaIcon}
                             </div>
-                            <div style="font-size:11px; color:var(--text-light);">
-                                ${r.date} | ${r.category}
-                            </div>
+                            <div style="font-size:11px; color:var(--text-light); margin-top:4px;">${r.date} | ${r.category}</div>
                             ${depositBadge}
                         </div>
-                        <div style="text-align:right; min-width:60px; flex-shrink: 0;">
+                        <div style="text-align:right; min-width:60px; flex-shrink:0;">
                             <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
                             <div style="font-size:11px; color:var(--text-light); margin-top:2px;">买 ￥${r.buy}</div>
                             <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
                         </div>
                     </div>
-                    <div class="swipe-delete" style="flex-shrink: 0;" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
+                    <div class="swipe-delete" style="flex-shrink:0;" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
                 </div>`;
             }
         });   
         
-        // ✨✨✨ 绝不删除的“心脏”代码：更新顶部数字 ✨✨✨
+        // 更新顶部数字和条数
         let topProfitEl = document.getElementById('topProfit');
         if(topProfitEl) topProfitEl.innerText = '￥' + pS.toFixed(2); 
         let topCapEl = document.getElementById('topCapital');
@@ -923,7 +915,6 @@
         let topSavEl = document.getElementById('topSaving');
         if(topSavEl) topSavEl.innerText = '￥' + curSav.toFixed(2);
 
-        // ✨✨✨ 更新总条数徽章 ✨✨✨
         let guCount = db.filter(r => r.type === '转单').length;
         let countEl = document.getElementById('guTotalCount');
         if(countEl) countEl.innerText = guCount;
