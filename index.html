@@ -56,9 +56,17 @@
         .stat-icon-wrapper { position: relative; z-index: 1; width: 60px; height: 60px; margin: 0 auto 5px auto; display: flex; align-items: center; justify-content: center; }
         .stat-icon-wrapper img { width: 100% !important; height: 100% !important; object-fit: contain; background: transparent; }
         
-        .stat-val { font-size: 16px; font-weight: bold; color: var(--accent-dark); display: block; margin-top: 3px; }
+        /* ✨ 修复 1：顶部金额的字体、大小，以及和男生的距离 */
+        .stat-val { 
+            font-size: 20px !important; 
+            font-weight: 900 !important; 
+            color: var(--accent-dark); 
+            display: block; 
+            margin-top: 10px !important; 
+            font-family: 'Nunito', ui-rounded, 'ZCOOL KuaiLe', 'PingFang SC', sans-serif !important; 
+        }
         .stat-label { font-size: 11px; color: var(--text-light); font-weight: bold; }
-
+        
         .page { display: none; padding: 15px; animation: fadeIn 0.3s; min-height: calc(100vh - 250px); position: relative; z-index: 1; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -82,9 +90,31 @@
         .btn-main:active { transform: scale(0.98); opacity: 1; }
         .btn-light { width: 100%; background: rgba(255,255,255,0.7); color: var(--accent-dark); padding: 15px; border-radius: 16px; border: 1px solid var(--glass-border); font-weight: bold; font-size: 15px; margin-bottom: 12px; cursor: pointer; }
 
-        .swipe-container-x { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 18px; margin-bottom: 12px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.9); position: relative; }
+        /* ✨ 修复 2：彻底锁死滑动列表，让左滑的 X 乖乖呆在最右边 */
+        .swipe-container-x { 
+            display: flex; 
+            flex-wrap: nowrap !important; 
+            overflow-x: auto; 
+            scroll-snap-type: x mandatory; 
+            scrollbar-width: none; 
+            border-radius: 18px; 
+            margin-bottom: 12px; 
+            background: rgba(255, 255, 255, 0.65); 
+            border: 1px solid rgba(255, 255, 255, 0.9); 
+            position: relative; 
+        }
         .swipe-container-x::-webkit-scrollbar { display: none; }
-        .swipe-content { flex: 0 0 100%; scroll-snap-align: start; padding: 15px; box-sizing: border-box; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .swipe-content { 
+            flex: 0 0 100% !important; 
+            min-width: 100% !important;
+            scroll-snap-align: start; 
+            padding: 15px; 
+            box-sizing: border-box; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
         .swipe-delete { flex: 0 0 75px; scroll-snap-align: end; background: #FF5252; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 0 18px 18px 0; }
 
         .glass-bubble { padding: 18px; margin-bottom: 15px; cursor: pointer; display: flex; flex-direction: column; }
@@ -291,10 +321,17 @@
                 <span onclick="toggleGuManage()" id="guManageBtn" style="color:var(--accent-dark); background: rgba(139,90,43,0.1); padding: 4px 8px; border-radius: 10px; cursor:pointer; font-weight:bold;">⚙️批量管理</span>
             </div>
         </div>
-    <input type="text" id="guSearchInput" class="search-input" placeholder="🔍 搜索商品名称 / 品类 / 状态..." oninput="rdr()">
-    <div id="guList" style="max-height: 300px; overflow-y: auto;"></div>
         
+        <div class="stats-segment" style="margin-bottom: 15px; margin-top: 10px;">
+            <div class="stats-seg-btn active" id="tab-gu-预售中" onclick="switchGuTab('预售中')">预售中</div>
+            <div class="stats-seg-btn" id="tab-gu-已收定金" onclick="switchGuTab('已收定金')">已收定</div>
+            <div class="stats-seg-btn" id="tab-gu-已转单" onclick="switchGuTab('已转单')">已转单</div>
+            <div class="stats-seg-btn" id="tab-gu-已退款" onclick="switchGuTab('已退款')">已退款</div>
         </div>
+        
+        <input type="text" id="guSearchInput" class="search-input" placeholder="🔍 搜索商品名称 / 品类 / 状态..." oninput="rdr()">
+        <div id="guList" style="max-height: 400px; overflow-y: auto; overflow-x: hidden;"></div>
+    </div>
     </div>
     <div id="pageAnalysis" class="page">
         <div class="card glass-panel" style="background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4)); margin-bottom: 15px;">
@@ -350,14 +387,20 @@
         </div>
         <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">当前操作状态</div>
         <select id="oeStatus" style="margin-bottom:10px;">
-            <option value="预售中">⏳ 预售中 (占用本金)</option>
+            <option value="预售中">⏳ 预售中 (全额压本)</option>
+            <option value="已收定金">💸 已收定金 (定金回流)</option>
             <option value="已转单">✅ 已转单 (核算利润)</option>
             <option value="已退款">❌ 已退款 (资金回流)</option>
         </select>
     
-    <div id="oeMarginDisplay" style="font-size:12px; color:var(--accent-main); font-weight:bold; margin: -5px 0 10px 4px;">利润率预估：0%</div>
-    
-    <div id="oeSellDateBox" style="display:none; margin-bottom:15px;">
+        <div id="oeMarginDisplay" style="font-size:12px; color:var(--accent-main); font-weight:bold; margin: -5px 0 10px 4px;">利润率预估：0%</div>
+        
+        <div id="oeDepositBox" style="display:none; margin-bottom:10px;">
+            <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">实收定金 (回到账户的钱 ￥)</div>
+            <input type="number" id="oeDeposit" placeholder="定金金额">
+        </div>
+        
+        <div id="oeSellDateBox" style="display:none; margin-bottom:15px;">
             <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">实际售出/回款日期 (算周转率用)</div>
             <input type="date" id="oeSellDate">
         </div>
@@ -488,7 +531,7 @@
             <button class="btn-pill-edit" onclick="enableRecordEdit()" style="margin-top: auto;">✏️ 修改</button>
         </div>
 
-        <div id="recordEditContainer" style="display: none; flex-direction: column; flex: 1;">
+    <div id="recordEditContainer" style="display: none; flex-direction: column; flex: 1;">
             <div style="display: flex; gap: 8px; margin-bottom: 10px;">
                 <input type="text" id="editRemark" placeholder="备注" style="flex:2;">
                 <input type="number" id="editAmt" style="flex:1;" placeholder="金额">
@@ -509,6 +552,18 @@
             </div>
             
             <button class="btn-main" style="border-radius: 30px;" onclick="saveRecordEdit()">保存修改</button>
+        </div>
+    </div>
+    
+    <div id="day-media-modal" class="glass-panel" style="display: none; position: fixed; top: 10%; left: 5%; right: 5%; bottom: 10%; border-radius: 30px; z-index: 306; padding: 0; overflow: hidden; animation: popIn 0.2s; flex-direction: column;">
+        <div class="cal-modal-header" style="padding: 15px 20px 10px; margin-bottom: 0; background: rgba(255,255,255,0.6); z-index: 2; border-bottom: 1px dashed rgba(255,255,255,0.6);">
+            <h3 class="cal-modal-title" id="dayMediaTitle">记忆</h3>
+            <div class="cal-modal-close" onclick="closeTopModals()">✕</div>
+        </div>
+        <div id="dayMediaCarousel" style="flex: 1; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; display: flex; scrollbar-width: none;">
+            </div>
+        <div style="padding: 15px; text-align: center; background: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.6);">
+            <button class="btn-main" id="btnShowAllRecords" style="padding: 10px; font-size: 14px; border-radius: 20px;">查看当天收支数字明细</button>
         </div>
     </div>
     
@@ -702,8 +757,14 @@
     function getTodayString() { const tzOffset = (new Date()).getTimezoneOffset() * 60000; return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; }
     function getTimeString() { return new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}); }
     function closeAllModals() { document.getElementById('bottom-sheet').style.transform = 'translateY(100%)'; document.getElementById('calendar-modal').style.display = 'none'; closeTopModals(); setTimeout(() => { document.getElementById('overlay').style.display = 'none'; }, 200); }
-    function closeTopModals() { document.getElementById('day-detail-modal').style.display = 'none'; document.getElementById('remark-modal').style.display = 'none'; document.getElementById('record-edit-modal').style.display = 'none'; document.getElementById('novel-modal').style.display = 'none'; document.getElementById('css-editor-modal').style.display = 'none'; document.getElementById('overlay-top').style.display = 'none'; }
-
+    // ✨ 修复迷雾 Bug：关闭弹窗时，强行关掉所有黑底！
+    function closeTopModals() { 
+        const modals = ['day-detail-modal', 'remark-modal', 'record-edit-modal', 'novel-modal', 'css-editor-modal', 'overlay-top', 'order-edit-modal', 'day-media-modal', 'category-detail-modal'];
+        modals.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+    }
     function initializeStickers() {
         const safeSet = (id, html) => { let el = document.getElementById(id); if(el) el.innerHTML = html; };
         
@@ -736,7 +797,15 @@
 
     const CATEGORY_STICKER_MAP = { '吃饭': ['meal', '🍔'], '购物': ['shopping', '🛒'], '交通': ['traffic', '🚗'], '生活开支': ['living', '🏠'], '其他支出': ['casual', '🐰'], '兼职': ['job', '💰'], '生活费': ['allowance','🧧'], '其他收入': ['otherInc', '🐻'] };
 
-    // ✨ 界面刷新与流水漏斗引擎 (加入日常明细按日期折叠功能)
+    // 谷子当前选中的板块
+    let currentGuTab = '预售中'; 
+    function switchGuTab(tab) {
+        currentGuTab = tab;
+        document.querySelectorAll('#pageRabbit .stats-seg-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('tab-gu-' + tab).classList.add('active');
+        rdr();
+    }
+
     function rdr() {
         let pS = 0, cS = 0; 
         const dl = document.getElementById('dailyList');
@@ -747,16 +816,9 @@
         const searchInputEl = document.getElementById('guSearchInput');
         const searchTerm = searchInputEl ? searchInputEl.value.trim().toLowerCase() : '';
 
-        // 日常和转单的分类容器
-        let dailyGroups = {}; // 用来按日期打包日常流水
-        let htmlPresale = ''; let countPresale = 0;
-        let htmlSold = '';    let countSold = 0;
-        let htmlRefund = '';  let countRefund = 0;
-
         db.forEach((r, idx) => {
             const hasMediaIcon = r.imageBase64 ? ' <span style="font-size:12px;">🖼️</span>' : '';
             
-            // ☕️ 1. 日常记账：按日期打包
             if(r.type === '日常') {
                 const isExp = r.detail === '支出'; 
                 const color = isExp ? 'var(--exp-color)' : (r.detail === '收入' ? 'var(--inc-color)' : 'var(--accent-dark)'); 
@@ -769,30 +831,26 @@
                     stickerHtml = isExp ? getStickerHtml('colExp', '🐰', true) : getStickerHtml('colInc', '🐻', true); 
                 }
                 
-                // 生产单条日常流水的 HTML
-                let singleDailyHtml = `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})" style="padding:10px 12px;"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:4px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:14px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:15px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
-                
-                // 存进对应日期的箱子里
-                if (!dailyGroups[r.date]) {
-                    dailyGroups[r.date] = { html: '', exp: 0, inc: 0 };
-                }
-                dailyGroups[r.date].html += singleDailyHtml;
-                if (isExp) dailyGroups[r.date].exp += parseFloat(r.amt || 0);
-                if (r.detail === '收入') dailyGroups[r.date].inc += parseFloat(r.amt || 0);
+                if(dl) dl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:4px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:14px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:15px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
             } 
-            // 📦 2. 转单流水：状态分流保持不变
             else {
+                // 核算顶部大数字
                 if(r.status === '已转单') pS += parseFloat(r.profit || 0); 
                 if(r.status === '预售中') cS += parseFloat(r.buy || 0);
+                if(r.status === '已收定金') cS += Math.max(0, parseFloat(r.buy || 0) - parseFloat(r.deposit || 0)); // 扣除已收定金
                 
+                // 过滤：如果不是当前选中的 Tab，直接不渲染在列表中！(完美解决列表太长)
+                if(r.status !== currentGuTab) return;
+
                 if (searchTerm) {
                     const titleMatch = r.title && r.title.toLowerCase().includes(searchTerm);
                     const catMatch = r.category && r.category.toLowerCase().includes(searchTerm);
-                    const statusMatch = r.status && r.status.toLowerCase().includes(searchTerm);
-                    if (!titleMatch && !catMatch && !statusMatch) return; 
+                    if (!titleMatch && !catMatch) return; 
                 }
 
                 let displayTitle = r.title ? r.title : '未知商品';
+                // ✨ 自动洗掉历史残留下来的旧文案，直接变成 "📦 X件"
+                displayTitle = displayTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '$1');
                 displayTitle = displayTitle.replace('件</div><div', '件<div').replace('</div><div style="display:inline-block;">', '</div>');
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                 let profitColor = parseFloat(r.profit) > 0 ? 'var(--exp-color)' : (parseFloat(r.profit) < 0 ? '#4DB6AC' : 'var(--text-light)');
@@ -807,8 +865,9 @@
                     clickEvent = `toggleGuSelect(${idx})`; 
                 }
 
-                // ✨ 核心修复：给这里加上 style="width: 100%;" 阻止气泡被压扁！
-                let singleItemHtml = `
+                let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold;">已回血 ￥${r.deposit}</div>` : '';
+
+                if(gl) gl.innerHTML += `
                 <div class="swipe-container-x" style="width: 100%;">
                     <div class="swipe-content glass-panel" onclick="${clickEvent}" style="display:flex; align-items:center;">
                         ${checkboxHtml}
@@ -817,8 +876,9 @@
                                 ${displayTitle}${hasMediaIcon}
                             </div>
                             <div style="font-size:11px; color:var(--text-light);">
-                                ${r.date} | ${r.ip} | ${r.category}
+                                ${r.date} | ${r.category}
                             </div>
+                            ${depositBadge}
                         </div>
                         <div style="text-align:right; min-width:60px;">
                             <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
@@ -828,72 +888,8 @@
                     </div>
                     <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
                 </div>`;
-
-                if (r.status === '预售中') { htmlPresale += singleItemHtml; countPresale++; }
-                else if (r.status === '已转单') { htmlSold += singleItemHtml; countSold++; }
-                else if (r.status === '已退款') { htmlRefund += singleItemHtml; countRefund++; }
-                else { htmlPresale += singleItemHtml; countPresale++; } 
             }
         });   
-        
-        // 🎨 渲染日常明细大屏 (今天直接摊开，以前的日期折叠)
-        if (dl) {
-            let todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
-            let sortedDates = Object.keys(dailyGroups).sort((a, b) => b.localeCompare(a)); // 日期从新到老排序
-            let finalDailyHtml = '';
-
-            if (sortedDates.length === 0) {
-                dl.innerHTML = '<div style="text-align:center; color:var(--text-light); padding:15px;">暂无日常记账记录</div>';
-            } else {
-                sortedDates.forEach(d => {
-                    let g = dailyGroups[d];
-                    let isToday = (d === todayStr);
-                    let titleDate = isToday ? '今天' : d;
-                    let summary = `<span style="color:var(--exp-color);">支 ￥${g.exp.toFixed(2)}</span>` + (g.inc > 0 ? ` <span style="color:var(--text-light);">|</span> <span style="color:var(--inc-color);">收 ￥${g.inc.toFixed(2)}</span>` : '');
-                    let contentId = 'daily_group_' + d.replace(/-/g, '');
-
-                    if (isToday) {
-                        // 今天的直接展开
-                        finalDailyHtml += `
-                        <div style="margin-bottom: 15px;">
-                            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:var(--text-light); margin-bottom:10px; padding:0 4px; border-bottom: 1px dashed rgba(0,0,0,0.05); padding-bottom: 6px;">
-                                <span>${titleDate}</span>
-                                <span>${summary}</span>
-                            </div>
-                            <div style="display:flex; flex-direction:column; gap:8px;">
-                                ${g.html}
-                            </div>
-                        </div>`;
-                    } else {
-                        // 以前的打包折叠，点一下才打开
-                        finalDailyHtml += `
-                        <div style="margin-bottom: 10px; background:rgba(255,255,255,0.4); border-radius:12px; border:1px solid rgba(255,255,255,0.6); overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                            <div onclick="let el=document.getElementById('${contentId}'); let arrow=document.getElementById('arrow_${contentId}'); if(el.style.display==='none'){el.style.display='flex'; arrow.style.transform='rotate(180deg)';}else{el.style.display='none'; arrow.style.transform='rotate(0deg)';}" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer;">
-                                <div style="font-size:13px; font-weight:bold; color:var(--accent-dark);">${titleDate}</div>
-                                <div style="font-size:11px; font-weight:bold;">${summary} <span id="arrow_${contentId}" style="display:inline-block; color:var(--text-light); margin-left:6px; transition:0.2s;">▼</span></div>
-                            </div>
-                            <div id="${contentId}" style="display:none; flex-direction:column; gap:8px; padding:0 10px 10px 10px; border-top:1px dashed rgba(255,255,255,0.4);">
-                                ${g.html}
-                            </div>
-                        </div>`;
-                    }
-                });
-                dl.innerHTML = finalDailyHtml;
-            }
-        }
-
-        // 🎨 渲染转单流水大屏 (高级卡片与内滚动)
-        if (gl) {
-            if (countPresale === 0 && countSold === 0 && countRefund === 0) {
-                gl.innerHTML = '<div style="text-align:center; font-size:12px; color:var(--text-light); padding:15px;">暂无转单记录</div>';
-            } else {
-                let finalHtml = '';
-                if (countPresale > 0) finalHtml += `<div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(255,138,101,0.3); padding-right: 6px;"><div style="font-size:14px; font-weight:900; color:#FF8A65; margin-bottom: 12px; display:flex; align-items:center;">⏳ 预售中 (待出掉) <span style="background:rgba(255,138,101,0.15); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countPresale} 单</span></div><div style="display:flex; flex-direction:column; gap:8px; max-height: 380px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">${htmlPresale}</div></div>`;
-                if (countSold > 0) finalHtml += `<div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(77,182,172,0.3); padding-right: 6px;"><div style="font-size:14px; font-weight:900; color:var(--inc-color); margin-bottom: 12px; display:flex; align-items:center;">✅ 已转单 (利润库) <span style="background:rgba(77,182,172,0.15); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countSold} 单</span></div><div style="display:flex; flex-direction:column; gap:8px; max-height: 300px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">${htmlSold}</div></div>`;
-                if (countRefund > 0) finalHtml += `<div class="card glass-panel" style="margin-bottom: 15px; border: 2px solid rgba(141,110,99,0.2); padding-right: 6px;"><div style="font-size:14px; font-weight:900; color:var(--text-light); margin-bottom: 12px; display:flex; align-items:center;">❌ 已退款 (回本金) <span style="background:rgba(0,0,0,0.05); padding:2px 8px; border-radius:12px; margin-left:8px; font-size:11px;">${countRefund} 单</span></div><div style="display:flex; flex-direction:column; gap:8px; max-height: 250px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; -webkit-overflow-scrolling: touch;">${htmlRefund}</div></div>`;
-                gl.innerHTML = finalHtml;
-            }
-        }
         
         let topProfitEl = document.getElementById('topProfit');
         if(topProfitEl) topProfitEl.innerText = '￥' + pS.toFixed(2); 
@@ -1258,6 +1254,8 @@
         }); 
         
         saveAll(); 
+        // 订单保存成功，清空草稿箱
+        localStorage.removeItem('evan_draft_gu');
         
         // 4. 清空表单，并恢复成只有一行输入的初始状态
         document.getElementById('manualItemsBox').innerHTML = `
@@ -1510,8 +1508,8 @@
                 if(dayInfo.hasMedia) dots += '<span style="font-size:7px; line-height:6px; margin-left:1px;">📝</span>';
             } 
             const borderC = dateStr === getTodayString() ? 'var(--accent-dark)' : 'rgba(255,255,255,0.8)'; 
-            // 加上 onclick，点格子直接看明细
-            grid.innerHTML += `<div class="cal-cell" style="border-color: ${borderC}; cursor:pointer;" onclick="openDayDetail('all', '${dateStr}')"><span class="cal-date">${i}</span><div style="display:flex; gap:2px; align-items:center;">${dots}</div></div>`; 
+            // 把 onclick 改为 handleCalendarClick，调用日记大屏
+        grid.innerHTML += `<div class="cal-cell" style="border-color: ${borderC}; cursor:pointer;" onclick="handleCalendarClick('all', '${dateStr}')"><span class="cal-date">${i}</span><div style="display:flex; gap:2px; align-items:center;">${dots}</div></div>`;
         } 
     }
     // ✨ 全新的核心功能：计算并渲染转化率排行榜
@@ -1966,36 +1964,48 @@ function parseTaobaoCSV(csvText) {
     // 🧠 终极控制台：负责弹窗和日期联动
     let editingOrderIndex = -1;
 function openOrderEdit(idx) {
-        const modal = document.getElementById('guEditModal'); // 确认你的修改弹窗ID
-        if(modal) modal.style.zIndex = "400"; // 强行提到最前面
+        const modal = document.getElementById('order-edit-modal'); // 确保ID是对的
+        if(modal) modal.style.zIndex = "400"; 
         editingOrderIndex = idx;
         const r = db[idx];
         
-        document.getElementById('oeName').value = r.title || r.id;
+        // ✨ 救命补丁 1：把烦人的 HTML 代码和旧文案全部洗干净，只把纯净的名字放到输入框里！
+        let rawTitle = r.title || r.id;
+        let textPart = rawTitle.split('<div')[0]; // 砍掉后面的排版代码
+        textPart = textPart.replace(/<[^>]+>/g, '').trim(); // 去掉多余标签
+        textPart = textPart.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '$1'); // 把又长又丑的历史遗留文案洗成 "X件"
+        document.getElementById('oeName').value = textPart;
+        
         document.getElementById('oeBuy').value = r.buy || 0;
         document.getElementById('oeSell').value = r.sell || '';
+        document.getElementById('oeDeposit').value = r.deposit || ''; 
         
         let sSelect = document.getElementById('oeStatus');
         let dateBox = document.getElementById('oeSellDateBox');
+        let depBox = document.getElementById('oeDepositBox');
         let dateInput = document.getElementById('oeSellDate');
 
         if(r.status === '预售中') sSelect.selectedIndex = 0;
-        else if(r.status === '已转单') sSelect.selectedIndex = 1;
-        else if(r.status === '已退款') sSelect.selectedIndex = 2;
+        else if(r.status === '已收定金') sSelect.selectedIndex = 1;
+        else if(r.status === '已转单') sSelect.selectedIndex = 2;
+        else if(r.status === '已退款') sSelect.selectedIndex = 3;
 
         dateInput.value = r.sellDate || getTodayString();
+        
         dateBox.style.display = (r.status === '已转单') ? 'block' : 'none';
+        depBox.style.display = (r.status === '已收定金') ? 'block' : 'none';
 
-        sSelect.onchange = function() { dateBox.style.display = (this.value === '已转单') ? 'block' : 'none'; };
+        sSelect.onchange = function() { 
+            dateBox.style.display = (this.value === '已转单') ? 'block' : 'none'; 
+            depBox.style.display = (this.value === '已收定金') ? 'block' : 'none'; 
+        };
 
         document.getElementById('overlay-top').style.display = 'block';
         document.getElementById('order-edit-modal').style.display = 'flex';
 
-        // ✨ 实时定价辅助：监听输入，自动算出利润率
         const sellInput = document.getElementById('oeSell');
         const buyInput = document.getElementById('oeBuy');
         const marginText = document.getElementById('oeMarginDisplay');
-        
         const updateMargin = () => {
             let b = parseFloat(buyInput.value || 0);
             let s = parseFloat(sellInput.value || 0);
@@ -2009,26 +2019,34 @@ function openOrderEdit(idx) {
         };
         sellInput.oninput = updateMargin;
         buyInput.oninput = updateMargin;
-        updateMargin(); // 每次打开弹窗先算一遍
+        updateMargin(); 
     }
 
     function saveOrderEdit() {
         if(editingOrderIndex === -1) return;
         const r = db[editingOrderIndex];
         
-        r.title = document.getElementById('oeName').value;
+        // ✨ 救命补丁 2：保存时，把纯净的新名字，和之前切下来的商品明细代码缝合回去，绝不丢失排版！
+        let newTextPart = document.getElementById('oeName').value;
+        if (r.title && r.title.includes('<div')) {
+            let htmlPart = '<div' + r.title.split('<div').slice(1).join('<div');
+            r.title = newTextPart + htmlPart;
+        } else {
+            r.title = newTextPart;
+        }
+
         r.buy = parseFloat(document.getElementById('oeBuy').value || 0);
         r.sell = parseFloat(document.getElementById('oeSell').value || 0);
+        r.deposit = parseFloat(document.getElementById('oeDeposit').value || 0); 
         
         let statusText = document.getElementById('oeStatus').value;
         r.status = statusText;
         
-        // 核心财务逻辑记录
         if (statusText === '已转单') {
             r.sellDate = document.getElementById('oeSellDate').value;
             let tBuy = new Date(r.date).getTime();
             let tSell = new Date(r.sellDate).getTime();
-            let days = Math.max(1, Math.ceil((tSell - tBuy) / (1000 * 3600 * 24))); // 至少算1天
+            let days = Math.max(1, Math.ceil((tSell - tBuy) / (1000 * 3600 * 24))); 
             r.holdDays = days;
         } else {
             r.sellDate = null;
@@ -2037,18 +2055,7 @@ function openOrderEdit(idx) {
         
         r.profit = (r.sell - r.buy).toFixed(2);
         saveAll(); 
-        
-        // ✨ 核心修复：坚决不调用粗暴的 closeTopModals()！
-        // 自动往上找修改框的本体并关闭它，保留底下的明细框
-        let editInput = document.getElementById('oeName');
-        if (editInput) {
-            let editModal = editInput.closest('div[style*="fixed"]');
-            if (editModal) editModal.style.display = 'none';
-        }
-        
-        // 刷新列表和大屏数据，让底下透出来的气泡金额瞬间变更是最新的
-        if (typeof rdr === 'function') rdr();
-        if (typeof renderCategoryAndShopAnalysis === 'function') renderCategoryAndShopAnalysis();
+        closeTopModals();
     }
 
     // ✨ 终极大屏核算中心 (精准计算，绝对不吞品类和店铺的数据)
@@ -2077,7 +2084,13 @@ function renderCategoryAndShopAnalysis() {
                 if(r.status === '预售中') {
                     currentCapital += parseFloat(r.buy || 0);
                     bundleStats[bKey].activeCap += parseFloat(r.buy || 0); 
-                } else if(r.status === '已转单') {
+                } else if(r.status === '已收定金') {
+                    // 已收定金，要减掉！
+                    let netCap = Math.max(0, parseFloat(r.buy || 0) - parseFloat(r.deposit || 0));
+                    currentCapital += netCap;
+                    bundleStats[bKey].activeCap += netCap; 
+                } 
+                else if(r.status === '已转单') {
                     let p = parseFloat(r.profit || 0); let b = parseFloat(r.buy || 0);
                     totalProfit += p; totalInvestedInSold += b; soldCount++;
                     if(r.holdDays) totalHoldDays += parseFloat(r.holdDays || 0);
@@ -2464,12 +2477,15 @@ function handleSwipeNavigation(e) {
                     let displaySell = r.sell > 0 ? r.sell : '-.-';
                     let statusColor = r.status === '已转单' ? 'var(--inc-color)' : (r.status === '已退款' ? 'var(--text-light)' : '#FF8A65');
                     
-                    // ✨ 修复：一整个反引号包到底！
+                    // ✨ 自动把历史长文字洗干净
+                    let cleanTitle = (r.title || '未知商品').replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '$1');
+                    
+                    // ✨ 把这里导致文字竖排发疯的 -webkit-box 限制全部删掉，让内排版自然展开！
                     listHtml += `
                     <div class="glass-panel" style="margin-bottom:10px; padding:12px; border-left: 4px solid ${statusColor};" onclick="openOrderEdit(${idx})">
                         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; flex:1; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; padding-right:10px;">
-                                ${r.title || '未知商品'}
+                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; flex:1; padding-right:10px;">
+                                ${cleanTitle}
                             </div>
                             <div style="font-size:11px; color:${statusColor}; font-weight:bold; white-space:nowrap;">${r.status}</div>
                         </div>
@@ -2500,6 +2516,96 @@ function handleSwipeNavigation(e) {
         // 显示弹窗
         modal.style.display = 'flex';
     }
+
+    function handleCalendarClick(type, dateStr) {
+        let dayRecords = db.filter(r => r.type === '日常' && r.date === dateStr);
+        let mediaRecords = dayRecords.filter(r => r.diaryText || r.imageBase64);
+        
+        if (mediaRecords.length > 0) {
+            document.getElementById('dayMediaTitle').innerText = `${dateStr} 记忆`;
+            const carousel = document.getElementById('dayMediaCarousel');
+            carousel.innerHTML = '';
+            
+            mediaRecords.forEach(r => {
+                let title = r.remark || '无题记账';
+                carousel.innerHTML += `
+                <div style="flex: 0 0 100%; scroll-snap-align: start; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; align-items: center;">
+                    <div style="font-size: 18px; font-weight: 900; color: var(--accent-dark); margin-bottom: 15px; background: rgba(255,255,255,0.5); padding: 5px 15px; border-radius: 15px;">🔖 ${title}</div>
+                    ${r.imageBase64 ? `<img src="${r.imageBase64}" style="max-width: 100%; border-radius: 15px; margin-bottom: 15px; border: 2px dashed rgba(255,255,255,0.8); box-shadow: 0 5px 15px rgba(0,0,0,0.1);">` : ''}
+                    ${r.diaryText ? `<div style="font-size: 15px; line-height: 1.8; color: var(--text-main); white-space: pre-wrap; width: 100%; background: rgba(255,255,255,0.4); padding: 15px; border-radius: 15px; box-sizing: border-box;">${r.diaryText}</div>` : ''}
+                </div>`;
+            });
+            
+            document.getElementById('btnShowAllRecords').onclick = () => {
+                closeTopModals();
+                openDayDetail(type, dateStr); 
+            };
+            
+            document.getElementById('overlay-top').style.display = 'block';
+            document.getElementById('day-media-modal').style.display = 'flex';
+        } else {
+            openDayDetail(type, dateStr); 
+        }
+    }
+    // ==========================================
+    // ✨ 防杀后台：自动草稿箱引擎
+    // ==========================================
+    function saveFormDraft() {
+        // 只在“转单录入”页面才保存草稿，免得影响其他功能
+        if (!document.getElementById('pageRabbit').classList.contains('active')) return;
+
+        let draft = {
+            bP: document.getElementById('bP').value || '',
+            sP: document.getElementById('sP').value || '',
+            gCat: document.getElementById('gCat').value || '',
+            items: []
+        };
+        
+        // 抓取所有动态添加的商品行
+        document.querySelectorAll('.m-item-row').forEach(row => {
+            draft.items.push({
+                name: row.querySelector('.m-name').value || '',
+                price: row.querySelector('.m-price').value || ''
+            });
+        });
+        localStorage.setItem('evan_draft_gu', JSON.stringify(draft));
+    }
+
+    function loadFormDraft() {
+        let draftJson = localStorage.getItem('evan_draft_gu');
+        if (!draftJson) return;
+        
+        try {
+            let draft = JSON.parse(draftJson);
+            if (draft.bP) document.getElementById('bP').value = draft.bP;
+            if (draft.sP) document.getElementById('sP').value = draft.sP;
+            if (draft.gCat) document.getElementById('gCat').value = draft.gCat;
+            
+            if (draft.items && draft.items.length > 0) {
+                const box = document.getElementById('manualItemsBox');
+                box.innerHTML = ''; 
+                draft.items.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'm-item-row';
+                    row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px;';
+                    row.innerHTML = `
+                        <input type="text" class="m-name" placeholder="商品名称" style="flex: 2; margin-bottom: 0;" value="${item.name}">
+                        <input type="number" class="m-price" placeholder="单价(￥)" style="flex: 1; margin-bottom: 0;" value="${item.price}">
+                        <div onclick="this.parentElement.remove(); saveFormDraft();" style="width: 40px; height: 42px; line-height: 42px; text-align: center; background: #FF5252; color: white; border-radius: 12px; cursor: pointer; font-weight: bold;">✕</div>
+                    `;
+                    box.appendChild(row);
+                });
+            }
+        } catch (e) {}
+    }
+
+    // 只要有任何打字输入，立马悄悄存草稿
+    document.addEventListener('input', saveFormDraft);
+    // 每次点击屏幕，也顺手存一下
+    document.addEventListener('click', saveFormDraft);
+
+    // 页面每次加载完毕后，延迟一点点恢复草稿
+    setTimeout(loadFormDraft, 300);
                 
 </script>
 <div id="anchoredDropdown" class="frosted-dropdown" style="display:none;"></div>
