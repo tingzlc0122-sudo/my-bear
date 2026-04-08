@@ -304,34 +304,34 @@
             <datalist id="dynamicCatList"></datalist>
             
     <input type="text" id="gS" value="预售中" readonly 
-                   onclick="window.openCustomSelect('gS', ['⏳ 预售中 (占用本金)', '✅ 已转单 (核算利润)', '❌ 已退款 (资金回流)'], event)" 
-                   style="cursor: pointer; background: rgba(255,255,255,0.4); text-align: center; border-radius: 18px; color: #5D4037; font-weight: bold; border: 1px solid rgba(141,110,99,0.3); padding: 12px; outline: none; width: 100%; box-sizing: border-box;">
-            
+       onclick="window.openCustomSelect('gS', ['⏳ 预售中 (占用本金)', '💸 已收定金 (定金回流)', '✅ 已转单 (核算利润)', '❌ 已退款 (资金回流)'], event)" 
+       style="cursor: pointer; background: rgba(255,255,255,0.4); text-align: center; border-radius: 18px; color: #5D4037; font-weight: bold; border: 1px solid rgba(141,110,99,0.3); padding: 12px; outline: none; width: 100%; box-sizing: border-box;">    
+    
     <button class="btn-main" onclick="addGu()">保存转单记录</button>
         </div>
 
     <div class="card glass-panel big-bubble">
-        <div class="card-title" style="display: flex; align-items: center; justify-content: space-between;">
-            <div>
-                🧾 转单流水 <span id="guTotalCount" style="background: var(--exp-color); color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; vertical-align: middle; margin-left: 2px; box-shadow: 0 2px 5px rgba(244,184,184,0.5);">0</span>
-            </div>
-            <div style="font-size: 11px; display: flex; gap: 6px;">
-                <span onclick="deleteSelectedGu()" id="guBatchDelBtn" style="display:none; color:white; background:#FF5252; padding: 4px 8px; border-radius: 10px; cursor:pointer; font-weight:bold; box-shadow: 0 2px 5px rgba(255,82,82,0.3);">🗑️删选中(0)</span>
-                <span onclick="if(confirm('⚠️ 确定要清空所有谷子转单吗？（不影响日常）')) { db = db.filter(r => r.type !== '转单'); saveAll(); location.reload(); }" id="guClearAllBtn" style="color:#FF5252; background: rgba(255,82,82,0.1); padding: 4px 8px; border-radius: 10px; cursor:pointer; font-weight:bold;">一键清空</span>
-                <span onclick="toggleGuManage()" id="guManageBtn" style="color:var(--accent-dark); background: rgba(139,90,43,0.1); padding: 4px 8px; border-radius: 10px; cursor:pointer; font-weight:bold;">⚙️批量管理</span>
-            </div>
+    <div class="card-title" style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            🧾 转单流水 <span id="guTotalCount" style="background: var(--exp-color); color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; vertical-align: middle;">0</span>
         </div>
-        
-        <div class="stats-segment" style="margin-bottom: 15px; margin-top: 10px;">
-            <div class="stats-seg-btn active" id="tab-gu-预售中" onclick="switchGuTab('预售中')">预售中</div>
-            <div class="stats-seg-btn" id="tab-gu-已收定金" onclick="switchGuTab('已收定金')">已收定</div>
-            <div class="stats-seg-btn" id="tab-gu-已转单" onclick="switchGuTab('已转单')">已转单</div>
-            <div class="stats-seg-btn" id="tab-gu-已退款" onclick="switchGuTab('已退款')">已退款</div>
+        <div style="font-size: 11px; display: flex; gap: 6px;">
+            <span onclick="deleteSelectedGu()" id="guBatchDelBtn" style="display:none; color:white; background:#FF5252; padding: 4px 8px; border-radius: 10px; cursor:pointer; font-weight:bold;">🗑️删选中</span>
+            <span onclick="if(confirm('⚠️ 确定要清空所有谷子转单吗？')) { db = db.filter(r => r.type !== '转单'); saveAll(); location.reload(); }" id="guClearAllBtn" style="color:#FF5252; background: rgba(255,82,82,0.1); padding: 4px 8px; border-radius: 10px; cursor:pointer; font-weight:bold;">一键清空</span>
+            <span onclick="toggleGuManage()" id="guManageBtn" style="color:var(--accent-dark); background: rgba(139,90,43,0.1); padding: 4px 8px; border-radius: 10px; cursor:pointer; font-weight:bold;">⚙️批量管理</span>
         </div>
-        
-        <input type="text" id="guSearchInput" class="search-input" placeholder="🔍 搜索商品名称 / 品类 / 状态..." oninput="rdr()">
-        <div id="guList" style="max-height: 400px; overflow-y: auto; overflow-x: hidden;"></div>
     </div>
+    
+    <div class="stats-segment" style="margin-bottom: 15px; margin-top: 10px;">
+        <div class="stats-seg-btn active" id="tab-gu-预售中" onclick="switchGuTab('预售中')">预售中</div>
+        <div class="stats-seg-btn" id="tab-gu-已收定金" onclick="switchGuTab('已收定金')">已收定金</div>
+        <div class="stats-seg-btn" id="tab-gu-已转单" onclick="switchGuTab('已转单')">已转单</div>
+        <div class="stats-seg-btn" id="tab-gu-已退款" onclick="switchGuTab('已退款')">已退款</div>
+    </div>
+    
+    <input type="text" id="guSearchInput" class="search-input" placeholder="🔍 搜索商品名称 / 品类..." oninput="rdr()">
+    <div id="guList" style="max-height: 400px; overflow-y: auto; overflow-x: hidden;"></div>
+</div>
     </div>
     <div id="pageAnalysis" class="page">
         <div class="card glass-panel" style="background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4)); margin-bottom: 15px;">
@@ -386,24 +386,24 @@
             </div>
         </div>
         <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">当前操作状态</div>
-        <select id="oeStatus" style="margin-bottom:10px;">
-            <option value="预售中">⏳ 预售中 (全额压本)</option>
-            <option value="已收定金">💸 已收定金 (定金回流)</option>
-            <option value="已转单">✅ 已转单 (核算利润)</option>
-            <option value="已退款">❌ 已退款 (资金回流)</option>
-        </select>
-    
-        <div id="oeMarginDisplay" style="font-size:12px; color:var(--accent-main); font-weight:bold; margin: -5px 0 10px 4px;">利润率预估：0%</div>
-        
-        <div id="oeDepositBox" style="display:none; margin-bottom:10px;">
-            <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">实收定金 (回到账户的钱 ￥)</div>
-            <input type="number" id="oeDeposit" placeholder="定金金额">
-        </div>
-        
-        <div id="oeSellDateBox" style="display:none; margin-bottom:15px;">
-            <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">实际售出/回款日期 (算周转率用)</div>
-            <input type="date" id="oeSellDate">
-        </div>
+    <select id="oeStatus" style="margin-bottom:10px;">
+    <option value="预售中">⏳ 预售中</option>
+    <option value="已收定金">💸 已收定金 (定金回流)</option>
+    <option value="已转单">✅ 已转单 (核算利润)</option>
+    <option value="已退款">❌ 已退款 (资金回流)</option>
+    </select>
+
+    <div id="oeMarginDisplay" style="font-size:12px; color:var(--accent-main); font-weight:bold; margin: -5px 0 10px 4px;">利润率预估：0%</div>
+
+    <div id="oeDepositBox" style="display:none; margin-bottom:10px;">
+        <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">实收定金 (￥)</div>
+        <input type="number" id="oeDeposit" placeholder="输入已收到的定金金额">
+    </div>
+
+    <div id="oeSellDateBox" style="display:none; margin-bottom:15px;">
+        <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">实际售出/回款日期</div>
+        <input type="date" id="oeSellDate">
+    </div>
         
         <div style="display:flex; gap:10px; margin-top:5px;">
             <button class="btn-light" style="flex:1; margin:0; border-radius:20px; padding:12px;" onclick="closeTopModals()">取消</button>
@@ -806,6 +806,19 @@
         rdr();
     }
 
+    // ✨ 1. 板块切换控制中心
+    let currentGuTab = '预售中'; 
+    function switchGuTab(tab) {
+        currentGuTab = tab;
+        // 切换按钮的高亮状态
+        document.querySelectorAll('#pageRabbit .stats-seg-btn').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.getElementById('tab-gu-' + tab);
+        if(activeBtn) activeBtn.classList.add('active');
+        // 重新渲染
+        rdr();
+    }
+
+    // ✨ 2. 核心渲染引擎 (绝对完整版)
     function rdr() {
         let pS = 0, cS = 0; 
         const dl = document.getElementById('dailyList');
@@ -834,27 +847,37 @@
                 if(dl) dl.innerHTML += `<div class="swipe-container-x"><div class="swipe-content glass-panel" onclick="openRecordEdit(${idx})"><div style="flex:1; display:flex; align-items:center;">${stickerHtml}<div style="margin-left:4px;"><div style="font-weight:bold; color:var(--accent-dark); font-size:14px;">${r.remark}${hasMediaIcon}</div><div style="font-size:11px; color:var(--text-light);">${r.timeStr || ''}</div></div></div><div style="color:${color}; font-weight:bold; font-size:15px;">${sign}${r.amt}</div></div><div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div></div>`;
             } 
             else {
-                // 核算顶部大数字
-                if(r.status === '已转单') pS += parseFloat(r.profit || 0); 
-                if(r.status === '预售中') cS += parseFloat(r.buy || 0);
-                if(r.status === '已收定金') cS += Math.max(0, parseFloat(r.buy || 0) - parseFloat(r.deposit || 0)); // 扣除已收定金
+                // --- 顶部数据核算逻辑 ---
+                if(r.status === '已转单') {
+                    pS += parseFloat(r.profit || 0); 
+                } else if(r.status === '预售中') {
+                    cS += parseFloat(r.buy || 0);
+                } else if(r.status === '已收定金') {
+                    // 定金回流：压在本金里的钱 = 买入价 - 已收定金
+                    cS += Math.max(0, parseFloat(r.buy || 0) - parseFloat(r.deposit || 0));
+                }
                 
-                // 过滤：如果不是当前选中的 Tab，直接不渲染在列表中！(完美解决列表太长)
+                // --- 板块过滤逻辑：只显示当前选中的 Tab 状态 ---
                 if(r.status !== currentGuTab) return;
 
+                // --- 搜索过滤逻辑 ---
                 if (searchTerm) {
                     const titleMatch = r.title && r.title.toLowerCase().includes(searchTerm);
                     const catMatch = r.category && r.category.toLowerCase().includes(searchTerm);
                     if (!titleMatch && !catMatch) return; 
                 }
 
+                // 清洗名字
                 let displayTitle = r.title ? r.title : '未知商品';
-                // ✨ 自动洗掉历史残留下来的旧文案，直接变成 "📦 X件"
-                displayTitle = displayTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '$1');
-                displayTitle = displayTitle.replace('件</div><div', '件<div').replace('</div><div style="display:inline-block;">', '</div>');
+                if (displayTitle.includes('<div')) {
+                    displayTitle = displayTitle.split('<div')[0]; 
+                }
+                displayTitle = displayTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
+
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                 let profitColor = parseFloat(r.profit) > 0 ? 'var(--exp-color)' : (parseFloat(r.profit) < 0 ? '#4DB6AC' : 'var(--text-light)');
                 
+                // 批量管理复选框
                 let checkboxHtml = '';
                 let clickEvent = `openOrderEdit(${idx})`; 
                 if (typeof isGuManaging !== 'undefined' && isGuManaging) {
@@ -865,13 +888,14 @@
                     clickEvent = `toggleGuSelect(${idx})`; 
                 }
 
-                let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold;">已回血 ￥${r.deposit}</div>` : '';
+                let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold;">已回定金 ￥${r.deposit}</div>` : '';
 
+                // 渲染转单列表项
                 if(gl) gl.innerHTML += `
-                <div class="swipe-container-x" style="width: 100%;">
-                    <div class="swipe-content glass-panel" onclick="${clickEvent}" style="display:flex; align-items:center;">
+                <div class="swipe-container-x" style="display: flex; flex-wrap: nowrap; width: 100%;">
+                    <div class="swipe-content glass-panel" onclick="${clickEvent}" style="display:flex; align-items:center; flex: 0 0 100%; min-width: 100%; box-sizing: border-box;">
                         ${checkboxHtml}
-                        <div style="flex:1; padding-right:10px;">
+                        <div style="flex:1; padding-right:10px; min-width: 0;">
                             <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
                                 ${displayTitle}${hasMediaIcon}
                             </div>
@@ -880,17 +904,18 @@
                             </div>
                             ${depositBadge}
                         </div>
-                        <div style="text-align:right; min-width:60px;">
+                        <div style="text-align:right; min-width:60px; flex-shrink: 0;">
                             <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
                             <div style="font-size:11px; color:var(--text-light); margin-top:2px;">买 ￥${r.buy}</div>
                             <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
                         </div>
                     </div>
-                    <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
+                    <div class="swipe-delete" style="flex-shrink: 0;" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
                 </div>`;
             }
         });   
         
+        // ✨✨✨ 绝不删除的“心脏”代码：更新顶部数字 ✨✨✨
         let topProfitEl = document.getElementById('topProfit');
         if(topProfitEl) topProfitEl.innerText = '￥' + pS.toFixed(2); 
         let topCapEl = document.getElementById('topCapital');
@@ -898,6 +923,7 @@
         let topSavEl = document.getElementById('topSaving');
         if(topSavEl) topSavEl.innerText = '￥' + curSav.toFixed(2);
 
+        // ✨✨✨ 更新总条数徽章 ✨✨✨
         let guCount = db.filter(r => r.type === '转单').length;
         let countEl = document.getElementById('guTotalCount');
         if(countEl) countEl.innerText = guCount;
@@ -2345,40 +2371,29 @@ function enableRecordEdit() {
     }, {passive: true});
 
     document.addEventListener('touchend', e => {
-        let touchEndX = e.changedTouches[0].screenX;
-        let touchEndY = e.changedTouches[0].screenY;
-        
-        // 1. 算出水平和垂直分别滑了多远
-        let deltaX = touchEndX - touchStartX;
-        let deltaY = touchEndY - touchStartY;
-        
-        // 2. 核心魔法：如果上下滑动的距离大于左右滑动，说明你在看列表，直接取消翻页判定！
-        if (Math.abs(deltaY) > Math.abs(deltaX)) {
-            return;
-        }
+    let touchEndX = e.changedTouches[0].screenX;
+    let touchEndY = e.changedTouches[0].screenY;
+    let deltaX = touchEndX - touchStartX;
+    let deltaY = touchEndY - touchStartY;
+    
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return;
 
-        // 3. 避开页面里自带的横向滚动区域（比如明细模块的日记/图片）
-        if (e.target.closest('.swipe-container-x') || 
-            e.target.closest('.swipe-container') || 
-            e.target.closest('.cal-week-row') || 
-            e.target.closest('.cal-grid') ||
-            e.target.closest('canvas')) {
-            return;
-        }
+    // ✨ 救命补丁：如果有任何弹窗或遮罩显示，严禁底层翻页！
+    if (document.getElementById('overlay-top').style.display === 'block' || 
+        document.getElementById('overlay').style.display === 'block') {
+        return;
+    }
 
-        const pages = ['B', 'R', 'A', 'S', 'N'];
-        let currentTab = localStorage.getItem('evan_current_tab') || 'B';
-        let currentIndex = pages.indexOf(currentTab);
+    // 避开列表的左右滑动
+    if (e.target.closest('.swipe-container-x')) return;
 
-        // 4. 把触发门槛从 80px 降到 45px，只要判定是横向划动，轻轻一拨就翻页！
-        if (deltaX < -45) { // 👈 向左滑 -> 去下一个页面
-            if (currentIndex < pages.length - 1) showP(pages[currentIndex + 1]);
-        }
-        if (deltaX > 45) {  // 👉 向右滑 -> 去上一个页面
-            if (currentIndex > 0) showP(pages[currentIndex - 1]);
-        }
-    }, {passive: true});
+    const pages = ['B', 'R', 'A', 'S', 'N'];
+    let currentTab = localStorage.getItem('evan_current_tab') || 'B';
+    let currentIndex = pages.indexOf(currentTab);
 
+    if (deltaX < -45 && currentIndex < pages.length - 1) showP(pages[currentIndex + 1]);
+    if (deltaX > 45 && currentIndex > 0) showP(pages[currentIndex - 1]);
+}, {passive: true});
 function handleSwipeNavigation(e) {
         // 如果正在滑动横向滚动条、图表或者日历，就不要翻页
         if (e.target.closest('.swipe-container-x') || 
@@ -2453,49 +2468,58 @@ function handleSwipeNavigation(e) {
             event.target.value = ''; // 清空选择框，方便下次再选同一张图
         }
     }
-        // ✨ 策略面板交互：点击弹出“单件/多件”专属订单明细
+        // ✨ 满血还原版：单件/多件明细弹窗
     function openBundleDetail(type) {
+        // 1. 获取所有原始 DOM 容器（确保和原版 ID 一致）
         const modal = document.getElementById('category-detail-modal');
         const titleEl = document.getElementById('catModalTitle');
-        const listEl = document.getElementById('catModalList'); // 借用你原本品类弹窗的容器
+        const listEl = document.getElementById('catModalList'); 
         
         if(!modal || !titleEl) return;
         
-        // 动态设置弹窗标题
-        titleEl.innerHTML = type === '单件' ? '🎯 单件单出 订单明细' : '📦 多件打包 订单明细';
+        // 2. 设置标题（根据类型显示）
+        titleEl.innerHTML = type === '单件' ? '🎯 单件单出 (已转单明细)' : '📦 多件打包 (已转单明细)';
         
         let listHtml = '';
         let count = 0;
         
+        // 3. 开始遍历数据库，严格按照原版逻辑重构
         db.forEach((r, idx) => {
             if (r.type === '转单') {
-                // 用我们之前的暗号来区分单件还是多件
-                let isBundle = r.title && r.title.includes('📦');
+                // 🚀 核心改动：根据你的需求，这里只筛选“已转单”状态
+                if (r.status !== '已转单') return; 
+
+                // 识别是否为多件打包
+                let isBundle = r.title && (r.title.includes('📦') || r.title.includes('包含多件商品'));
                 
                 if ((type === '多件' && isBundle) || (type === '单件' && !isBundle)) {
+                    // 4. 还原原版的利润颜色判定逻辑
                     let pColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
-                    let displaySell = r.sell > 0 ? r.sell : '-.-';
-                    let statusColor = r.status === '已转单' ? 'var(--inc-color)' : (r.status === '已退款' ? 'var(--text-light)' : '#FF8A65');
+                    let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                     
-                    // ✨ 自动把历史长文字洗干净
-                    let cleanTitle = (r.title || '未知商品').replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '$1');
+                    // 5. 核心改动：标题清洗，去掉 HTML 乱码，保留 📦 符号
+                    let cleanTitle = r.title || '未知商品';
+                    if (cleanTitle.includes('<div')) {
+                        cleanTitle = cleanTitle.split('<div')[0]; // 砍掉后面的 HTML 尾巴
+                    }
+                    cleanTitle = cleanTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
                     
-                    // ✨ 把这里导致文字竖排发疯的 -webkit-box 限制全部删掉，让内排版自然展开！
+                    // 6. 100% 还原原版的复杂列表 HTML 结构
                     listHtml += `
-                    <div class="glass-panel" style="margin-bottom:10px; padding:12px; border-left: 4px solid ${statusColor};" onclick="openOrderEdit(${idx})">
+                    <div class="glass-panel" style="margin-bottom:10px; padding:12px; border-left: 4px solid var(--inc-color); cursor:pointer;" onclick="openOrderEdit(${idx})">
                         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
                             <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; flex:1; padding-right:10px;">
                                 ${cleanTitle}
                             </div>
-                            <div style="font-size:11px; color:${statusColor}; font-weight:bold; white-space:nowrap;">${r.status}</div>
+                            <div style="font-size:11px; color:var(--inc-color); font-weight:bold; white-space:nowrap;">已转单</div>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-end;">
                             <div style="font-size:11px; color:var(--text-light);">
-                                ${r.date} | ${r.shop || '未知'}
+                                ${r.date} | ${r.shop || '未知店铺'}
                             </div>
                             <div style="text-align:right;">
                                 <div style="font-size:11px; color:var(--text-light);">买 ￥${r.buy} | 售 ￥${displaySell}</div>
-                                <div style="font-size:13px; font-weight:bold; color:${pColor}; margin-top:2px;">润 ￥${r.profit}</div>
+                                <div style="font-size:13px; font-weight:bold; color:${pColor}; margin-top:2px;">利润 ￥${r.profit}</div>
                             </div>
                         </div>
                     </div>`;
@@ -2504,16 +2528,21 @@ function handleSwipeNavigation(e) {
             }
         });
         
-        if (count === 0) listHtml = '<div style="text-align:center; padding:20px; color:var(--text-light);">暂无对应订单</div>';
+        // 7. 还原原版的“空数据”提示逻辑
+        if (count === 0) {
+            listHtml = '<div style="text-align:center; padding:30px; color:var(--text-light); font-weight:bold;">暂无已转单的记录 🐰</div>';
+        }
         
+        // 8. 还原原版的容器兼容性写入逻辑
         if (listEl) {
             listEl.innerHTML = listHtml;
         } else {
-            // 兼容防错：如果找不到列表容器，强行找弹窗里的第二个 div
+            // 兼容防错：如果找不到列表容器，强行找弹窗里的第二个 div（你的原版代码就在这）
             modal.children[1].innerHTML = listHtml;
         }
         
-        // 显示弹窗
+        // 9. 🚀 核心改动：显示弹窗并开启遮罩，彻底锁死底层翻页
+        document.getElementById('overlay-top').style.display = 'block';
         modal.style.display = 'flex';
     }
 
