@@ -6,7 +6,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="小兔记账">
-<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.jpg">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -741,11 +740,7 @@
             document.addEventListener('click', closeAndSync); 
         }, 50);
     }
-    function selectFromPicker(range, value, event) {
-        event.stopPropagation(); window.customSelectedValue = value;
-        document.querySelectorAll('.frosted-picker').forEach(el => el.style.display = 'none');
-        updateStatsUI();
-    }
+
     // 3. 选中日期后的处理
     function selectFromPicker(range, value, event) {
         event.stopPropagation();
@@ -1262,36 +1257,8 @@
         let analysisPage = document.getElementById('pageAnalysis');
         if(analysisPage && analysisPage.classList.contains('active')) renderCategoryAndShopAnalysis();
     }
-        // 1. 关弹窗的时候，记得把新的订单修改框也关掉
-    const originalCloseTopModals = closeTopModals;
-    closeTopModals = function() {
-        originalCloseTopModals(); // 调用你原本的代码
-        const om = document.getElementById('order-edit-modal'); 
-        if(om) om.style.display = 'none';
-    };
     function openInteractiveCalendar(type) { renderInteractiveCalendar(type); document.getElementById('overlay').style.display = 'block'; document.getElementById('calendar-modal').style.display = 'block'; }
-    function switchDateRange(range) {
-        currentRange = range;
-        const btns = document.querySelectorAll('#timeRangeSegment .stats-seg-btn');
-        if(btns.length > 0) {
-            btns[0].classList.toggle('active', range === 'day');
-            btns[1].classList.toggle('active', range === 'month');
-            btns[2].classList.toggle('active', range === 'year');
-        }
-        document.getElementById('statsDatePicker').style.display = range === 'day' ? 'inline-block' : 'none';
-        document.getElementById('statsMonthPicker').style.display = range === 'month' ? 'inline-block' : 'none';
-        document.getElementById('statsYearPicker').style.display = range === 'year' ? 'inline-block' : 'none';
-        updateStatsUI();
-    }  
-    // --- ✨ 核心修复：联动、交互与书签 ---
-    function syncAndUI(range) {
-        currentRange = range;
-        const btns = document.querySelectorAll('#timeRangeSegment .stats-seg-btn');
-        btns[0].classList.toggle('active', range === 'day');
-        btns[1].classList.toggle('active', range === 'month');
-        btns[2].classList.toggle('active', range === 'year');
-        updateStatsUI();
-    }
+
     // ✨ 热力图数据处理（新增识别日记和图片标记）
     function processStatsData() { 
         const todayStr = getTodayString(); 
@@ -2314,29 +2281,6 @@ function enableRecordEdit() {
     if (deltaX < -45 && currentIndex < pages.length - 1) showP(pages[currentIndex + 1]);
     if (deltaX > 45 && currentIndex > 0) showP(pages[currentIndex - 1]);
 }, {passive: true});
-function handleSwipeNavigation(e) {
-        // 如果正在滑动横向滚动条、图表或者日历，就不要翻页
-        if (e.target.closest('.swipe-container-x') || 
-            e.target.closest('.swipe-container') || 
-            e.target.closest('.cal-week-row') || 
-            e.target.closest('.cal-grid') ||
-            e.target.closest('canvas')) {
-            return;
-        }
-
-        const pages = ['B', 'R', 'A', 'S', 'N'];
-        let currentTab = localStorage.getItem('evan_current_tab') || 'B';
-        let currentIndex = pages.indexOf(currentTab);
-
-        // 向左滑 -> 去下一个页面
-        if (touchEndX < touchStartX - 80) {
-            if (currentIndex < pages.length - 1) showP(pages[currentIndex + 1]);
-        }
-        // 向右滑 -> 去上一个页面
-        if (touchEndX > touchStartX + 80) {
-            if (currentIndex > 0) showP(pages[currentIndex - 1]);
-        }
-    }
     // 📷 截图智能识别引擎
     async function processOCRImage(event) {
         const file = event.target.files[0];
