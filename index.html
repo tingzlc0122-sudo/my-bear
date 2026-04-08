@@ -119,7 +119,7 @@
         }
         
         .swipe-delete { 
-            flex: 0 0 75px !important; 
+            flex: 0 0 75px; 
             scroll-snap-align: end; 
             background: #FF5252; 
             color: white; 
@@ -129,8 +129,9 @@
             font-size: 24px; 
             font-weight: bold; 
             cursor: pointer; 
-            border-radius: 0 18px 18px 0; 
-            margin-left: -15px; /* 关键：负边距让它平滑连接，不产生割裂感 */
+            border-radius: 0 18px 18px 0;
+            height: auto; /* 🌟 核心修复：防止它被暴力撑开换行 */
+            margin: 0;
         }
         .glass-bubble { padding: 18px; margin-bottom: 15px; cursor: pointer; display: flex; flex-direction: column; }
         .bubble-title { font-size: 16px; font-weight: 900; color: var(--accent-dark); margin-bottom: 6px; }
@@ -498,7 +499,7 @@
     <div id="novel-modal" class="novel-modal glass-panel">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><div style="font-size: 12px; color: var(--accent-main);" id="novelDateText">今天</div><span onclick="closeTopModals()" style="color: var(--text-light); font-weight: bold; cursor: pointer;">✕</span></div>
         <div id="novelEditContainer" style="display: flex; flex-direction: column; flex: 1;"><input type="text" id="novelTitle" class="novel-input-title" placeholder="灵感标题..."><textarea id="novelContent" class="novel-input-content" placeholder="记录灵光一闪..."></textarea><button class="btn-main" onclick="saveNovelRecord()" style="margin-top: 15px;">保存</button></div>
-        <div id="novelReadContainer" style="display: none; flex-direction: column; flex: 1;"><div id="novelReadTitle" class="novel-read-title"></div><div id="novelReadContent" class="novel-read-content"></div><button class="btn-pill-edit" onclick="enableNovelEdit()">✏️ 修改</button></div>
+        <div id="novelReadContainer" style="display: none; flex-direction: column; flex: 1; overflow: hidden;"><div id="novelReadTitle" class="novel-read-title"></div><div id="novelReadContent" class="novel-read-content" style="overflow-y: auto; flex: 1; margin-bottom: 15px;"></div><button class="btn-pill-edit" style="flex-shrink: 0;" onclick="enableNovelEdit()">✏️ 修改</button></div>
     </div>
 
     <div id="bottom-sheet" class="glass-panel">
@@ -1242,10 +1243,11 @@
                 </div>`
             ).join('');
             
-            displayTitle = `📦 ${items.length}件<div style="background:rgba(255,255,255,0.4); border-radius:8px; padding:4px 8px 6px 8px; margin-top:4px; border:1px dashed rgba(255,255,255,0.8); font-weight:normal; line-height:1.4;">${itemsHtml}</div>`;
+            // 🌟 修复外显名字：加上括号和首个商品名，并将代码部分隐藏防止污染布局
+            displayTitle = `📦 多件打包 (${items[0].name}等${items.length}件)<div style="display:none; background:rgba(255,255,255,0.4); border-radius:8px; padding:8px; margin-top:6px; border:1px dashed rgba(255,255,255,0.8); font-weight:normal; line-height:1.4;">${itemsHtml}</div>`;
         }
 
-        const shortId = 'M' + Date.now().toString().slice(-6); // 手动录入分配一个随机单号
+        const shortId = 'M' + Date.now().toString().slice(-6); 
 
         db.unshift({ 
             type: '转单', 
@@ -1254,12 +1256,8 @@
             buy: finalBuyPrice, 
             sell: s, 
             status: document.getElementById('gS').value, 
-            category: document.getElementById('gCat').value || '未分类', 
-            ip: '手动录入', 
-            shop: '手动/闲鱼',
-            profit: (s - finalBuyPrice).toFixed(2), 
-            date: getTodayString() 
-        }); 
+            // 🌟 只要大于1件，强制归类为“组合”，再也不乱！
+            category: items.length > 1 ? '组合' : (document.getElementById('gCat').value || '未分类'),
         
         saveAll(); 
         // 订单保存成功，清空草稿箱
@@ -2380,18 +2378,25 @@ function enableRecordEdit() {
                     let pColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                     let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                     
-                    // ✨ 核心救命：绝对不切掉商品明细！只清洗外层的丑前缀！
+                    // 🌟 剥离出子商品明细块，单独给它漂亮的外观，杜绝重叠乱码！
                     let cleanTitle = r.title || '未知商品';
+                    let subItemsHtml = '';
+                    if (cleanTitle.includes('<div')) {
+                        let parts = cleanTitle.split('<div');
+                        cleanTitle = parts[0].trim();
+                        let rawSubHtml = '<div' + parts.slice(1).join('<div');
+                        subItemsHtml = rawSubHtml.replace('display:none;', 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
+                    }
                     cleanTitle = cleanTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
                     
-                    // ✨ 核心护盾：加入 width:100% 和 flex-shrink:0，绝对不准撑爆屏幕！
                     listHtml += `
                     <div class="glass-panel" style="margin-bottom:10px; padding:12px; border-left: 4px solid var(--inc-color); cursor:pointer; width:100%; box-sizing:border-box;" onclick="openOrderEdit(${idx})">
                         <div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:flex-start;">
                             <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
                                 ${cleanTitle}
+                                ${subItemsHtml}
                             </div>
-                            <div style="font-size:11px; color:white; background:var(--inc-color); font-weight:bold; padding:2px 6px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
+                    <div style="font-size:11px; color:white; background:var(--inc-color); font-weight:bold; padding:2px 6px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-end;">
                             <div style="font-size:11px; color:var(--text-light); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
@@ -2434,9 +2439,24 @@ function enableRecordEdit() {
             if (r.status === '已收定金') statusColor = 'var(--accent-main)'; 
             let realProfit = r.status === '已转单' ? `润 ￥${r.profit}` : `买 ￥${r.buy}`;
 
-            // ✨ 同理：绝不切掉详情！只洗掉恶心前缀！
-            let cleanTitle = r.title || '未知商品';
-            cleanTitle = cleanTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
+            // 🌟 剥离出子商品明细块，单独给它漂亮的外观，杜绝重叠乱码！
+                    let cleanTitle = r.title || '未知商品';
+                    let subItemsHtml = '';
+                    if (cleanTitle.includes('<div')) {
+                        let parts = cleanTitle.split('<div');
+                        cleanTitle = parts[0].trim();
+                        let rawSubHtml = '<div' + parts.slice(1).join('<div');
+                        subItemsHtml = rawSubHtml.replace('display:none;', 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
+                    }
+                    cleanTitle = cleanTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
+                    
+                    listHtml += `
+                    <div class="glass-panel" style="margin-bottom:10px; padding:12px; border-left: 4px solid var(--inc-color); cursor:pointer; width:100%; box-sizing:border-box;" onclick="openOrderEdit(${idx})">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:flex-start;">
+                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
+                                ${cleanTitle}
+                                ${subItemsHtml}
+                            </div>
 
             listDiv.innerHTML += `
             <div onclick="openOrderEdit(${realIdx})" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:${isDead ? '2px solid #FF5252' : '1px solid rgba(255,255,255,0.8)'}; cursor:pointer; width: 100%; box-sizing: border-box;">
