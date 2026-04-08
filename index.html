@@ -797,15 +797,6 @@
 
     const CATEGORY_STICKER_MAP = { '吃饭': ['meal', '🍔'], '购物': ['shopping', '🛒'], '交通': ['traffic', '🚗'], '生活开支': ['living', '🏠'], '其他支出': ['casual', '🐰'], '兼职': ['job', '💰'], '生活费': ['allowance','🧧'], '其他收入': ['otherInc', '🐻'] };
 
-    // 谷子当前选中的板块
-    let currentGuTab = '预售中'; 
-    function switchGuTab(tab) {
-        currentGuTab = tab;
-        document.querySelectorAll('#pageRabbit .stats-seg-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById('tab-gu-' + tab).classList.add('active');
-        rdr();
-    }
-
     // ✨ 1. 板块切换控制中心
     let currentGuTab = '预售中'; 
     function switchGuTab(tab) {
@@ -1581,7 +1572,6 @@
             `;
         });
     }
-    function openRecordEdit(idx) { editingRecordIndex = idx; const r = db[idx]; document.getElementById('editRemark').value = r.remark || r.id; document.getElementById('editAmt').value = r.amt || r.profit || r.buy; document.getElementById('editDate').value = r.date || getTodayString(); document.getElementById('editTime').value = r.timeStr || getTimeString(); document.getElementById('editDiary').value = r.diaryText || ''; const imgEl = document.getElementById('displayImage'); if (r.imageBase64) { imgEl.src = r.imageBase64; imgEl.style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; } else { imgEl.style.display = 'none'; document.getElementById('uploadPrompt').style.display = 'block'; } document.getElementById('overlay-top').style.display = 'block'; document.getElementById('record-edit-modal').style.display = 'flex'; }
     function handleImageUpload(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(e) { const img = new Image(); img.onload = function() { const canvas = document.getElementById('compressCanvas'); const MAX_WIDTH = 400; let width = img.width, height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height); db[editingRecordIndex].imageBase64 = canvas.toDataURL('image/jpeg', 0.6); saveAll(); document.getElementById('displayImage').src = db[editingRecordIndex].imageBase64; document.getElementById('displayImage').style.display = 'block'; document.getElementById('uploadPrompt').style.display = 'none'; }; img.src = e.target.result; }; reader.readAsDataURL(file); }
     function saveRecordEdit() { if(editingRecordIndex === -1) return; const r = db[editingRecordIndex]; const oldAmt = parseFloat(r.amt || 0); const newAmt = parseFloat(document.getElementById('editAmt').value || 0); r.remark = document.getElementById('editRemark').value; r.date = document.getElementById('editDate').value; r.timeStr = document.getElementById('editTime').value; r.diaryText = document.getElementById('editDiary').value; if(r.type === '日常') { if(r.detail === '收入') curSav = curSav - oldAmt + newAmt; else if(r.detail === '支出') curSav = curSav + oldAmt - newAmt; r.amt = newAmt; localStorage.setItem('evan_sav_val', curSav); } else if(r.type === '转单') { r.id = r.remark; r.profit = newAmt; } saveAll(); closeTopModals(); }
     
