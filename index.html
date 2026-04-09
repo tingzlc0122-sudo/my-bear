@@ -927,7 +927,10 @@
                 mainTitle = mainTitle.replace(/📦/g, '📦 '); // 保证箱子后面有个空格
                 mainTitle = mainTitle.replace(/\s+/g, ' ').trim(); // 去掉多余空格
 
+                // ✨ 顺手清洗列表上的显示：只要是多件，列表上的品类标签也强制显示为组合
+                if (mainTitle && mainTitle.includes('📦')) r.category = '组合';
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
+
                 let profitColor = parseFloat(r.profit) > 0 ? 'var(--exp-color)' : (parseFloat(r.profit) < 0 ? '#4DB6AC' : 'var(--text-light)');
                 
                 let checkboxHtml = '';
@@ -944,7 +947,7 @@
 
                 // 🚀 终极柔性装甲：将 align-items 改为 flex-start 让高度自由拉伸，展示所有商品！
                 if(gl) gl.innerHTML += `
-                <div style="display:flex; flex-wrap:nowrap !important; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; width:100%; border-radius:18px; margin-bottom:12px; background:rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.9); position:relative;">
+                <div class="swipe-container-x" style="display:flex; flex-wrap:nowrap !important; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; width:100%; border-radius:18px; margin-bottom:12px; background:rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.9); position:relative;">
                     <div onclick="${clickEvent}" style="display:flex; align-items:flex-start; justify-content:space-between; flex:0 0 100% !important; min-width:100% !important; padding:15px; box-sizing:border-box; scroll-snap-align:start; cursor:pointer;">
                         ${checkboxHtml}
                         <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;">
@@ -2068,7 +2071,12 @@ function renderCategoryAndShopAnalysis() {
                 }
 
                 // 2. 品类分析计算
+                // ✨ 自动清洗老数据：只要带有箱子图标或者子明细，强制将底层品类洗成“组合”！
+                if (r.title && (r.title.includes('📦') || r.title.includes('<div'))) {
+                    r.category = '组合'; 
+                }
                 let c = r.category || '未分类';
+
                 if(!catStats[c]) catStats[c] = { buy: 0, profit: 0, count: 0 };
                 catStats[c].buy += parseFloat(r.buy || 0); 
                 if(r.status === '已转单') catStats[c].profit += parseFloat(r.profit || 0); 
@@ -2469,11 +2477,15 @@ function enableRecordEdit() {
                     cleanTitle = parts[0].trim();
                     let rawSubHtml = '<div' + parts.slice(1).join('<div');
                     subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
-                    subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0;');
+                    // ✨ 子商品裁剪刀：太长也会自动变成省略号
+                    subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
                 }
                 cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '$1');
                 cleanTitle = cleanTitle.replace(/📦+/g, '📦').replace(/📦/g, '📦 ').replace(/\s+/g, ' ').trim();
-
+                // ✨ 裁剪刀：主商品名称超过 14 个字，直接切掉换成省略号，绝不挤压金额！
+                if (cleanTitle.length > 14) {
+                    cleanTitle = cleanTitle.substring(0, 14) + '...';
+                }
                 listDiv.innerHTML += `
                 <div onclick="openOrderEdit(${realIdx}); document.getElementById('category-detail-modal').style.display='none'; document.getElementById('overlay-top').style.display='none';" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
