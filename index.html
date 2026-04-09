@@ -903,34 +903,30 @@
                     if (!titleMatch) return; 
                 }
 
-                // 🚀 终极精细清洗：分离主标题和子商品列表，杜绝双箱子，并让明细漂亮地展开
+                // 🚀 终极精细清洗：杜绝双箱子，支持字数裁剪，强制隐藏红叉
                 let rawTitle = r.title ? r.title : '未知商品';
                 let mainTitle = rawTitle;
                 let subItemsHtml = '';
 
-                // 如果有子商品明细，把它剥离出来，并且强制显示
+                // 分离明细：确保多件明细能展开，且不挤压布局
                 if (rawTitle.includes('<div')) {
                     let parts = rawTitle.split('<div');
                     mainTitle = parts[0].trim();
                     let rawSubHtml = '<div' + parts.slice(1).join('<div');
-                    // 强制显示，并给名字加上 min-width:0 防止文字太长把价格挤没
-                    subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block;');
-                    subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0;');
+                    subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:6px; background:rgba(255,255,255,0.7);');
+                    // ✨ 子商品裁剪：太长变省略号
+                    subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
                 }
 
-                // 清洗主标题的毒瘤标签，保留纯文本
+                // 洗掉毒瘤标签 & 修复箱子图标
                 mainTitle = mainTitle.replace(/<[^>]*>?/gm, '').trim(); 
-                
-                // 修复双包裹图标，清理老数据
                 mainTitle = mainTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '$1');
-                mainTitle = mainTitle.replace(/📦+/g, '📦'); // 把多个箱子合并成一个
-                mainTitle = mainTitle.replace(/📦/g, '📦 '); // 保证箱子后面有个空格
-                mainTitle = mainTitle.replace(/\s+/g, ' ').trim(); // 去掉多余空格
+                mainTitle = mainTitle.replace(/📦+/g, '📦').replace(/📦/g, '📦 ').trim();
 
-                // ✨ 顺手清洗列表上的显示：只要是多件，列表上的品类标签也强制显示为组合
-                if (mainTitle && mainTitle.includes('📦')) r.category = '组合';
+                // ✨ 自动纠正品类：只要是多件，品类强制显示为“组合”
+                if (mainTitle.includes('📦')) r.category = '组合';
+
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
-
                 let profitColor = parseFloat(r.profit) > 0 ? 'var(--exp-color)' : (parseFloat(r.profit) < 0 ? '#4DB6AC' : 'var(--text-light)');
                 
                 let checkboxHtml = '';
@@ -938,20 +934,19 @@
                 if (typeof isGuManaging !== 'undefined' && isGuManaging) {
                     let isChecked = selectedGuSet.has(idx);
                     let checkBg = isChecked ? 'var(--accent-main)' : 'rgba(255,255,255,0.4)';
-                    // margin-top:2px 配合外层的顶部对齐
                     checkboxHtml = `<div style="width:18px; height:18px; border-radius:50%; border:2px solid var(--accent-main); background:${checkBg}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; margin-right:12px; flex-shrink:0; margin-top:2px;">${isChecked ? '✓' : ''}</div>`;
                     clickEvent = `toggleGuSelect(${idx})`; 
                 }
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-                // 🚀 终极柔性装甲：将 align-items 改为 flex-start 让高度自由拉伸，展示所有商品！
+                // 🚀 终极装甲：加入 swipe-container-x 身份证，确保只有左滑才能看到 X
                 if(gl) gl.innerHTML += `
                 <div class="swipe-container-x" style="display:flex; flex-wrap:nowrap !important; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; width:100%; border-radius:18px; margin-bottom:12px; background:rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.9); position:relative;">
-                    <div onclick="${clickEvent}" style="display:flex; align-items:flex-start; justify-content:space-between; flex:0 0 100% !important; min-width:100% !important; padding:15px; box-sizing:border-box; scroll-snap-align:start; cursor:pointer;">
+                    <div onclick="${clickEvent}" style="display:flex; align-items:flex-start; justify-content:space-between; flex:0 0 100% !important; min-width:100% !important; padding:15px; box-sizing:border-box; scroll-snap-align:start; cursor:pointer; overflow:hidden;">
                         ${checkboxHtml}
                         <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;">
-                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                 ${mainTitle}${hasMediaIcon}
                             </div>
                             ${subItemsHtml}
@@ -1301,7 +1296,7 @@
         document.getElementById('gCat').value = ''; 
     }
     function saveAll() { 
-        // ✨ 自动按时间从近到远排序（最新购买的在最上面）
+    // ✨ 自动按时间从近到远排序（最新购买的在最上面）
         db.sort((a, b) => {
             let tA = new Date(a.date + 'T' + (a.timeStr || '00:00:00')).getTime();
             let tB = new Date(b.date + 'T' + (b.timeStr || '00:00:00')).getTime();
@@ -1654,6 +1649,14 @@ function exportNovels() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
+
+    // ✨ 强制洗髓：老数据只要是多件打包，品类统统变“组合”
+    db.forEach(r => {
+        if (r.type === '转单' && (r.title && (r.title.includes('📦') || r.title.includes('<div')))) {
+            r.category = '组合';
+        }
+    });
+    saveAll(); // 洗完存一下
     
     // --- ✨ 启动程序：初始化并找回书签 ---
     initializeStickers(); 
@@ -2451,17 +2454,16 @@ function enableRecordEdit() {
         modal.style.display = 'flex';
     }
 
-        // ✨ 全新：专属的转单利润明细弹窗
+// ✨ 全新：利润明细弹窗，自带 14 字裁剪和多件变组合功能
     function openProfitDetail() {
         const listDiv = document.getElementById('catModalList');
         listDiv.innerHTML = '';
         let items = db.filter(r => r.type === '转单' && r.status === '已转单');
-        items.sort((a, b) => new Date(b.date) - new Date(a.date)); // 按日期从新到旧排
+        items.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         let totalP = 0;
-
         if (items.length === 0) {
-            listDiv.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-light); font-weight:bold;">暂无已转单的记录，快去赚钱吧！ 🐰</div>';
+            listDiv.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-light); font-weight:bold;">暂无已转单记录 🐰</div>';
         } else {
             items.forEach((r) => {
                 let realIdx = db.indexOf(r);
@@ -2469,7 +2471,6 @@ function enableRecordEdit() {
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                 totalP += parseFloat(r.profit || 0);
 
-                // 🌟 剥离出子商品明细块，杜绝重叠！
                 let cleanTitle = r.title || '未知商品';
                 let subItemsHtml = '';
                 if (cleanTitle.includes('<div')) {
@@ -2477,35 +2478,30 @@ function enableRecordEdit() {
                     cleanTitle = parts[0].trim();
                     let rawSubHtml = '<div' + parts.slice(1).join('<div');
                     subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
-                    // ✨ 子商品裁剪刀：太长也会自动变成省略号
                     subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
                 }
-                cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '$1');
-                cleanTitle = cleanTitle.replace(/📦+/g, '📦').replace(/📦/g, '📦 ').replace(/\s+/g, ' ').trim();
-                // ✨ 裁剪刀：主商品名称超过 14 个字，直接切掉换成省略号，绝不挤压金额！
-                if (cleanTitle.length > 14) {
-                    cleanTitle = cleanTitle.substring(0, 14) + '...';
-                }
+                cleanTitle = cleanTitle.replace(/📦+/g, '📦').replace(/📦/g, '📦 ').trim();
+                if (cleanTitle.length > 14) cleanTitle = cleanTitle.substring(0, 14) + '...';
+
                 listDiv.innerHTML += `
-                <div onclick="openOrderEdit(${realIdx}); document.getElementById('category-detail-modal').style.display='none'; document.getElementById('overlay-top').style.display='none';" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
+                <div onclick="openOrderEdit(${realIdx}); closeTopModals();" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
                         <div style="font-weight:bold; color:var(--text-main); font-size:13px; line-height:1.4; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
-                            ${cleanTitle}
-                            ${subItemsHtml}
+                            ${cleanTitle}${subItemsHtml}
                         </div>
                         <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 6px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-light); align-items:flex-end;">
-                        <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.date} | ${r.shop || '未知'}</div>
+                        <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.date}</div>
                         <div style="text-align:right; flex-shrink:0; margin-left:10px;">
-                            <div style="font-size:11px; color:var(--text-light);">买 ￥${r.buy} | 售 ￥${displaySell}</div>
-                            <div style="font-size:13px; font-weight:900; color:${pColor}; margin-top:2px;">润 ￥${r.profit}</div>
+                            <div style="font-size:11px; color:var(--text-light);">买￥${r.buy} | 售￥${displaySell}</div>
+                            <div style="font-size:13px; font-weight:900; color:${pColor}; margin-top:2px;">润￥${r.profit}</div>
                         </div>
                     </div>
                 </div>`;
             });
         }
-        document.getElementById('catModalTitle').innerHTML = `💰 利润明细 <span style="font-size:12px; font-weight:normal; color:var(--text-light); margin-left:6px;">共赚 ￥${totalP.toFixed(2)}</span>`;
+        document.getElementById('catModalTitle').innerHTML = `💰 利润明细 <span style="font-size:12px; font-weight:normal; color:var(--text-light);">总赚 ￥${totalP.toFixed(2)}</span>`;
         document.getElementById('overlay-top').style.display = 'block';
         document.getElementById('category-detail-modal').style.display = 'flex';
     }
