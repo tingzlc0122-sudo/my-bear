@@ -241,7 +241,7 @@
                 <div class="stat-icon-wrapper" id="sticker-deposit"></div>
                 <span class="stat-val" id="topSaving">￥0</span>
             </div>
-            <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer;" onclick="showP('R'); setTimeout(()=>switchGuTab('已转单'), 50);">
+            <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer;" onclick="openProfitDetail()">
                 <span class="stat-label" style="margin-bottom: 5px;">转单利润</span>
                 <div class="stat-icon-wrapper" id="sticker-profit"></div>
                 <span class="stat-val" id="topProfit">￥0</span>
@@ -903,11 +903,30 @@
                     if (!titleMatch) return; 
                 }
 
-             // 🚀 终极暴力清洗：剔除所有可能破坏界面的旧代码和隐藏标签
-                let cleanTitle = r.title ? r.title : '未知商品';
-                cleanTitle = cleanTitle.replace(/<[^>]*>?/gm, ''); // 暴力拔除所有毒瘤 HTML 标签
-                cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '📦 $1'); // 兼容带空格的老数据
+                // 🚀 终极精细清洗：分离主标题和子商品列表，杜绝双箱子，并让明细漂亮地展开
+                let rawTitle = r.title ? r.title : '未知商品';
+                let mainTitle = rawTitle;
+                let subItemsHtml = '';
+
+                // 如果有子商品明细，把它剥离出来，并且强制显示
+                if (rawTitle.includes('<div')) {
+                    let parts = rawTitle.split('<div');
+                    mainTitle = parts[0].trim();
+                    let rawSubHtml = '<div' + parts.slice(1).join('<div');
+                    // 强制显示，并给名字加上 min-width:0 防止文字太长把价格挤没
+                    subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block;');
+                    subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0;');
+                }
+
+                // 清洗主标题的毒瘤标签，保留纯文本
+                mainTitle = mainTitle.replace(/<[^>]*>?/gm, '').trim(); 
                 
+                // 修复双包裹图标，清理老数据
+                mainTitle = mainTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '$1');
+                mainTitle = mainTitle.replace(/📦+/g, '📦'); // 把多个箱子合并成一个
+                mainTitle = mainTitle.replace(/📦/g, '📦 '); // 保证箱子后面有个空格
+                mainTitle = mainTitle.replace(/\s+/g, ' ').trim(); // 去掉多余空格
+
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                 let profitColor = parseFloat(r.profit) > 0 ? 'var(--exp-color)' : (parseFloat(r.profit) < 0 ? '#4DB6AC' : 'var(--text-light)');
                 
@@ -916,28 +935,30 @@
                 if (typeof isGuManaging !== 'undefined' && isGuManaging) {
                     let isChecked = selectedGuSet.has(idx);
                     let checkBg = isChecked ? 'var(--accent-main)' : 'rgba(255,255,255,0.4)';
-                    checkboxHtml = `<div style="width:18px; height:18px; border-radius:50%; border:2px solid var(--accent-main); background:${checkBg}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; margin-right:12px; flex-shrink:0;">${isChecked ? '✓' : ''}</div>`;
+                    // margin-top:2px 配合外层的顶部对齐
+                    checkboxHtml = `<div style="width:18px; height:18px; border-radius:50%; border:2px solid var(--accent-main); background:${checkBg}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; margin-right:12px; flex-shrink:0; margin-top:2px;">${isChecked ? '✓' : ''}</div>`;
                     clickEvent = `toggleGuSelect(${idx})`; 
                 }
 
-                let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold;">已回定金 ￥${r.deposit}</div>` : '';
+                let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-                // 🚀 终极装甲：将布局样式全部强制写死在行内，绝对不受外部干扰，强制同行不换行！
+                // 🚀 终极柔性装甲：将 align-items 改为 flex-start 让高度自由拉伸，展示所有商品！
                 if(gl) gl.innerHTML += `
                 <div style="display:flex; flex-wrap:nowrap !important; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; width:100%; border-radius:18px; margin-bottom:12px; background:rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.9); position:relative;">
-                    <div onclick="${clickEvent}" style="display:flex; align-items:center; justify-content:space-between; flex:0 0 100% !important; min-width:100% !important; padding:15px; box-sizing:border-box; scroll-snap-align:start; cursor:pointer;">
+                    <div onclick="${clickEvent}" style="display:flex; align-items:flex-start; justify-content:space-between; flex:0 0 100% !important; min-width:100% !important; padding:15px; box-sizing:border-box; scroll-snap-align:start; cursor:pointer;">
                         ${checkboxHtml}
-                        <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
+                        <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;">
                             <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
-                                ${cleanTitle}${hasMediaIcon}
+                                ${mainTitle}${hasMediaIcon}
                             </div>
-                            <div style="font-size:11px; color:var(--text-light); margin-top:4px;">${r.date} | ${r.category}</div>
+                            ${subItemsHtml}
+                            <div style="font-size:11px; color:var(--text-light); margin-top:6px;">${r.date} | ${r.category}</div>
                             ${depositBadge}
                         </div>
-                        <div style="text-align:right; min-width:65px; flex-shrink:0 !important;">
+                        <div style="text-align:right; min-width:65px; flex-shrink:0 !important; margin-top:0;">
                             <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
-                            <div style="font-size:11px; color:var(--text-light); margin-top:2px;">买 ￥${r.buy}</div>
-                            <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:2px;">润 ￥${r.profit}</div>
+                            <div style="font-size:11px; color:var(--text-light); margin-top:4px;">买 ￥${r.buy}</div>
+                            <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
                         </div>
                     </div>
                     <div style="flex:0 0 75px !important; min-width:75px !important; background:#FF5252; color:white; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:bold; scroll-snap-align:end; border-radius:0 18px 18px 0; cursor:pointer;" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
@@ -2420,6 +2441,61 @@ function enableRecordEdit() {
         if (listEl) listEl.innerHTML = listHtml; else modal.children[1].innerHTML = listHtml;
         document.getElementById('overlay-top').style.display = 'block';
         modal.style.display = 'flex';
+    }
+
+        // ✨ 全新：专属的转单利润明细弹窗
+    function openProfitDetail() {
+        const listDiv = document.getElementById('catModalList');
+        listDiv.innerHTML = '';
+        let items = db.filter(r => r.type === '转单' && r.status === '已转单');
+        items.sort((a, b) => new Date(b.date) - new Date(a.date)); // 按日期从新到旧排
+
+        let totalP = 0;
+
+        if (items.length === 0) {
+            listDiv.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-light); font-weight:bold;">暂无已转单的记录，快去赚钱吧！ 🐰</div>';
+        } else {
+            items.forEach((r) => {
+                let realIdx = db.indexOf(r);
+                let pColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
+                let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
+                totalP += parseFloat(r.profit || 0);
+
+                // 🌟 剥离出子商品明细块，杜绝重叠！
+                let cleanTitle = r.title || '未知商品';
+                let subItemsHtml = '';
+                if (cleanTitle.includes('<div')) {
+                    let parts = cleanTitle.split('<div');
+                    cleanTitle = parts[0].trim();
+                    let rawSubHtml = '<div' + parts.slice(1).join('<div');
+                    subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
+                    subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0;');
+                }
+                cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '$1');
+                cleanTitle = cleanTitle.replace(/📦+/g, '📦').replace(/📦/g, '📦 ').replace(/\s+/g, ' ').trim();
+
+                listDiv.innerHTML += `
+                <div onclick="openOrderEdit(${realIdx}); document.getElementById('category-detail-modal').style.display='none'; document.getElementById('overlay-top').style.display='none';" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                        <div style="font-weight:bold; color:var(--text-main); font-size:13px; line-height:1.4; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
+                            ${cleanTitle}
+                            ${subItemsHtml}
+                        </div>
+                        <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 6px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-light); align-items:flex-end;">
+                        <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.date} | ${r.shop || '未知'}</div>
+                        <div style="text-align:right; flex-shrink:0; margin-left:10px;">
+                            <div style="font-size:11px; color:var(--text-light);">买 ￥${r.buy} | 售 ￥${displaySell}</div>
+                            <div style="font-size:13px; font-weight:900; color:${pColor}; margin-top:2px;">润 ￥${r.profit}</div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+        document.getElementById('catModalTitle').innerHTML = `💰 利润明细 <span style="font-size:12px; font-weight:normal; color:var(--text-light); margin-left:6px;">共赚 ￥${totalP.toFixed(2)}</span>`;
+        document.getElementById('overlay-top').style.display = 'block';
+        document.getElementById('category-detail-modal').style.display = 'flex';
     }
 
     // ✨ 修复 2：品类明细弹窗 (同样保留明细，增加防撑爆装甲)
