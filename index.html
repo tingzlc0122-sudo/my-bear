@@ -940,10 +940,10 @@
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-                // 🚀 终极装甲：加入 swipe-container-x 身份证，确保只有左滑才能看到 X
+                // 🚀 终极装甲：完全复用自带的干净 CSS 类，彻底隐藏红叉！
                 if(gl) gl.innerHTML += `
-                <div class="swipe-container-x" style="display:flex; flex-wrap:nowrap !important; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; width:100%; border-radius:18px; margin-bottom:12px; background:rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.9); position:relative;">
-                    <div onclick="${clickEvent}" style="display:flex; align-items:flex-start; justify-content:space-between; flex:0 0 100% !important; min-width:100% !important; padding:15px; box-sizing:border-box; scroll-snap-align:start; cursor:pointer; overflow:hidden;">
+                <div class="swipe-container-x">
+                    <div class="swipe-content" onclick="${clickEvent}" style="align-items:flex-start; overflow:hidden;">
                         ${checkboxHtml}
                         <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;">
                             <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
@@ -959,7 +959,7 @@
                             <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
                         </div>
                     </div>
-                    <div style="flex:0 0 75px !important; min-width:75px !important; background:#FF5252; color:white; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:bold; scroll-snap-align:end; border-radius:0 18px 18px 0; cursor:pointer;" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
+                    <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
                 </div>`;
             }
         });   
