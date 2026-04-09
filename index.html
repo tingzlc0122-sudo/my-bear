@@ -241,7 +241,7 @@
                 <div class="stat-icon-wrapper" id="sticker-deposit"></div>
                 <span class="stat-val" id="topSaving">￥0</span>
             </div>
-            <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer;" onclick="showP('R'); setTimeout(()=>switchGuTab('已转单'), 50);">
                 <span class="stat-label" style="margin-bottom: 5px;">转单利润</span>
                 <div class="stat-icon-wrapper" id="sticker-profit"></div>
                 <span class="stat-val" id="topProfit">￥0</span>
@@ -1891,7 +1891,8 @@ function parseTaobaoCSV(csvText) {
                 buy: finalBuyPrice, // 这里的买入金额就是汇总的实付！
                 sell: 0, 
                 status: '预售中', 
-                category: order.cat, 
+                // 🌟 只要大于 1 件，强制归为“组合”
+                category: order.items.length > 1 ? '组合' : order.cat, 
                 ip: order.ip,       
                 shop: order.shop,   
                 profit: "0.00",
