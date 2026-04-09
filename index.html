@@ -1257,7 +1257,8 @@
             sell: s, 
             status: document.getElementById('gS').value, 
             // 🌟 只要大于1件，强制归类为“组合”，再也不乱！
-            category: items.length > 1 ? '组合' : (document.getElementById('gCat').value || '未分类'),
+            category: items.length > 1 ? '组合' : (document.getElementById('gCat').value || '未分类')
+            });
         
         saveAll(); 
         // 订单保存成功，清空草稿箱
@@ -2439,30 +2440,23 @@ function enableRecordEdit() {
             if (r.status === '已收定金') statusColor = 'var(--accent-main)'; 
             let realProfit = r.status === '已转单' ? `润 ￥${r.profit}` : `买 ￥${r.buy}`;
 
-            // 🌟 剥离出子商品明细块，单独给它漂亮的外观，杜绝重叠乱码！
-                    let cleanTitle = r.title || '未知商品';
-                    let subItemsHtml = '';
-                    if (cleanTitle.includes('<div')) {
-                        let parts = cleanTitle.split('<div');
-                        cleanTitle = parts[0].trim();
-                        let rawSubHtml = '<div' + parts.slice(1).join('<div');
-                        subItemsHtml = rawSubHtml.replace('display:none;', 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
-                    }
-                    cleanTitle = cleanTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
-                    
-                    listHtml += `
-                    <div class="glass-panel" style="margin-bottom:10px; padding:12px; border-left: 4px solid var(--inc-color); cursor:pointer; width:100%; box-sizing:border-box;" onclick="openOrderEdit(${idx})">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:flex-start;">
-                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
-                                ${cleanTitle}
-                                ${subItemsHtml}
-                            </div>
+        // 🌟 剥离出子商品明细块，单独给它漂亮的外观，杜绝重叠乱码！
+            let cleanTitle = r.title || '未知商品';
+            let subItemsHtml = '';
+            if (cleanTitle.includes('<div')) {
+                let parts = cleanTitle.split('<div');
+                cleanTitle = parts[0].trim();
+                let rawSubHtml = '<div' + parts.slice(1).join('<div');
+                subItemsHtml = rawSubHtml.replace('display:none;', 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
+            }
+            cleanTitle = cleanTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
 
             listDiv.innerHTML += `
             <div onclick="openOrderEdit(${realIdx})" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:${isDead ? '2px solid #FF5252' : '1px solid rgba(255,255,255,0.8)'}; cursor:pointer; width: 100%; box-sizing: border-box;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px;">
                     <div style="font-weight:bold; color:var(--text-main); font-size:13px; line-height:1.4; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
                         ${cleanTitle}
+                        ${subItemsHtml}
                         ${warningTag}
                     </div>
                     <div style="font-size:11px; font-weight:bold; color:white; background:${statusColor}; padding:2px 6px; border-radius:8px; white-space:nowrap; flex-shrink:0;">${r.status}</div>
