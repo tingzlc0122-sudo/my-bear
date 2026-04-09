@@ -940,26 +940,29 @@
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-                // 🚀 终极装甲：完全复用自带的干净 CSS 类，彻底隐藏红叉！
+                // 🚀 终极防爆装甲：抛弃脆弱的CSS类名，用绝对数学公式强制把红叉挤出屏幕！
                 if(gl) gl.innerHTML += `
-                <div class="swipe-container-x">
-                    <div class="swipe-content" onclick="${clickEvent}" style="align-items:flex-start; overflow:hidden;">
-                        ${checkboxHtml}
-                        <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;">
-                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                ${mainTitle}${hasMediaIcon}
+                <div style="width: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-bottom: 12px; border-radius: 18px;">
+                    <div style="display: flex; width: calc(100% + 85px);">
+                        
+                        <div class="glass-panel" onclick="${clickEvent}" style="flex: 1; box-sizing: border-box; padding: 15px; display: flex; align-items: flex-start; justify-content: space-between; border-radius: 18px; scroll-snap-align: start; cursor: pointer; overflow: hidden; margin: 0; background: rgba(255,255,255,0.65); border: 1px solid rgba(255,255,255,0.9);">
+                            ${checkboxHtml}
+                            <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column;">
+                                <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    ${mainTitle}${hasMediaIcon}
+                                </div>
+                                ${subItemsHtml}
+                                <div style="font-size:11px; color:var(--text-light); margin-top:6px;">${r.date} | ${r.category}</div>
+                                ${depositBadge}
                             </div>
-                            ${subItemsHtml}
-                            <div style="font-size:11px; color:var(--text-light); margin-top:6px;">${r.date} | ${r.category}</div>
-                            ${depositBadge}
+                            <div style="text-align:right; flex-shrink:0; margin-top:0;">
+                                <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
+                                <div style="font-size:11px; color:var(--text-light); margin-top:4px;">买 ￥${r.buy}</div>
+                                <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
+                            </div>
                         </div>
-                        <div style="text-align:right; min-width:65px; flex-shrink:0 !important; margin-top:0;">
-                            <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
-                            <div style="font-size:11px; color:var(--text-light); margin-top:4px;">买 ￥${r.buy}</div>
-                            <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
-                        </div>
+                        <div onclick="triggerDeleteSwipe(${idx}, false, event)" style="width: 75px; flex-shrink: 0; margin-left: 10px; background: #FF5252; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border-radius: 18px; scroll-snap-align: end; cursor: pointer;">✕</div>      
                     </div>
-                    <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
                 </div>`;
             }
         });   
