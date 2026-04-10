@@ -335,11 +335,23 @@
         </div>
     </div>
     
-    <div class="stats-segment" style="margin-bottom: 15px; margin-top: 10px;">
-        <div class="stats-seg-btn active" id="tab-gu-预售中" onclick="switchGuTab('预售中')">预售中</div>
-        <div class="stats-seg-btn" id="tab-gu-已收定金" onclick="switchGuTab('已收定金')">已收定金</div>
-        <div class="stats-seg-btn" id="tab-gu-已转单" onclick="switchGuTab('已转单')">已转单</div>
-        <div class="stats-seg-btn" id="tab-gu-已退款" onclick="switchGuTab('已退款')">已退款</div>
+    <div class="stats-segment" style="margin-bottom: 15px; margin-top: 10px; padding: 6px 4px; align-items: center; border-radius: 18px;">
+        <div class="stats-seg-btn active" id="tab-gu-预售中" onclick="switchGuTab('预售中')" style="display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.2; padding: 8px 0;">
+            <div style="font-size:13px; margin-bottom:4px;">预售中</div>
+            <div id="count-预售中" style="background:var(--inc-color); color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold; box-shadow: 0 2px 5px rgba(168,213,186,0.5);">0</div>
+        </div>
+        <div class="stats-seg-btn" id="tab-gu-已收定金" onclick="switchGuTab('已收定金')" style="display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.2; padding: 8px 0;">
+            <div style="font-size:13px; margin-bottom:4px;">已收定金</div>
+            <div id="count-已收定金" style="background:var(--inc-color); color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold; box-shadow: 0 2px 5px rgba(168,213,186,0.5);">0</div>
+        </div>
+        <div class="stats-seg-btn" id="tab-gu-已转单" onclick="switchGuTab('已转单')" style="display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.2; padding: 8px 0;">
+            <div style="font-size:13px; margin-bottom:4px;">已转单</div>
+            <div id="count-已转单" style="background:var(--inc-color); color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold; box-shadow: 0 2px 5px rgba(168,213,186,0.5);">0</div>
+        </div>
+        <div class="stats-seg-btn" id="tab-gu-已退款" onclick="switchGuTab('已退款')" style="display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.2; padding: 8px 0;">
+            <div style="font-size:13px; margin-bottom:4px;">已退款</div>
+            <div id="count-已退款" style="background:var(--inc-color); color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold; box-shadow: 0 2px 5px rgba(168,213,186,0.5);">0</div>
+        </div>
     </div>
     
     <input type="text" id="guSearchInput" class="search-input" placeholder="🔍 搜索商品名称 / 品类..." oninput="rdr()">
@@ -982,18 +994,18 @@
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-                // 🚀 终极智能排版：单件商品自动折行显示全名，多件商品强制单行防撑爆！
+                // 🚀 终极排版美化：单件换行、多件防爆，外加浅青绿虚线发光卡片
                 let titleWrapStyle = subItemsHtml === '' 
                     ? 'display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-all;' 
                     : 'white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
 
                 if(gl) gl.innerHTML += `
-                <div class="swipe-container-x">
-                    <div class="swipe-content" onclick="${clickEvent}">
-                        <div style="display: flex; width: 100%; box-sizing: border-box; padding: 15px;">
+                <div class="swipe-container-x" style="margin-bottom: 16px;">
+                    <div class="swipe-content" onclick="${clickEvent}" style="background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.65) 100%); border: 2px dashed var(--inc-color); border-radius: 22px; box-shadow: 0 8px 20px rgba(168, 213, 186, 0.15);">
+                        <div style="display: flex; width: 100%; box-sizing: border-box; padding: 16px 15px;">
                             ${checkboxHtml}
                             <div style="flex: 1; min-width: 0; padding-right: 15px; overflow: hidden;">
-                                <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; ${titleWrapStyle}">
+                                <div style="font-weight:bold; color:var(--accent-dark); font-size:14px; line-height:1.4; ${titleWrapStyle}">
                                     ${mainTitle.replace(/miHoYo/gi, '').trim()}${hasMediaIcon}
                                 </div>
                                 
@@ -1001,13 +1013,13 @@
                                     ${subItemsHtml.replace(/miHoYo/gi, '').trim()}
                                 </div>
                                 
-                                <div style="font-size:11px; color:var(--text-light); margin-top:6px;">${r.date} | ${r.category}</div>
+                                <div style="font-size:11px; color:var(--text-light); margin-top:8px;">${r.date} | ${r.category}</div>
                                 ${depositBadge}
                             </div>
                             <div style="flex-shrink: 0; width: 65px; text-align: right; align-self: flex-start;">
-                                <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
-                                <div style="font-size:11px; color:var(--text-light); margin-top:4px;">买 ￥${r.buy}</div>
-                                <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
+                                <div style="color:var(--accent-dark); font-weight:900; font-size:15px;">售 ￥${displaySell}</div>
+                                <div style="font-size:11px; color:var(--text-light); margin-top:6px;">买 ￥${r.buy}</div>
+                                <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:6px; background: rgba(255,255,255,0.6); display: inline-block; padding: 2px 6px; border-radius: 8px;">润 ￥${r.profit}</div>
                             </div>
                         </div>
                     </div>
