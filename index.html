@@ -89,54 +89,53 @@
         .btn-main:active { transform: scale(0.98); opacity: 1; }
         .btn-light { width: 100%; background: rgba(255,255,255,0.7); color: var(--accent-dark); padding: 15px; border-radius: 16px; border: 1px solid var(--glass-border); font-weight: bold; font-size: 15px; margin-bottom: 12px; cursor: pointer; }
 
-/* 🚀 统一左滑删除：单/多商品完全通用，彻底解决默认显示红叉的问题 */
+/* 🚀 纯Flex左滑删除：天生支持任意高度，红叉永远等高 */
 .swipe-container-x { 
-    position: relative;
-    overflow: hidden; /* 关键：把超出的红叉彻底藏起来 */
-    margin-bottom: 12px; 
-    border-radius: 18px; 
+    display: flex;
+    overflow: hidden;
+    margin-bottom: 12px;
+    border-radius: 18px;
+    scrollbar-width: none;
 }
 .swipe-container-x::-webkit-scrollbar { display: none; }
 
-/* 内容区：单/多商品共用，永远占满整行 */
-.swipe-main { 
+/* 内容区：永远占满整行，单/多商品自动撑开高度 */
+.swipe-content {
+    flex: 0 0 100%;
     width: 100%;
     transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    background: rgba(255, 255, 255, 0.65); 
-    border: 1px solid rgba(255, 255, 255, 0.9); 
-    border-radius: 18px; 
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 18px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.02);
     box-sizing: border-box;
     cursor: pointer;
 }
 
-/* 红叉删除区：永远在内容区后面，默认完全隐藏 */
-.swipe-delete { 
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 75px;
-    height: 100%;
-    background: #FF5252; 
-    color: white; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    font-size: 24px; 
-    font-weight: bold; 
+/* 红叉删除区：Flex自动等高，默认宽度为0完全隐藏 */
+.swipe-delete {
+    flex: 0 0 0;
+    background: #FF5252;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
     cursor: pointer;
     border-radius: 0 18px 18px 0;
-    transform: translateX(100%); /* 默认藏在右边 */
-    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    overflow: hidden;
+    transition: flex 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* 左滑激活状态：内容左移75px，红叉同步滑入 */
-.swipe-container-x.active .swipe-main {
+/* 左滑激活：内容左移75px，红叉同步展开到75px */
+.swipe-container-x.active .swipe-content {
     transform: translateX(-75px);
 }
 .swipe-container-x.active .swipe-delete {
-    transform: translateX(0);
+    flex: 0 0 75px;
 }
+
         .glass-bubble { padding: 18px; margin-bottom: 15px; cursor: pointer; display: flex; flex-direction: column; }
         .bubble-title { font-size: 16px; font-weight: 900; color: var(--accent-dark); margin-bottom: 6px; }
         .bubble-preview { font-size: 13px; color: var(--text-main); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.8; }
@@ -944,10 +943,10 @@
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-// 🚀 统一渲染：单商品/多商品订单完全同构
+// 🚀 统一渲染：单/多商品完全同构，红叉自动等高
 if(gl) gl.innerHTML += `
 <div class="swipe-container-x" data-idx="${idx}">
-    <div class="swipe-main" onclick="${clickEvent}">
+    <div class="swipe-content" onclick="${clickEvent}">
         <div style="display:flex; align-items:flex-start; justify-content:space-between; padding:15px; box-sizing:border-box; overflow:hidden;">
             ${checkboxHtml}
             <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;">
