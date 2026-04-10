@@ -815,35 +815,34 @@
         rdr();
     }
 
-    // ✨ 2. 核心渲染引擎 (已植入全自动校对引擎)
+// ✨ 2. 核心渲染引擎 (已植入微信全自动收支引擎)
     function rdr() {
-        // 🚀 时光机：从第一笔账开始重新推演，确保删改记录后金额绝对同步
-        let calculatedTotal = 0;
-        let categoryLatestVal = {}; 
-        
-        // 必须从最早的记录往最新的记录推演 (reverse)
+        // 🚀 终极时光机：收支全自动挂钩微信，各账户独立核算
+        let categoryLatestVal = { '微信': 0, '支付宝': 0, '银行卡': 0, '基金': 0 }; 
         let chronDb = [...db].reverse(); 
         
         chronDb.forEach(r => {
             if (r.type === '日常') {
                 let amt = parseFloat(r.amt || 0);
                 if (r.detail === '收入') {
-                    calculatedTotal += amt;
+                    categoryLatestVal['微信'] += amt; // 🌟 收入：无脑加进微信！
                 } else if (r.detail === '支出') {
-                    calculatedTotal -= amt;
+                    categoryLatestVal['微信'] -= amt; // 🌟 支出：无脑从微信里扣！
                 } else if (r.detail === '存款') {
-                    // 如果是校准记录，它会覆盖掉该账户之前的状态
                     let cat = r.category || '未分类';
-                    let oldVal = categoryLatestVal[cat] || 0;
-                    calculatedTotal += (amt - oldVal); 
-                    categoryLatestVal[cat] = amt;
+                    categoryLatestVal[cat] = amt;     // 🌟 校准：直接强行覆盖该账户的余额
                 }
             }
         });
-        // 强制把推演结果同步给全局变量和本地存储
-        curSav = calculatedTotal;
+        
+        // 把推演出来的各账户最新余额存进系统，给弹窗用
+        window.assetBalances = categoryLatestVal;
+        
+        // 🌟 账户总存款 = 微信 + 支付宝 + 银行卡 + 基金 的总和！(闲鱼在途不算在这)
+        curSav = (categoryLatestVal['微信'] || 0) + (categoryLatestVal['支付宝'] || 0) + (categoryLatestVal['银行卡'] || 0) + (categoryLatestVal['基金'] || 0);
         localStorage.setItem('evan_sav_val', curSav);
-        // --- 👆 以上是校对引擎，下面开始画界面 ---
+        
+        // --- 👆 以上是核心算账引擎，下面开始画界面 ---
         let pS = 0, cS = 0; 
         const dl = document.getElementById('dailyList');
         const gl = document.getElementById('guList'); 
@@ -2460,7 +2459,7 @@ function enableRecordEdit() {
             event.target.value = ''; // 清空选择框，方便下次再选同一张图
         }
     }
-        // ✨ 修复 1：多件打包明细弹窗 (保留内部商品列表，解决撑爆横向卡死)
+    // ✨ 修复 1：多件打包弹窗 (三层楼结构，绝不互相挤压，单箱子防重叠)
     function openBundleDetail(type) {
         const modal = document.getElementById('category-detail-modal');
         const titleEl = document.getElementById('catModalTitle');
@@ -2477,35 +2476,43 @@ function enableRecordEdit() {
                     let pColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                     let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                     
-                    // 🌟 剥离出子商品明细块，单独给它漂亮的外观，杜绝重叠乱码！
-                    let cleanTitle = r.title || '未知商品';
+                    let rawTitle = r.title || '未知商品';
+                    let cleanTitle = rawTitle;
                     let subItemsHtml = '';
-                    if (cleanTitle.includes('<div')) {
-                        let parts = cleanTitle.split('<div');
+
+                    if (rawTitle.includes('<div')) {
+                        let parts = rawTitle.split('<div');
                         cleanTitle = parts[0].trim();
                         let rawSubHtml = '<div' + parts.slice(1).join('<div');
-                        subItemsHtml = rawSubHtml.replace('display:none;', 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
+                        subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:12px; padding:10px; background:rgba(255,255,255,0.7); border-radius:10px;'); 
+                        subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
                     }
-                    cleanTitle = cleanTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
+                    
+                    // 🚀 暴力洗净：去掉一切多余标签和箱子，只在头上加一个干净的箱子
+                    cleanTitle = cleanTitle.replace(/<[^>]*>?/gm, '').trim();
+                    cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '$1');
+                    cleanTitle = cleanTitle.replace(/📦\s*/g, '').trim();
+                    if (isBundle) cleanTitle = '📦 ' + cleanTitle;
+                    if (cleanTitle.length > 20) cleanTitle = cleanTitle.substring(0, 20) + '...';
                     
                     listHtml += `
-                    <div class="glass-panel" style="margin-bottom:10px; padding:12px; border-left: 4px solid var(--inc-color); cursor:pointer; width:100%; box-sizing:border-box;" onclick="openOrderEdit(${idx})">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:flex-start;">
-                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
+                    <div class="glass-panel" onclick="openOrderEdit(${idx})" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:15px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                            <div style="font-weight:bold; color:var(--text-main); font-size:14px; line-height:1.4; flex:1; padding-right:10px; min-width:0; word-break:break-all;">
                                 ${cleanTitle}
-                                ${subItemsHtml}
                             </div>
-                    <div style="font-size:11px; color:white; background:var(--inc-color); font-weight:bold; padding:2px 6px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
+                            <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:3px 8px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-                            <div style="font-size:11px; color:var(--text-light); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                ${r.date} | ${r.shop || '未知店铺'}
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-light); align-items:flex-end;">
+                            <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:10px;">
+                                ${r.date} | ${r.shop || '未知'}
                             </div>
-                            <div style="text-align:right; flex-shrink:0; margin-left:10px;">
+                            <div style="text-align:right; flex-shrink:0;">
                                 <div style="font-size:11px; color:var(--text-light);">买 ￥${r.buy} | 售 ￥${displaySell}</div>
-                                <div style="font-size:13px; font-weight:bold; color:${pColor}; margin-top:2px;">利润 ￥${r.profit}</div>
+                                <div style="font-size:14px; font-weight:900; color:${pColor}; margin-top:2px;">润 ￥${r.profit}</div>
                             </div>
                         </div>
+                        ${subItemsHtml}
                     </div>`;
                     count++;
                 }
@@ -2518,29 +2525,20 @@ function enableRecordEdit() {
         modal.style.display = 'flex';
     }
 
-        // ✨ 全新：账户资产汇总弹窗 (闲鱼自动联动在途资金)
+    // ✨ 全新：账户资产汇总弹窗 (实时读取微信挂钩余额)
     function openAssetDetail() {
         const listDiv = document.getElementById('catModalList');
         listDiv.innerHTML = '';
 
+        // 1. 🌟 直接从时光机引擎里拿走最新算好的精准余额
         let assets = {
-            '微信': { name: '💬 微信零钱', val: 0, found: false },
-            '支付宝': { name: '🔷 支付宝余额', val: 0, found: false },
-            '银行卡': { name: '💳 银行卡余额', val: 0, found: false },
-            '基金': { name: '📈 基金账户', val: 0, found: false }
+            '微信': { name: '💬 微信零钱', val: window.assetBalances['微信'] || 0 },
+            '支付宝': { name: '🔷 支付宝余额', val: window.assetBalances['支付宝'] || 0 },
+            '银行卡': { name: '💳 银行卡余额', val: window.assetBalances['银行卡'] || 0 },
+            '基金': { name: '📈 基金账户', val: window.assetBalances['基金'] || 0 }
         };
 
-        // 1. 时光机扫描：揪出每个账户最新的一次校准金额
-        for (let r of db) {
-            if (r.type === '日常' && r.detail === '存款' && assets[r.category]) {
-                if (!assets[r.category].found) {
-                    assets[r.category].val = parseFloat(r.amt || 0);
-                    assets[r.category].found = true;
-                }
-            }
-        }
-
-        // 2. ✨ 梦幻联动：闲鱼 = 在途本金
+        // 2. ✨ 闲鱼资金 = 在途本金
         let cS = 0;
         db.forEach(r => {
             if (r.type === '转单') {
@@ -2549,7 +2547,7 @@ function enableRecordEdit() {
             }
         });
 
-        // 3. 渲染资产卡片
+        // 3. 渲染四大资产卡片
         let html = '';
         for (let k in assets) {
             html += `
@@ -2562,7 +2560,7 @@ function enableRecordEdit() {
             </div>`;
         }
 
-        // 4. 专属闲鱼卡片 (点击不校准，而是跳转预售列表看明细)
+        // 4. 专属闲鱼卡片 (绝对独立)
         html += `
         <div class="glass-panel" onclick="closeTopModals(); showP('R'); setTimeout(()=>switchGuTab('预售中'), 50);" style="padding:15px; margin-bottom:12px; border-radius:18px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; border:2px dashed var(--inc-color); background:rgba(255,255,255,0.7);">
             <div>
@@ -2576,7 +2574,7 @@ function enableRecordEdit() {
         </div>`;
 
         listDiv.innerHTML = html;
-        document.getElementById('catModalTitle').innerHTML = `💰 资产汇总`;
+        document.getElementById('catModalTitle').innerHTML = `💰 资产汇总 <span style="font-size:12px; font-weight:normal; color:var(--text-light); margin-left:6px;">总计 ￥${curSav.toFixed(2)}</span>`;
         document.getElementById('overlay-top').style.display = 'block';
         document.getElementById('category-detail-modal').style.display = 'flex';
     }
@@ -2591,7 +2589,7 @@ function enableRecordEdit() {
     }
 
 
-    // ✨ 全新：利润明细弹窗 (独立楼层隔离布局)
+        // ✨ 修复 3：利润明细弹窗 (三层楼结构，单箱子)
     function openProfitDetail() {
         const listDiv = document.getElementById('catModalList');
         listDiv.innerHTML = '';
@@ -2611,6 +2609,7 @@ function enableRecordEdit() {
                 let rawTitle = r.title || '未知商品';
                 let cleanTitle = rawTitle;
                 let subItemsHtml = '';
+                let isBundle = rawTitle.includes('📦') || rawTitle.includes('<div');
 
                 if (rawTitle.includes('<div')) {
                     let parts = rawTitle.split('<div');
@@ -2620,12 +2619,14 @@ function enableRecordEdit() {
                     subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
                 }
                 
+                // 🚀 彻底清洗双箱子
                 cleanTitle = cleanTitle.replace(/<[^>]*>?/gm, '').trim(); 
-                cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '📦 $1');
-                cleanTitle = cleanTitle.replace(/📦+/g, '📦').replace(/📦/g, '📦 ').trim();
+                cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '$1');
+                cleanTitle = cleanTitle.replace(/📦\s*/g, '').trim();
+                if (isBundle) cleanTitle = '📦 ' + cleanTitle;
+                
                 if (cleanTitle.length > 20) cleanTitle = cleanTitle.substring(0, 20) + '...';
 
-                // 🌟 核心：三层楼结构隔离
                 listDiv.innerHTML += `
                 <div onclick="openOrderEdit(${realIdx})" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:15px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
@@ -2652,7 +2653,7 @@ function enableRecordEdit() {
         document.getElementById('category-detail-modal').style.display = 'flex';
     }
 
-    // ✨ 修复：品类明细弹窗 (独立楼层隔离布局，绝不互相挤压)
+    // ✨ 修复 2：品类明细弹窗 (三层楼结构，单箱子)
     function openCatDetail(catName) {
         document.getElementById('catModalTitle').innerText = `🏷️ ${catName} (已转单明细)`;
         const listDiv = document.getElementById('catModalList');
@@ -2672,34 +2673,32 @@ function enableRecordEdit() {
                 let rawTitle = r.title || '未知商品';
                 let cleanTitle = rawTitle;
                 let subItemsHtml = '';
+                let isBundle = rawTitle.includes('📦') || rawTitle.includes('<div');
 
-                // 提取多件明细，并给它换上干净的白色背景盒
                 if (rawTitle.includes('<div')) {
                     let parts = rawTitle.split('<div');
                     cleanTitle = parts[0].trim();
                     let rawSubHtml = '<div' + parts.slice(1).join('<div');
                     subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:12px; padding:10px; background:rgba(255,255,255,0.7); border-radius:10px;'); 
-                    // 强制让明细里的名字缩放不撑爆
                     subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
                 }
                 
+                // 🚀 彻底清洗双箱子
                 cleanTitle = cleanTitle.replace(/<[^>]*>?/gm, '').trim(); 
-                cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '📦 $1');
-                cleanTitle = cleanTitle.replace(/📦+/g, '📦').replace(/📦/g, '📦 ').trim();
-                // 保护标题：如果实在太长，就变省略号
+                cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '$1');
+                cleanTitle = cleanTitle.replace(/📦\s*/g, '').trim();
+                if (isBundle) cleanTitle = '📦 ' + cleanTitle;
+                
                 if (cleanTitle.length > 20) cleanTitle = cleanTitle.substring(0, 20) + '...';
 
-                // 🌟 核心：三层楼结构！第一层标题，第二层金额，第三层商品明细！
                 listDiv.innerHTML += `
                 <div onclick="openOrderEdit(${realIdx})" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:15px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
-                    
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
                         <div style="font-weight:bold; color:var(--text-main); font-size:14px; line-height:1.4; flex:1; padding-right:10px; min-width:0; word-break:break-all;">
                             ${cleanTitle}
                         </div>
                         <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:3px 8px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
                     </div>
-                    
                     <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-light); align-items:flex-end;">
                         <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:10px;">
                             ${r.date} | ${r.shop || '未知'}
@@ -2709,7 +2708,6 @@ function enableRecordEdit() {
                             <div style="font-size:14px; font-weight:900; color:${pColor}; margin-top:2px;">润 ￥${r.profit}</div>
                         </div>
                     </div>
-
                     ${subItemsHtml}
                 </div>`;
             });
