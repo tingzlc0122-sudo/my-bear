@@ -1047,10 +1047,26 @@
         let topSavEl = document.getElementById('topSaving');
         if(topSavEl) topSavEl.innerText = isHide ? '****' : ('￥' + curSav.toFixed(2));
 
-        // 👇 这里是你原本算订单条数的代码，我帮你原封不动保留了！
-        let guCount = db.filter(r => r.type === '转单').length;
+                // 👇 升级版：统计所有细分状态的数量，并渲染到浅青绿气泡上
+        let guCount = 0, countYu = 0, countDing = 0, countZhuan = 0, countTui = 0;
+        db.forEach(r => {
+            if (r.type === '转单') {
+                guCount++;
+                if (r.status === '预售中') countYu++;
+                else if (r.status === '已收定金') countDing++;
+                else if (r.status === '已转单') countZhuan++;
+                else if (r.status === '已退款') countTui++;
+            }
+        });
+        
         let countEl = document.getElementById('guTotalCount');
         if(countEl) countEl.innerText = guCount;
+        
+        // 分发四个状态的数据到气泡里
+        let elYu = document.getElementById('count-预售中'); if(elYu) elYu.innerText = countYu;
+        let elDing = document.getElementById('count-已收定金'); if(elDing) elDing.innerText = countDing;
+        let elZhuan = document.getElementById('count-已转单'); if(elZhuan) elZhuan.innerText = countZhuan;
+        let elTui = document.getElementById('count-已退款'); if(elTui) elTui.innerText = countTui;
     }
         
 
