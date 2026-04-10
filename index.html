@@ -934,14 +934,14 @@
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-// 🚀 终极统一：单/多商品内部结构100%一致，价格永远在最右边
+// 🚀 真正的两列布局：左列(多行商品) + 右列(多行价格)，永远对齐
 if(gl) gl.innerHTML += `
 <div class="swipe-container-x">
     <div class="swipe-content" onclick="${clickEvent}">
-        <div style="display:flex; align-items:flex-start; justify-content:space-between; padding:15px; box-sizing:border-box;">
+        <div style="display: flex; width: 100%; box-sizing: border-box; padding: 15px;">
             ${checkboxHtml}
-            <!-- 左侧商品区：单/多商品共用，自动截断过长文字 -->
-            <div style="flex:1; min-width:0; padding-right:12px; display:flex; flex-direction:column; justify-content:flex-start;">
+            <!-- 左列：所有商品信息，占满剩余宽度 -->
+            <div style="flex: 1; min-width: 0; padding-right: 15px;">
                 <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                     ${mainTitle.replace(/miHoYo/gi, '').trim()}${hasMediaIcon}
                 </div>
@@ -949,8 +949,8 @@ if(gl) gl.innerHTML += `
                 <div style="font-size:11px; color:var(--text-light); margin-top:6px;">${r.date} | ${r.category}</div>
                 ${depositBadge}
             </div>
-            <!-- 右侧价格区：永远固定在最右边，和单商品完全一样 -->
-            <div style="text-align:right; min-width:65px; flex-shrink:0 !important; align-self:flex-start;">
+            <!-- 右列：价格信息，永远固定在右上角，和单商品完全一样 -->
+            <div style="flex-shrink: 0; width: 65px; text-align: right; align-self: flex-start;">
                 <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
                 <div style="font-size:11px; color:var(--text-light); margin-top:4px;">买 ￥${r.buy}</div>
                 <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
