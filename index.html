@@ -346,6 +346,7 @@
     <div id="guList" style="max-height: 400px; overflow-y: auto; overflow-x: hidden;"></div>
 </div>
     </div>
+    
     <div id="pageAnalysis" class="page">
         <div class="card glass-panel" style="background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4)); margin-bottom: 15px;">
             <div style="font-size: 13px; color: var(--text-light); font-weight: bold; margin-bottom: 15px;">💼 谷子生意思维导报</div>
@@ -423,15 +424,16 @@
             <button class="btn-main" style="flex:1; margin:0; border-radius:20px; padding:12px;" onclick="saveOrderEdit()">保存并核算</button>
         </div>
     </div>
+    
     <div id="pageStats" class="page">
-            <div class="card glass-panel">
+        <div class="card glass-panel">
             <div class="stats-segment" id="timeRangeSegment">
                 <div class="stats-seg-btn" onclick="switchStatsRange('day')">本日</div>
                 <div class="stats-seg-btn active" onclick="switchStatsRange('month')">本月</div>
                 <div class="stats-seg-btn" onclick="switchStatsRange('year')">本年</div>
             </div>
 
-            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
                 <div class="date-selector-wrap" onclick="toggleCustomPicker(currentRange, event)">
                     <span id="currentSelectedText" style="font-size: 15px; color: var(--accent-dark); font-weight: 800;">2026-04</span>
                     <span class="mini-triangle">▼</span>
@@ -456,7 +458,8 @@
                     <div style="font-size: 19px; font-weight: 900; color: var(--accent-main);" id="statPro">￥0</div>
                 </div>
             </div>
-
+        </div>
+        
     <div class="card glass-panel">
             <div class="view-toggle"><span id="viewBtnChart" class="active" onclick="switchViewMode('chart')">📉 概览</span><span id="viewBtnCal" onclick="switchViewMode('cal')">📅 热力图</span></div>
             <div id="chartSection">
@@ -979,31 +982,29 @@
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-// 🚀 真正的两列布局：左列(多行商品) + 右列(多行价格)，永远对齐
-if(gl) gl.innerHTML += `
-<div class="swipe-container-x">
-    <div class="swipe-content" onclick="${clickEvent}">
-        <div style="display: flex; width: 100%; box-sizing: border-box; padding: 15px;">
-            ${checkboxHtml}
-            <!-- 左列：所有商品信息，占满剩余宽度 -->
-            <div style="flex: 1; min-width: 0; padding-right: 15px;">
-                <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                    ${mainTitle.replace(/miHoYo/gi, '').trim()}${hasMediaIcon}
-                </div>
-                ${subItemsHtml.replace(/miHoYo/gi, '').trim()}
-                <div style="font-size:11px; color:var(--text-light); margin-top:6px;">${r.date} | ${r.category}</div>
-                ${depositBadge}
-            </div>
-            <!-- 右列：价格信息，永远固定在右上角，和单商品完全一样 -->
-            <div style="flex-shrink: 0; width: 65px; text-align: right; align-self: flex-start;">
-                <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
-                <div style="font-size:11px; color:var(--text-light); margin-top:4px;">买 ￥${r.buy}</div>
-                <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
-            </div>
-        </div>
-    </div>
-    <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
-</div>`;
+                // 🚀 完美复刻弹窗结构：自带强力裁剪防弹装甲，绝不撑爆红叉！
+                // 强行把主标题剪短，超过20个字直接变省略号
+                if (mainTitle.length > 20) mainTitle = mainTitle.substring(0, 20) + '...';
+                if(gl) gl.innerHTML += `
+                <div class="swipe-container-x" style="display:flex; flex-wrap:nowrap !important; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; width:100%; border-radius:18px; margin-bottom:12px; background:rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.9); position:relative;">
+                    <div onclick="${clickEvent}" style="display:flex; align-items:flex-start; justify-content:space-between; flex:0 0 100% !important; min-width:100% !important; padding:15px; box-sizing:border-box; scroll-snap-align:start; cursor:pointer; overflow:hidden;">
+                        ${checkboxHtml}
+                        <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;">
+                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                ${mainTitle.replace(/miHoYo/gi, '').trim()}${hasMediaIcon}
+                            </div>
+                            ${subItemsHtml.replace(/miHoYo/gi, '').trim()}
+                            <div style="font-size:11px; color:var(--text-light); margin-top:6px;">${r.date} | ${r.category}</div>
+                            ${depositBadge}
+                        </div>
+                        <div style="text-align:right; min-width:65px; flex-shrink:0 !important; margin-top:0;">
+                            <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
+                            <div style="font-size:11px; color:var(--text-light); margin-top:4px;">买 ￥${r.buy}</div>
+                            <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
+                        </div>
+                    </div>
+                    <div style="flex:0 0 75px !important; min-width:75px !important; background:#FF5252; color:white; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:bold; scroll-snap-align:end; border-radius:0 18px 18px 0; cursor:pointer;" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
+                </div>`;
             }
         });   
         
