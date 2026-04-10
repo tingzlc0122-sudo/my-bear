@@ -395,7 +395,7 @@
                 <input type="number" id="oeSell">
             </div>
         </div>
-        <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">当前操作状态</div>
+    <div style="font-size:11px; color:var(--text-light); margin-bottom:4px; margin-left:4px;">当前操作状态</div>
     <select id="oeStatus" style="margin-bottom:10px;">
     <option value="预售中">⏳ 预售中</option>
     <option value="已收定金">💸 已收定金 (定金回流)</option>
@@ -416,7 +416,7 @@
     </div>
         
         <div style="display:flex; gap:10px; margin-top:5px;">
-            <button class="btn-light" style="flex:1; margin:0; border-radius:20px; padding:12px;" onclick="closeTopModals()">取消</button>
+            <button class="btn-light" style="flex:1; margin:0; border-radius:20px; padding:12px;" onclick="closeOrderEditModal()">返回</button>
             <button class="btn-main" style="flex:1; margin:0; border-radius:20px; padding:12px;" onclick="saveOrderEdit()">保存并核算</button>
         </div>
     </div>
@@ -570,9 +570,9 @@
             <h3 class="cal-modal-title" id="dayMediaTitle">记忆</h3>
             <div class="cal-modal-close" onclick="closeTopModals()">✕</div>
         </div>
-        <div id="dayMediaCarousel" style="flex: 1; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; display: flex; scrollbar-width: none;">
+    <div id="dayMediaCarousel" style="flex: 1; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; display: flex; scrollbar-width: none;">
             </div>
-        <div style="padding: 15px; text-align: center; background: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.6);">
+    <div style="padding: 15px; text-align: center; background: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.6);">
             <button class="btn-main" id="btnShowAllRecords" style="padding: 10px; font-size: 14px; border-radius: 20px;">查看当天收支数字明细</button>
         </div>
     </div>
@@ -1005,8 +1005,10 @@ if(gl) gl.innerHTML += `
         } 
         else { 
     // ✨ 这里新增了存款的三个细分
-            title.innerHTML = '账户余额校准'; 
+    title.innerHTML = '账户余额校准'; 
             category.innerHTML = `
+                <option value="微信">💬 微信零钱</option>
+                <option value="支付宝">🔷 支付宝余额</option>
                 <option value="基金">📈 基金账户</option>
                 <option value="闲鱼">🐟 闲鱼资金</option>
                 <option value="银行卡">💳 银行卡余额</option>
@@ -2024,8 +2026,17 @@ function openOrderEdit(idx) {
         }
         
         r.profit = (r.sell - r.buy).toFixed(2);
-        saveAll(); 
-        closeTopModals();
+                saveAll(); 
+        closeOrderEditModal();
+    }
+
+    // ✨ 智能返回引擎：只关掉编辑框，绝不误杀背后的列表弹窗！
+    function closeOrderEditModal() {
+        document.getElementById('order-edit-modal').style.display = 'none';
+        // 检查背后是不是还有明细弹窗，如果没有，才彻底关掉黑底遮罩
+        if (document.getElementById('category-detail-modal').style.display !== 'flex') {
+            document.getElementById('overlay-top').style.display = 'none';
+        }
     }
 
     // ✨ 终极大屏核算中心 (精准计算，绝对不吞品类和店铺的数据)
@@ -2482,7 +2493,7 @@ function enableRecordEdit() {
                 if (cleanTitle.length > 14) cleanTitle = cleanTitle.substring(0, 14) + '...';
 
                 listDiv.innerHTML += `
-                <div onclick="openOrderEdit(${realIdx}); closeTopModals();" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
+                <div onclick="openOrderEdit(${realIdx});" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
                         <div style="font-weight:bold; color:var(--text-main); font-size:13px; line-height:1.4; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
                             ${cleanTitle}${subItemsHtml}
@@ -2504,53 +2515,57 @@ function enableRecordEdit() {
         document.getElementById('category-detail-modal').style.display = 'flex';
     }
 
-    // ✨ 修复 2：品类明细弹窗 (同样保留明细，增加防撑爆装甲)
+// ✨ 修复：品类明细弹窗 (只看已转单，不看预售中，并且自带字数裁剪刀)
     function openCatDetail(catName) {
-        document.getElementById('catModalTitle').innerText = `🏷️ ${catName} 明细`;
+        document.getElementById('catModalTitle').innerText = `🏷️ ${catName} (已转单明细)`;
         const listDiv = document.getElementById('catModalList');
         listDiv.innerHTML = '';
-        let items = db.filter(r => r.type === '转单' && (r.category === catName || (catName === '未分类' && !r.category)));
-        items.sort((a, b) => (a.status === '预售中' ? -1 : 1));
-        const today = new Date();
         
-        items.forEach((r) => {
-            let realIdx = db.indexOf(r); 
-            let buyDate = new Date(r.date);
-            let holdDays = Math.floor((today - buyDate) / (1000 * 60000 * 60 * 24));
-            let isDead = r.status === '预售中' && holdDays > 180;
-            let warningTag = isDead ? `<div style="background:#FF5252; color:white; padding:2px 6px; border-radius:6px; font-size:10px; margin-top:6px; display:inline-block;">⚠️ 滞销预警(${holdDays}天)</div>` : '';
-            
-            let statusColor = r.status === '预售中' ? '#FF8A65' : (r.status === '已退款' ? 'var(--text-light)' : 'var(--inc-color)');
-            if (r.status === '已收定金') statusColor = 'var(--accent-main)'; 
-            let realProfit = r.status === '已转单' ? `润 ￥${r.profit}` : `买 ￥${r.buy}`;
+        // 🚀 核心过滤机制：强行加上 r.status === '已转单' 的条件！
+        let items = db.filter(r => r.type === '转单' && r.status === '已转单' && (r.category === catName || (catName === '未分类' && !r.category)));
+        items.sort((a, b) => new Date(b.date) - new Date(a.date)); // 按日期从新到旧排
+        
+        if (items.length === 0) {
+            listDiv.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-light); font-weight:bold;">暂无已转单的记录 🐰</div>';
+        } else {
+            items.forEach((r) => {
+                let realIdx = db.indexOf(r); 
+                let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
+                let pColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
 
-        // 🌟 剥离出子商品明细块，单独给它漂亮的外观，杜绝重叠乱码！
-            let cleanTitle = r.title || '未知商品';
-            let subItemsHtml = '';
-            if (cleanTitle.includes('<div')) {
-                let parts = cleanTitle.split('<div');
-                cleanTitle = parts[0].trim();
-                let rawSubHtml = '<div' + parts.slice(1).join('<div');
-                subItemsHtml = rawSubHtml.replace('display:none;', 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
-            }
-            cleanTitle = cleanTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
+                // 🌟 剥离出子商品明细块，单独给它漂亮的外观，杜绝重叠乱码！
+                let cleanTitle = r.title || '未知商品';
+                let subItemsHtml = '';
+                if (cleanTitle.includes('<div')) {
+                    let parts = cleanTitle.split('<div');
+                    cleanTitle = parts[0].trim();
+                    let rawSubHtml = '<div' + parts.slice(1).join('<div');
+                    subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
+                    subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
+                }
+                cleanTitle = cleanTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
+                cleanTitle = cleanTitle.replace(/📦+/g, '📦').replace(/📦/g, '📦 ').trim();
+                if (cleanTitle.length > 14) cleanTitle = cleanTitle.substring(0, 14) + '...';
 
-            listDiv.innerHTML += `
-            <div onclick="openOrderEdit(${realIdx})" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:${isDead ? '2px solid #FF5252' : '1px solid rgba(255,255,255,0.8)'}; cursor:pointer; width: 100%; box-sizing: border-box;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px;">
-                    <div style="font-weight:bold; color:var(--text-main); font-size:13px; line-height:1.4; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
-                        ${cleanTitle}
-                        ${subItemsHtml}
-                        ${warningTag}
+                listDiv.innerHTML += `
+                <div onclick="openOrderEdit(${realIdx})" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px;">
+                        <div style="font-weight:bold; color:var(--text-main); font-size:13px; line-height:1.4; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
+                            ${cleanTitle}
+                            ${subItemsHtml}
+                        </div>
+                        <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 6px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
                     </div>
-                    <div style="font-size:11px; font-weight:bold; color:white; background:${statusColor}; padding:2px 6px; border-radius:8px; white-space:nowrap; flex-shrink:0;">${r.status}</div>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-light); align-items:flex-end;">
-                    <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.date} (持仓${holdDays}天)</div>
-                    <div style="font-weight:900; color:var(--accent-dark); flex-shrink:0; margin-left:10px;">${realProfit}</div>
-                </div>
-            </div>`;
-        });
+                    <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-light); align-items:flex-end;">
+                        <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.date} | ${r.shop || '未知'}</div>
+                        <div style="text-align:right; flex-shrink:0; margin-left:10px;">
+                            <div style="font-size:11px; color:var(--text-light);">买 ￥${r.buy} | 售 ￥${displaySell}</div>
+                            <div style="font-size:13px; font-weight:900; color:${pColor}; margin-top:2px;">润 ￥${r.profit}</div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
         document.getElementById('overlay-top').style.display = 'block';
         document.getElementById('category-detail-modal').style.display = 'flex';
     }
