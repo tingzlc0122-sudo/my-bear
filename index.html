@@ -815,8 +815,35 @@
         rdr();
     }
 
-    // ✨ 2. 核心渲染引擎 (已恢复日常流水按日期智能折叠)
+    // ✨ 2. 核心渲染引擎 (已植入全自动校对引擎)
     function rdr() {
+        // 🚀 时光机：从第一笔账开始重新推演，确保删改记录后金额绝对同步
+        let calculatedTotal = 0;
+        let categoryLatestVal = {}; 
+        
+        // 必须从最早的记录往最新的记录推演 (reverse)
+        let chronDb = [...db].reverse(); 
+        
+        chronDb.forEach(r => {
+            if (r.type === '日常') {
+                let amt = parseFloat(r.amt || 0);
+                if (r.detail === '收入') {
+                    calculatedTotal += amt;
+                } else if (r.detail === '支出') {
+                    calculatedTotal -= amt;
+                } else if (r.detail === '存款') {
+                    // 如果是校准记录，它会覆盖掉该账户之前的状态
+                    let cat = r.category || '未分类';
+                    let oldVal = categoryLatestVal[cat] || 0;
+                    calculatedTotal += (amt - oldVal); 
+                    categoryLatestVal[cat] = amt;
+                }
+            }
+        });
+        // 强制把推演结果同步给全局变量和本地存储
+        curSav = calculatedTotal;
+        localStorage.setItem('evan_sav_val', curSav);
+        // --- 👆 以上是校对引擎，下面开始画界面 ---
         let pS = 0, cS = 0; 
         const dl = document.getElementById('dailyList');
         const gl = document.getElementById('guList'); 
