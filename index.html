@@ -940,26 +940,26 @@
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-             // 🚀 绝不翻车版：物理锁死宽度，强制溢出隐藏红叉，找回左滑灵魂！
+                // 🌟 纯净原生版：完全复用CSS编辑器里的完美样式，彻底隐藏红叉！
                 if(gl) gl.innerHTML += `
-                <div class="swipe-container-x" style="display: flex; width: 100%; max-width: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 18px; margin-bottom: 12px; background: rgba(255,255,255,0.65); border: 1px solid rgba(255,255,255,0.9); box-sizing: border-box;">       
-                    <div onclick="${clickEvent}" style="flex: 0 0 100%; width: 100%; max-width: 100%; min-width: 100%; scroll-snap-align: start; padding: 15px; box-sizing: border-box; cursor: pointer; display: flex; align-items: flex-start; justify-content: space-between;">
-                        ${checkboxHtml}  
-                        <div style="flex: 1; padding-right: 10px; min-width: 0; display: flex; flex-direction: column;">
-                            <div style="font-weight: bold; color: var(--accent-dark); font-size: 13px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <div class="swipe-container-x">
+                    <div class="swipe-content" onclick="${clickEvent}" style="align-items:flex-start;">
+                        ${checkboxHtml}
+                        <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column;">
+                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
                                 ${mainTitle}${hasMediaIcon}
                             </div>
                             ${subItemsHtml}
-                            <div style="font-size: 11px; color: var(--text-light); margin-top: 6px;">${r.date} | ${r.category}</div>
+                            <div style="font-size:11px; color:var(--text-light); margin-top:6px;">${r.date} | ${r.category}</div>
                             ${depositBadge}
-                        </div>   
-                        <div style="text-align: right; flex-shrink: 0; margin-top: 0; min-width: 65px;">
-                            <div style="color: var(--accent-dark); font-weight: 900; font-size: 14px;">售 ￥${displaySell}</div>
-                            <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">买 ￥${r.buy}</div>
-                            <div style="font-size: 12px; color: ${profitColor}; font-weight: bold; margin-top: 4px;">润 ￥${r.profit}</div>
+                        </div>
+                        <div style="text-align:right; min-width:65px; flex-shrink:0;">
+                            <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
+                            <div style="font-size:11px; color:var(--text-light); margin-top:4px;">买 ￥${r.buy}</div>
+                            <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
                         </div>
                     </div>
-                    <div onclick="triggerDeleteSwipe(${idx}, false, event)" style="flex: 0 0 75px; width: 75px; max-width: 75px; min-width: 75px; scroll-snap-align: end; background: #FF5252; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border-radius: 0 18px 18px 0; cursor: pointer;">✕</div>   
+                    <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
                 </div>`;
             }
         });   
