@@ -89,50 +89,54 @@
         .btn-main:active { transform: scale(0.98); opacity: 1; }
         .btn-light { width: 100%; background: rgba(255,255,255,0.7); color: var(--accent-dark); padding: 15px; border-radius: 16px; border: 1px solid var(--glass-border); font-weight: bold; font-size: 15px; margin-bottom: 12px; cursor: pointer; }
 
-       /* 🚀 重构的左滑删除：干净、隐藏、防误触 */
-        .swipe-container-x { 
-            display: flex; 
-            overflow-x: auto; 
-            scroll-snap-type: x mandatory; 
-            scrollbar-width: none; 
-            margin-bottom: 12px; 
-            border-radius: 18px; 
-            /* 容器本身透明，不抢戏 */
-        }
-        .swipe-container-x::-webkit-scrollbar { display: none; }
-        
-        .swipe-content { 
-            flex: 0 0 100% !important; 
-            width: 100% !important;
-            scroll-snap-align: start; 
-            padding: 15px; 
-            box-sizing: border-box; 
-            cursor: pointer; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            /* 拟态背景交还给内容卡片 */
-            background: rgba(255, 255, 255, 0.65); 
-            border: 1px solid rgba(255, 255, 255, 0.9); 
-            border-radius: 18px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
-        }
-        
-        .swipe-delete { 
-            flex: 0 0 75px; 
-            scroll-snap-align: end; 
-            background: #FF5252; 
-            color: white; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 24px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            border-radius: 0 18px 18px 0;
-            height: auto; /* 🌟 核心修复：防止它被暴力撑开换行 */
-            margin: 0;
-        }
+/* 🚀 统一左滑删除：单/多商品完全通用，彻底解决默认显示红叉的问题 */
+.swipe-container-x { 
+    position: relative;
+    overflow: hidden; /* 关键：把超出的红叉彻底藏起来 */
+    margin-bottom: 12px; 
+    border-radius: 18px; 
+}
+.swipe-container-x::-webkit-scrollbar { display: none; }
+
+/* 内容区：单/多商品共用，永远占满整行 */
+.swipe-main { 
+    width: 100%;
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    background: rgba(255, 255, 255, 0.65); 
+    border: 1px solid rgba(255, 255, 255, 0.9); 
+    border-radius: 18px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+/* 红叉删除区：永远在内容区后面，默认完全隐藏 */
+.swipe-delete { 
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 75px;
+    height: 100%;
+    background: #FF5252; 
+    color: white; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 24px; 
+    font-weight: bold; 
+    cursor: pointer;
+    border-radius: 0 18px 18px 0;
+    transform: translateX(100%); /* 默认藏在右边 */
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 左滑激活状态：内容左移75px，红叉同步滑入 */
+.swipe-container-x.active .swipe-main {
+    transform: translateX(-75px);
+}
+.swipe-container-x.active .swipe-delete {
+    transform: translateX(0);
+}
         .glass-bubble { padding: 18px; margin-bottom: 15px; cursor: pointer; display: flex; flex-direction: column; }
         .bubble-title { font-size: 16px; font-weight: 900; color: var(--accent-dark); margin-bottom: 6px; }
         .bubble-preview { font-size: 13px; color: var(--text-main); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.8; }
@@ -940,27 +944,29 @@
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-                // 🌟 纯净原生版：完全复用CSS编辑器里的完美样式，彻底隐藏红叉！
-                if(gl) gl.innerHTML += `
-                <div class="swipe-container-x">
-                    <div class="swipe-content" onclick="${clickEvent}" style="align-items:flex-start;">
-                        ${checkboxHtml}
-                        <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column;">
-                            <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
-                                ${mainTitle}${hasMediaIcon}
-                            </div>
-                            ${subItemsHtml}
-                            <div style="font-size:11px; color:var(--text-light); margin-top:6px;">${r.date} | ${r.category}</div>
-                            ${depositBadge}
-                        </div>
-                        <div style="text-align:right; min-width:65px; flex-shrink:0;">
-                            <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
-                            <div style="font-size:11px; color:var(--text-light); margin-top:4px;">买 ￥${r.buy}</div>
-                            <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
-                        </div>
-                    </div>
-                    <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
-                </div>`;
+// 🚀 统一渲染：单商品/多商品订单完全同构
+if(gl) gl.innerHTML += `
+<div class="swipe-container-x" data-idx="${idx}">
+    <div class="swipe-main" onclick="${clickEvent}">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; padding:15px; box-sizing:border-box; overflow:hidden;">
+            ${checkboxHtml}
+            <div style="flex:1; padding-right:10px; min-width:0; display:flex; flex-direction:column; justify-content:flex-start;">
+                <div style="font-weight:bold; color:var(--accent-dark); font-size:13px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    ${mainTitle}${hasMediaIcon}
+                </div>
+                ${subItemsHtml}
+                <div style="font-size:11px; color:var(--text-light); margin-top:6px;">${r.date} | ${r.category}</div>
+                ${depositBadge}
+            </div>
+            <div style="text-align:right; min-width:65px; flex-shrink:0 !important; margin-top:0;">
+                <div style="color:var(--accent-dark); font-weight:900; font-size:14px;">售 ￥${displaySell}</div>
+                <div style="font-size:11px; color:var(--text-light); margin-top:4px;">买 ￥${r.buy}</div>
+                <div style="font-size:12px; color:${profitColor}; font-weight:bold; margin-top:4px;">润 ￥${r.profit}</div>
+            </div>
+        </div>
+    </div>
+    <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
+</div>`;
             }
         });   
         
@@ -2703,6 +2709,66 @@ function enableRecordEdit() {
 
     // 页面每次加载完毕后，延迟一点点恢复草稿
     setTimeout(loadFormDraft, 300);
+
+// 🚀 全局左滑删除交互：自动绑定所有订单，单/多商品通用
+let activeSwipeContainer = null;
+
+document.addEventListener('touchstart', function(e) {
+    // 关闭之前打开的左滑
+    if (activeSwipeContainer && !e.target.closest('.swipe-container-x.active')) {
+        activeSwipeContainer.classList.remove('active');
+        activeSwipeContainer = null;
+    }
+}, {passive: true});
+
+document.addEventListener('touchmove', function(e) {
+    const container = e.target.closest('.swipe-container-x');
+    if (!container) return;
+    
+    const touch = e.touches[0];
+    const startX = container.dataset.startX ? parseFloat(container.dataset.startX) : touch.clientX;
+    if (!container.dataset.startX) container.dataset.startX = touch.clientX;
+    
+    const deltaX = touch.clientX - startX;
+    // 只允许向左滑
+    if (deltaX < 0 && Math.abs(deltaX) > 10) {
+        e.preventDefault();
+        const translateX = Math.max(-75, deltaX);
+        container.querySelector('.swipe-main').style.transform = `translateX(${translateX}px)`;
+        container.querySelector('.swipe-delete').style.transform = `translateX(${translateX + 75}px)`;
+    }
+}, {passive: false});
+
+document.addEventListener('touchend', function(e) {
+    const container = e.target.closest('.swipe-container-x');
+    if (!container || !container.dataset.startX) return;
+    
+    const startX = parseFloat(container.dataset.startX);
+    const endX = e.changedTouches[0].clientX;
+    const deltaX = endX - startX;
+    
+    // 滑动超过一半则打开，否则关闭
+    if (deltaX < -37) {
+        container.classList.add('active');
+        activeSwipeContainer = container;
+    } else {
+        container.classList.remove('active');
+        activeSwipeContainer = null;
+    }
+    
+    // 重置临时数据
+    delete container.dataset.startX;
+    container.querySelector('.swipe-main').style.transform = '';
+    container.querySelector('.swipe-delete').style.transform = '';
+});
+
+// 点击空白处关闭左滑
+document.addEventListener('click', function(e) {
+    if (activeSwipeContainer && !e.target.closest('.swipe-container-x')) {
+        activeSwipeContainer.classList.remove('active');
+        activeSwipeContainer = null;
+    }
+});
                 
 </script>
 <div id="anchoredDropdown" class="frosted-dropdown" style="display:none;"></div>
