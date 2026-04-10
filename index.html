@@ -3057,8 +3057,10 @@ document.addEventListener('touchmove', function(e) {
     if (deltaX < 0 && Math.abs(deltaX) > 10) {
         e.preventDefault();
         const translateX = Math.max(-75, deltaX);
-        container.querySelector('.swipe-main').style.transform = `translateX(${translateX}px)`;
-        container.querySelector('.swipe-delete').style.transform = `translateX(${translateX + 75}px)`;
+        const contentEl = container.querySelector('.swipe-content');
+        const deleteEl = container.querySelector('.swipe-delete');
+        if (contentEl) contentEl.style.transform = `translateX(${translateX}px)`;
+        if (deleteEl) deleteEl.style.transform = `translateX(${translateX + 75}px)`;
     }
 }, {passive: false});
 
@@ -3081,8 +3083,10 @@ document.addEventListener('touchend', function(e) {
     
     // 重置临时数据
     delete container.dataset.startX;
-    container.querySelector('.swipe-main').style.transform = '';
-    container.querySelector('.swipe-delete').style.transform = '';
+const contentEl = container.querySelector('.swipe-content');
+const deleteEl = container.querySelector('.swipe-delete');
+if (contentEl) contentEl.style.transform = '';
+if (deleteEl) deleteEl.style.transform = '';
 });
 
 // 点击空白处关闭左滑
