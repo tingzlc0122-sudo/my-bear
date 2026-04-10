@@ -220,6 +220,28 @@
         margin: 10px auto;  /* 自动居中，并和文字保持一点距离 */
         filter: drop-shadow(0 5px 15px rgba(0,0,0,0.05)); /* 增加一点点微弱的阴影，更有质感 */
         }
+        
+/* 修复多商品卡片红叉换行问题 */
+.swipe-container-x {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+}
+
+.swipe-container-x .swipe-content {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    word-break: break-word !important;
+}
+
+.swipe-container-x .swipe-delete {
+    flex: 0 0 75px !important;
+    width: 75px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    }
     </style>
 </head>
 <body>
@@ -3070,35 +3092,7 @@ document.addEventListener('click', function(e) {
         activeSwipeContainer = null;
     }
 });
-    
-/* 强制所有左滑容器绝不换行，红叉永远贴右侧隐藏 */
-.swipe-container-x {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    scroll-snap-type: x mandatory !important;
-}
-
-/* 卡片主体严格占满宽度，绝不给红叉让出换行空间 */
-.swipe-container-x .swipe-content {
-    flex: 0 0 100% !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    display: block !important;          /* 保持原结构不变 */
-    word-break: break-word !important;
-    overflow: hidden !important;
-}
-
-/* 红叉固定宽度，并且强制不参与换行 */
-.swipe-container-x .swipe-delete {
-    flex: 0 0 75px !important;
-    width: 75px !important;
-    display: flex !important;           /* 让它内部文字居中 */
-    align-items: center !important;
-    justify-content: center !important;
-}
-                
+             
 </script>
 <div id="anchoredDropdown" class="frosted-dropdown" style="display:none;"></div>
 <div id="category-detail-modal" class="glass-panel" style="display:none; position:fixed; top:15%; left:6%; right:6%; max-height:70%; z-index:306; padding:20px; border-radius:25px; flex-direction:column; overflow:hidden;">
