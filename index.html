@@ -441,13 +441,21 @@
                 </div>
             </div>
 
-            <div style="text-align: center; color: var(--text-light); font-size: 11px; margin-bottom: 10px; opacity: 0.6;">当前周期</div>
+    <div style="text-align: center; color: var(--text-light); font-size: 11px; margin-bottom: 10px; opacity: 0.6;">当前周期</div>
             <div style="display: flex; gap: 10px;">
-                <div class="stats-box" style="flex:1;"><div style="font-size: 11px;">总收入</div><div style="font-size: 16px; font-weight: bold; color: var(--inc-color);" id="statInc">￥0</div></div>
-                <div class="stats-box" style="flex:1;"><div style="font-size: 11px;">总支出</div><div style="font-size: 16px; font-weight: bold; color: var(--exp-color);" id="statExp">￥0</div></div>
-                <div class="stats-box" style="flex:1;"><div style="font-size: 11px;">利润</div><div style="font-size: 16px; font-weight: bold; color: var(--accent-main);" id="statPro">￥0</div></div>
+                <div class="stats-box" style="flex:1; cursor:pointer;" onclick="openStatDetail('inc')">
+                    <div style="font-size: 13px; font-weight:bold; color:var(--text-light); margin-bottom:4px;">总收入</div>
+                    <div style="font-size: 19px; font-weight: 900; color: var(--inc-color);" id="statInc">￥0</div>
+                </div>
+                <div class="stats-box" style="flex:1; cursor:pointer;" onclick="openStatDetail('exp')">
+                    <div style="font-size: 13px; font-weight:bold; color:var(--text-light); margin-bottom:4px;">总支出</div>
+                    <div style="font-size: 19px; font-weight: 900; color: var(--exp-color);" id="statExp">￥0</div>
+                </div>
+                <div class="stats-box" style="flex:1; cursor:pointer;" onclick="openStatDetail('pro')">
+                    <div style="font-size: 13px; font-weight:bold; color:var(--text-light); margin-bottom:4px;">利润</div>
+                    <div style="font-size: 19px; font-weight: 900; color: var(--accent-main);" id="statPro">￥0</div>
+                </div>
             </div>
-        </div>
 
     <div class="card glass-panel">
             <div class="view-toggle"><span id="viewBtnChart" class="active" onclick="switchViewMode('chart')">📉 概览</span><span id="viewBtnCal" onclick="switchViewMode('cal')">📅 热力图</span></div>
@@ -1411,6 +1419,80 @@ if(gl) gl.innerHTML += `
         document.getElementById('statExp').innerText = '￥' + tExp.toFixed(2); 
         document.getElementById('statPro').innerText = '￥' + tPro.toFixed(2); 
         return { timeline: dayData, matchStr: matchStr }; 
+    }
+
+    // ✨ 全新：当前周期收支利润明细拆解弹窗
+    function openStatDetail(type) {
+        const listDiv = document.getElementById('catModalList');
+        listDiv.innerHTML = '';
+
+        // 1. 获取当前选中的时间周期 (今天/本月/本年)
+        let selected = window.customSelectedValue || getTodayString();
+        let matchStr = selected;
+        if (currentRange === 'month' && matchStr.length > 7) matchStr = matchStr.slice(0,7);
+        if (currentRange === 'year' && matchStr.length > 4) matchStr = matchStr.slice(0,4);
+
+        let catSums = {};
+        let totalAmt = 0;
+        let titleName = '';
+        let colorVar = '';
+
+        // 2. 遍历账本，把符合这个周期的钱按类目加起来
+        db.forEach(r => {
+            if (r.date && r.date.startsWith(matchStr)) {
+                let cat = r.category || '未分类';
+                
+                if (type === 'inc' && r.type === '日常' && r.detail === '收入') {
+                    titleName = '💰 收入构成'; colorVar = 'var(--inc-color)';
+                    let amt = parseFloat(r.amt || 0);
+                    catSums[cat] = (catSums[cat] || 0) + amt;
+                    totalAmt += amt;
+                } else if (type === 'exp' && r.type === '日常' && r.detail === '支出') {
+                    titleName = '💸 支出构成'; colorVar = 'var(--exp-color)';
+                    let amt = parseFloat(r.amt || 0);
+                    catSums[cat] = (catSums[cat] || 0) + amt;
+                    totalAmt += amt;
+                } else if (type === 'pro' && r.type === '转单' && r.status === '已转单') {
+                    titleName = '✨ 转单利润构成'; colorVar = 'var(--accent-main)';
+                    let amt = parseFloat(r.profit || 0);
+                    catSums[cat] = (catSums[cat] || 0) + amt;
+                    totalAmt += amt;
+                }
+            }
+        });
+
+        // 3. 按金额大小从高到低排序
+        let sortedCats = Object.entries(catSums).sort((a, b) => b[1] - a[1]);
+
+        let html = '';
+        if (sortedCats.length === 0) {
+            html = '<div style="text-align:center; padding:30px; color:var(--text-light); font-weight:bold;">当前周期没有记录哦 🐰</div>';
+        } else {
+            sortedCats.forEach(([cat, val]) => {
+                let absTotal = Math.abs(totalAmt);
+                // 自动计算百分比占比
+                let percent = absTotal > 0 ? Math.abs((val / absTotal) * 100).toFixed(1) : 0;
+                
+                let displayColor = (type === 'pro' && val < 0) ? '#4DB6AC' : colorVar;
+                let sign = (type === 'pro' && val > 0) ? '+' : '';
+
+                html += `
+                <div class="glass-panel" style="padding:15px; margin-bottom:12px; border-radius:18px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.8);">
+                    <div style="display:flex; align-items:center;">
+                        <div style="font-weight:bold; color:var(--text-main); font-size:14px;">${cat}</div>
+                        <div style="font-size:11px; color:var(--text-light); margin-left:8px; background:rgba(255,255,255,0.5); padding:2px 6px; border-radius:8px;">${percent}%</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:900; color:${displayColor}; font-size:16px;">${sign}￥${val.toFixed(2)}</div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        listDiv.innerHTML = html;
+        document.getElementById('catModalTitle').innerHTML = `${titleName} <span style="font-size:12px; font-weight:normal; color:var(--text-light); margin-left:6px;">总计 ￥${totalAmt.toFixed(2)}</span>`;
+        document.getElementById('overlay-top').style.display = 'block';
+        document.getElementById('category-detail-modal').style.display = 'flex';
     }
     
     // ✨ 这是一个关键补丁：确保你选完日期后，数据会立刻跳动更新
