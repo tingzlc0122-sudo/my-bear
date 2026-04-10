@@ -231,7 +231,10 @@
         
     <div class="stat-grid">
                 <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer;" onclick="openAssetDetail()">
-                <span class="stat-label" style="margin-bottom: 5px;">账户存款</span>
+                <span class="stat-label" style="margin-bottom: 5px; display: flex; align-items: center; justify-content: center;">
+                账户存款
+                <span id="eye-icon" onclick="toggleEye(event)" style="cursor:pointer; margin-left:6px; font-size:14px; opacity:0.7;">👁️</span>
+                </span>
                 <div class="stat-icon-wrapper" id="sticker-deposit"></div>
                 <span class="stat-val" id="topSaving">￥0</span>
             </div>
@@ -815,6 +818,14 @@
         rdr();
     }
 
+    // ✨ 小眼睛隐藏开关魔法
+    function toggleEye(e) {
+        if(e) e.stopPropagation(); // 防止点眼睛时误触后面的弹窗
+        let hide = localStorage.getItem('hide_assets') === 'true';
+        localStorage.setItem('hide_assets', !hide);
+        rdr(); // 刷新数字
+    }
+
 // ✨ 2. 核心渲染引擎 (已植入微信全自动收支引擎)
     function rdr() {
         // 🚀 终极时光机：收支全自动挂钩微信，各账户独立核算
@@ -994,14 +1005,20 @@ if(gl) gl.innerHTML += `
         }
         if(dl) dl.innerHTML = dailyHtml;
         
-        // 更新顶部数字和条数
-        let topProfitEl = document.getElementById('topProfit');
-        if(topProfitEl) topProfitEl.innerText = '￥' + pS.toFixed(2); 
-        let topCapEl = document.getElementById('topCapital');
-        if(topCapEl) topCapEl.innerText = '￥' + cS.toFixed(2); 
-        let topSavEl = document.getElementById('topSaving');
-        if(topSavEl) topSavEl.innerText = '￥' + curSav.toFixed(2);
+        // 🌟 小眼睛判断逻辑：开启隐藏则全部变成 ****
+        let isHide = localStorage.getItem('hide_assets') === 'true';
+        let eyeEl = document.getElementById('eye-icon');
+        if (eyeEl) eyeEl.innerText = isHide ? '🙈' : '👁️'; 
 
+        // 更新顶部数字
+        let topProfitEl = document.getElementById('topProfit');
+        if(topProfitEl) topProfitEl.innerText = isHide ? '****' : ('￥' + pS.toFixed(2)); 
+        let topCapEl = document.getElementById('topCapital');
+        if(topCapEl) topCapEl.innerText = isHide ? '****' : ('￥' + cS.toFixed(2)); 
+        let topSavEl = document.getElementById('topSaving');
+        if(topSavEl) topSavEl.innerText = isHide ? '****' : ('￥' + curSav.toFixed(2));
+
+        // 👇 这里是你原本算订单条数的代码，我帮你原封不动保留了！
         let guCount = db.filter(r => r.type === '转单').length;
         let countEl = document.getElementById('guTotalCount');
         if(countEl) countEl.innerText = guCount;
