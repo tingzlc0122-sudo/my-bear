@@ -3071,38 +3071,32 @@ document.addEventListener('click', function(e) {
     }
 });
     
-/* 强制左滑容器不换行，删除按钮永远贴右侧隐藏 */
+/* 强制所有左滑容器绝不换行，红叉永远贴右侧隐藏 */
 .swipe-container-x {
     display: flex !important;
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
-    scroll-snap-type: x mandatory;
-    margin-bottom: 12px;
-    border-radius: 18px;
+    scroll-snap-type: x mandatory !important;
 }
 
-/* 卡片主体严格锁定宽度，绝不撑破父容器 */
+/* 卡片主体严格占满宽度，绝不给红叉让出换行空间 */
 .swipe-container-x .swipe-content {
     flex: 0 0 100% !important;
     width: 100% !important;
     max-width: 100% !important;
-    box-sizing: border-box;
-    word-break: break-word;      /* 强制长单词/链接换行 */
-    overflow: hidden;
+    box-sizing: border-box !important;
+    display: block !important;          /* 保持原结构不变 */
+    word-break: break-word !important;
+    overflow: hidden !important;
 }
 
-/* 删除按钮固定宽度，永远不换行 */
+/* 红叉固定宽度，并且强制不参与换行 */
 .swipe-container-x .swipe-delete {
     flex: 0 0 75px !important;
     width: 75px !important;
-}
-
-/* 子明细列表内部的文字也强制换行，防止溢出 */
-.swipe-content div[style*="margin-top: 12px"],
-.swipe-content div[style*="margin-top:12px"] {
-    word-break: break-word !important;
-    overflow-wrap: break-word !important;
-    white-space: normal !important;
+    display: flex !important;           /* 让它内部文字居中 */
+    align-items: center !important;
+    justify-content: center !important;
 }
                 
 </script>
