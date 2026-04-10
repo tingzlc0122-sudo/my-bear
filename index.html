@@ -230,7 +230,7 @@
          <img src="https://raw.githubusercontent.com/tingzlc0122-sudo/my-bear/refs/heads/main/header-rabbit.jpg" class="header-img">
         
     <div class="stat-grid">
-            <div style="display: flex; flex-direction: column; align-items: center;">
+                <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer;" onclick="openAssetDetail()">
                 <span class="stat-label" style="margin-bottom: 5px;">账户存款</span>
                 <div class="stat-icon-wrapper" id="sticker-deposit"></div>
                 <span class="stat-val" id="topSaving">￥0</span>
@@ -1094,7 +1094,35 @@ if(gl) gl.innerHTML += `
     }
     function showRemark(event, text) { event.stopPropagation(); document.getElementById('remarkText').innerText = text || '无备注'; document.getElementById('overlay-top').style.display = 'block'; document.getElementById('remark-modal').style.display = 'block'; }
     
-    function confirmSheetAction() { const amt = parseFloat(document.getElementById('sheetAmount').value); if (!amt) return alert('填入金额'); const dateStr = document.getElementById('sheetDate').value; if (!dateStr) return; let cat = currentSheetType !== '存款' ? document.getElementById('sheetCategory').value : ''; const remark = document.getElementById('sheetRemark').value || '无备注'; if(currentSheetType === '收入') curSav += amt; else if(currentSheetType === '支出') curSav -= amt; else curSav = amt; db.unshift({ type: '日常', detail: currentSheetType, category: cat, remark: remark, amt: amt, date: dateStr, timeStr: getTimeString(), diaryText: '', imageBase64: '' }); localStorage.setItem('evan_sav_val', curSav); saveAll(); closeAllModals(); }
+    function confirmSheetAction() { 
+        const amt = parseFloat(document.getElementById('sheetAmount').value); 
+        if (isNaN(amt)) return alert('填入金额'); 
+        const dateStr = document.getElementById('sheetDate').value; 
+        if (!dateStr) return;   
+        // ✨ 救命修复：保留分类，不再丢失微信/支付宝标签
+        let cat = document.getElementById('sheetCategory').value; 
+        const remark = document.getElementById('sheetRemark').value || '无备注';    
+        if (currentSheetType === '收入') {
+            curSav += amt; 
+        } else if (currentSheetType === '支出') {
+            curSav -= amt; 
+        } else { 
+            // ✨ 核心逻辑：校准时自动寻找上一次该账户的金额，只加减差额，不破坏总金库！
+            let oldVal = 0; 
+            for (let r of db) { 
+                if (r.type === '日常' && r.detail === '存款' && r.category === cat) { 
+                    oldVal = r.amt; 
+                    break; 
+                } 
+            } 
+            curSav += (amt - oldVal); 
+        }    
+        db.unshift({ type: '日常', detail: currentSheetType, category: cat, remark: remark, amt: amt, date: dateStr, timeStr: getTimeString(), diaryText: '', imageBase64: '' }); 
+        localStorage.setItem('evan_sav_val', curSav); 
+        saveAll(); 
+        closeAllModals(); 
+    }
+
     // 1. 替换原生 prompt 的高级提取函数
     function parseClipPrompt() {
         document.getElementById('customPromptInput').value = ''; // 清空上次输入
@@ -2463,7 +2491,80 @@ function enableRecordEdit() {
         modal.style.display = 'flex';
     }
 
-// ✨ 全新：利润明细弹窗，自带 14 字裁剪和多件变组合功能
+        // ✨ 全新：账户资产汇总弹窗 (闲鱼自动联动在途资金)
+    function openAssetDetail() {
+        const listDiv = document.getElementById('catModalList');
+        listDiv.innerHTML = '';
+
+        let assets = {
+            '微信': { name: '💬 微信零钱', val: 0, found: false },
+            '支付宝': { name: '🔷 支付宝余额', val: 0, found: false },
+            '银行卡': { name: '💳 银行卡余额', val: 0, found: false },
+            '基金': { name: '📈 基金账户', val: 0, found: false }
+        };
+
+        // 1. 时光机扫描：揪出每个账户最新的一次校准金额
+        for (let r of db) {
+            if (r.type === '日常' && r.detail === '存款' && assets[r.category]) {
+                if (!assets[r.category].found) {
+                    assets[r.category].val = parseFloat(r.amt || 0);
+                    assets[r.category].found = true;
+                }
+            }
+        }
+
+        // 2. ✨ 梦幻联动：闲鱼 = 在途本金
+        let cS = 0;
+        db.forEach(r => {
+            if (r.type === '转单') {
+                if (r.status === '预售中') cS += parseFloat(r.buy || 0);
+                if (r.status === '已收定金') cS += Math.max(0, parseFloat(r.buy || 0) - parseFloat(r.deposit || 0));
+            }
+        });
+
+        // 3. 渲染资产卡片
+        let html = '';
+        for (let k in assets) {
+            html += `
+            <div class="glass-panel" onclick="openSheetForAsset('${k}')" style="padding:15px; margin-bottom:12px; border-radius:18px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.8);">
+                <div style="font-weight:bold; color:var(--text-main); font-size:14px;">${assets[k].name}</div>
+                <div style="text-align:right;">
+                    <div style="font-weight:900; color:var(--accent-dark); font-size:16px;">￥${assets[k].val.toFixed(2)}</div>
+                    <div style="font-size:10px; color:var(--text-light); margin-top:4px;">点击校准</div>
+                </div>
+            </div>`;
+        }
+
+        // 4. 专属闲鱼卡片 (点击不校准，而是跳转预售列表看明细)
+        html += `
+        <div class="glass-panel" onclick="closeTopModals(); showP('R'); setTimeout(()=>switchGuTab('预售中'), 50);" style="padding:15px; margin-bottom:12px; border-radius:18px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; border:2px dashed var(--inc-color); background:rgba(255,255,255,0.7);">
+            <div>
+                <div style="font-weight:bold; color:var(--text-main); font-size:14px;">🐟 闲鱼资金</div>
+                <div style="font-size:10px; color:white; background:var(--inc-color); padding:2px 6px; border-radius:8px; margin-top:6px; display:inline-block;">自动联动在途本金</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-weight:900; color:var(--accent-dark); font-size:16px;">￥${cS.toFixed(2)}</div>
+                <div style="font-size:10px; color:var(--text-light); margin-top:4px;">点击查看明细</div>
+            </div>
+        </div>`;
+
+        listDiv.innerHTML = html;
+        document.getElementById('catModalTitle').innerHTML = `💰 资产汇总`;
+        document.getElementById('overlay-top').style.display = 'block';
+        document.getElementById('category-detail-modal').style.display = 'flex';
+    }
+
+    // ✨ 点击卡片：自动弹出对应账户的校准界面
+    function openSheetForAsset(cat) {
+        closeTopModals(); 
+        openSheet('存款');
+        setTimeout(() => {
+            document.getElementById('sheetCategory').value = cat;
+        }, 50);
+    }
+
+
+    // ✨ 全新：利润明细弹窗 (独立楼层隔离布局)
     function openProfitDetail() {
         const listDiv = document.getElementById('catModalList');
         listDiv.innerHTML = '';
@@ -2480,33 +2581,42 @@ function enableRecordEdit() {
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                 totalP += parseFloat(r.profit || 0);
 
-                let cleanTitle = r.title || '未知商品';
+                let rawTitle = r.title || '未知商品';
+                let cleanTitle = rawTitle;
                 let subItemsHtml = '';
-                if (cleanTitle.includes('<div')) {
-                    let parts = cleanTitle.split('<div');
+
+                if (rawTitle.includes('<div')) {
+                    let parts = rawTitle.split('<div');
                     cleanTitle = parts[0].trim();
                     let rawSubHtml = '<div' + parts.slice(1).join('<div');
-                    subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
+                    subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:12px; padding:10px; background:rgba(255,255,255,0.7); border-radius:10px;'); 
                     subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
                 }
+                
+                cleanTitle = cleanTitle.replace(/<[^>]*>?/gm, '').trim(); 
+                cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '📦 $1');
                 cleanTitle = cleanTitle.replace(/📦+/g, '📦').replace(/📦/g, '📦 ').trim();
-                if (cleanTitle.length > 14) cleanTitle = cleanTitle.substring(0, 14) + '...';
+                if (cleanTitle.length > 20) cleanTitle = cleanTitle.substring(0, 20) + '...';
 
+                // 🌟 核心：三层楼结构隔离
                 listDiv.innerHTML += `
-                <div onclick="openOrderEdit(${realIdx});" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-                        <div style="font-weight:bold; color:var(--text-main); font-size:13px; line-height:1.4; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
-                            ${cleanTitle}${subItemsHtml}
+                <div onclick="openOrderEdit(${realIdx})" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:15px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                        <div style="font-weight:bold; color:var(--text-main); font-size:14px; line-height:1.4; flex:1; padding-right:10px; min-width:0; word-break:break-all;">
+                            ${cleanTitle}
                         </div>
-                        <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 6px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
+                        <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:3px 8px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-light); align-items:flex-end;">
-                        <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.date}</div>
-                        <div style="text-align:right; flex-shrink:0; margin-left:10px;">
+                        <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:10px;">
+                            ${r.date} | ${r.shop || '未知'}
+                        </div>
+                        <div style="text-align:right; flex-shrink:0;">
                             <div style="font-size:11px; color:var(--text-light);">买￥${r.buy} | 售￥${displaySell}</div>
-                            <div style="font-size:13px; font-weight:900; color:${pColor}; margin-top:2px;">润￥${r.profit}</div>
+                            <div style="font-size:14px; font-weight:900; color:${pColor}; margin-top:2px;">润￥${r.profit}</div>
                         </div>
                     </div>
+                    ${subItemsHtml}
                 </div>`;
             });
         }
@@ -2515,15 +2625,14 @@ function enableRecordEdit() {
         document.getElementById('category-detail-modal').style.display = 'flex';
     }
 
-// ✨ 修复：品类明细弹窗 (只看已转单，不看预售中，并且自带字数裁剪刀)
+    // ✨ 修复：品类明细弹窗 (独立楼层隔离布局，绝不互相挤压)
     function openCatDetail(catName) {
         document.getElementById('catModalTitle').innerText = `🏷️ ${catName} (已转单明细)`;
         const listDiv = document.getElementById('catModalList');
         listDiv.innerHTML = '';
         
-        // 🚀 核心过滤机制：强行加上 r.status === '已转单' 的条件！
         let items = db.filter(r => r.type === '转单' && r.status === '已转单' && (r.category === catName || (catName === '未分类' && !r.category)));
-        items.sort((a, b) => new Date(b.date) - new Date(a.date)); // 按日期从新到旧排
+        items.sort((a, b) => new Date(b.date) - new Date(a.date)); 
         
         if (items.length === 0) {
             listDiv.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-light); font-weight:bold;">暂无已转单的记录 🐰</div>';
@@ -2533,36 +2642,48 @@ function enableRecordEdit() {
                 let displaySell = parseFloat(r.sell) > 0 ? r.sell : '-.-';
                 let pColor = r.profit > 0 ? 'var(--exp-color)' : (r.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
 
-                // 🌟 剥离出子商品明细块，单独给它漂亮的外观，杜绝重叠乱码！
-                let cleanTitle = r.title || '未知商品';
+                let rawTitle = r.title || '未知商品';
+                let cleanTitle = rawTitle;
                 let subItemsHtml = '';
-                if (cleanTitle.includes('<div')) {
-                    let parts = cleanTitle.split('<div');
+
+                // 提取多件明细，并给它换上干净的白色背景盒
+                if (rawTitle.includes('<div')) {
+                    let parts = rawTitle.split('<div');
                     cleanTitle = parts[0].trim();
                     let rawSubHtml = '<div' + parts.slice(1).join('<div');
-                    subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:8px; background:rgba(255,255,255,0.7);'); 
+                    subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:12px; padding:10px; background:rgba(255,255,255,0.7); border-radius:10px;'); 
+                    // 强制让明细里的名字缩放不撑爆
                     subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
                 }
-                cleanTitle = cleanTitle.replace(/包含多件商品[（\(]?(\d+件)[）\)]?/g, '📦 $1');
+                
+                cleanTitle = cleanTitle.replace(/<[^>]*>?/gm, '').trim(); 
+                cleanTitle = cleanTitle.replace(/包含多件商品\s*[（\(]?(\d+件)[）\)]?/g, '📦 $1');
                 cleanTitle = cleanTitle.replace(/📦+/g, '📦').replace(/📦/g, '📦 ').trim();
-                if (cleanTitle.length > 14) cleanTitle = cleanTitle.substring(0, 14) + '...';
+                // 保护标题：如果实在太长，就变省略号
+                if (cleanTitle.length > 20) cleanTitle = cleanTitle.substring(0, 20) + '...';
 
+                // 🌟 核心：三层楼结构！第一层标题，第二层金额，第三层商品明细！
                 listDiv.innerHTML += `
-                <div onclick="openOrderEdit(${realIdx})" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px;">
-                        <div style="font-weight:bold; color:var(--text-main); font-size:13px; line-height:1.4; flex:1; padding-right:10px; word-break:break-all; min-width:0;">
+                <div onclick="openOrderEdit(${realIdx})" style="background:rgba(255,255,255,0.5); border-radius:15px; padding:15px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.8); cursor:pointer; width: 100%; box-sizing: border-box;">
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                        <div style="font-weight:bold; color:var(--text-main); font-size:14px; line-height:1.4; flex:1; padding-right:10px; min-width:0; word-break:break-all;">
                             ${cleanTitle}
-                            ${subItemsHtml}
                         </div>
-                        <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 6px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
+                        <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:3px 8px; border-radius:8px; white-space:nowrap; flex-shrink:0;">已转单</div>
                     </div>
+                    
                     <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-light); align-items:flex-end;">
-                        <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.date} | ${r.shop || '未知'}</div>
-                        <div style="text-align:right; flex-shrink:0; margin-left:10px;">
+                        <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:10px;">
+                            ${r.date} | ${r.shop || '未知'}
+                        </div>
+                        <div style="text-align:right; flex-shrink:0;">
                             <div style="font-size:11px; color:var(--text-light);">买 ￥${r.buy} | 售 ￥${displaySell}</div>
-                            <div style="font-size:13px; font-weight:900; color:${pColor}; margin-top:2px;">润 ￥${r.profit}</div>
+                            <div style="font-size:14px; font-weight:900; color:${pColor}; margin-top:2px;">润 ￥${r.profit}</div>
                         </div>
                     </div>
+
+                    ${subItemsHtml}
                 </div>`;
             });
         }
