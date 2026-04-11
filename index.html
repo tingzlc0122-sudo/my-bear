@@ -1814,7 +1814,7 @@ function resetCSS() {
         location.reload();
     }
 }
-// 7. 搜索代码功能
+// 7. 搜索代码功能 (防输入法弹窗版)
 let lastSearchTerm = '', lastSearchIndex = -1;
 function findInCSS() {
     const searchTerm = searchInput.value.trim();
@@ -1828,16 +1828,30 @@ function findInCSS() {
     const nextIndex = text.toLowerCase().indexOf(searchTerm.toLowerCase(), lastSearchIndex + 1);
     
     if (nextIndex !== -1) {
+        // ✨ 核心魔法 1：强行收起你搜索框里的键盘
+        document.activeElement.blur(); 
+        
+        // ✨ 核心魔法 2：给代码框套上“只读护盾”，手机就不会弹键盘了
+        cssInput.setAttribute('readonly', 'true'); 
+        
         cssInput.focus();
         cssInput.setSelectionRange(nextIndex, nextIndex + searchTerm.length);
         lastSearchIndex = nextIndex;
-    // 自动滚动到找到的位置
+        
+        // 自动滚动到对应位置
         cssInput.scrollTop = (nextIndex / text.length) * cssInput.scrollHeight - 50;
+        
+        // ✨ 核心魔法 3：延迟 0.3 秒偷偷撤销护盾，不影响你之后手动点进去改代码
+        setTimeout(() => {
+            cssInput.removeAttribute('readonly');
+        }, 300);
+        
     } else {
         alert('没找到了🐰');
         lastSearchIndex = -1;
     }
 }
+
 // 8. 一键复制 (解决太长选不中的问题)
 function copyCSS() {
     if (!cssInput.value.trim()) return alert('内容是空的哦 🐰');
