@@ -314,10 +314,10 @@
                 📷 截图智能识别订单
             </button>
             <input type="file" id="ocrInput" accept="image/*" style="display:none;" onchange="processOCRImage(event)">
-    <div id="manualItemsBox">
+        <div id="manualItemsBox">
                 <div class="m-item-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <input type="text" class="m-name" placeholder="商品名称 (如:夏彦吧唧)" style="flex: 2; margin-bottom: 0;">
-                    <input type="number" class="m-price" placeholder="原单价(￥)" style="flex: 1; margin-bottom: 0;">
+                    <input type="text" class="m-name" placeholder="商品名称 (如:夏彦吧唧)" style="flex: 1; margin-bottom: 0;">
+                    <input type="number" class="m-price" placeholder="单价(￥)" style="display: none; flex: 0 0 90px; margin-bottom: 0;">
                 </div>
             </div>
             
@@ -1354,20 +1354,37 @@
         saveAll();
         toggleGuManage(); // 删完自动退出管理模式
     }
-    // 动态添加输入行的功能
+        // 动态删除输入行 (如果删到只剩1件，把单价框再次隐藏，恢复极简状态)
+    function removeManualItem(btn) {
+        btn.parentElement.remove();
+        saveFormDraft();
+        const rows = document.querySelectorAll('#manualItemsBox .m-item-row');
+        if (rows.length === 1) {
+            rows[0].querySelector('.m-price').style.display = 'none';
+        }
+    }
+
+    // 动态添加输入行的功能 (智能唤醒)
     function addManualItem() {
+        // 1. 如果是第一次点击添加，唤醒第一行的“单价”输入框
+        const firstPrice = document.querySelector('#manualItemsBox .m-item-row:first-child .m-price');
+        if (firstPrice && firstPrice.style.display === 'none') {
+            firstPrice.style.display = 'block';
+        }
+
+        // 2. 添加带有红叉的同捆新行
         const box = document.getElementById('manualItemsBox');
         const row = document.createElement('div');
         row.className = 'm-item-row';
         row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; animation: fadeIn 0.2s;';
         row.innerHTML = `
-            <input type="text" class="m-name" placeholder="随单商品名称" style="flex: 2; margin-bottom: 0;">
-            <input type="number" class="m-price" placeholder="单价(￥)" style="flex: 1; margin-bottom: 0;">
-            <div onclick="this.parentElement.remove()" style="width: 40px; height: 42px; line-height: 42px; text-align: center; background: #FF5252; color: white; border-radius: 12px; cursor: pointer; font-weight: bold;">✕</div>
+            <input type="text" class="m-name" placeholder="随单商品名称" style="flex: 1; margin-bottom: 0;">
+            <input type="number" class="m-price" placeholder="单价(￥)" style="display: block; flex: 0 0 90px; margin-bottom: 0;">
+            <div onclick="removeManualItem(this)" style="width: 42px; height: 42px; line-height: 42px; text-align: center; background: #FF5252; color: white; border-radius: 12px; cursor: pointer; font-weight: bold; flex-shrink: 0;">✕</div>
         `;
         box.appendChild(row);
+        saveFormDraft();
     }
-
     // ✨ 升级版保存逻辑：完全对齐批量导入的排版
     function addGu() { 
         const b = parseFloat(document.getElementById('bP').value) || 0; 
@@ -1426,16 +1443,12 @@
         // 订单保存成功，清空草稿箱
         localStorage.removeItem('evan_draft_gu');
         
-        // 4. 清空表单，并恢复成只有一行输入的初始状态
+        // 4. 清空表单，并恢复成只有一行纯净输入的初始极简状态
         document.getElementById('manualItemsBox').innerHTML = `
             <div class="m-item-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <input type="text" class="m-name" placeholder="商品名称 (如:夏彦吧唧)" style="flex: 2; margin-bottom: 0;">
-                <input type="number" class="m-price" placeholder="原单价(￥)" style="flex: 1; margin-bottom: 0;">
-            </div>
-        `;
-        document.getElementById('bP').value = ''; 
-        document.getElementById('sP').value = ''; 
-        document.getElementById('gCat').value = ''; 
+                <input type="text" class="m-name" placeholder="商品名称 (如:夏彦吧唧)" style="flex: 1; margin-bottom: 0;">
+                <input type="number" class="m-price" placeholder="单价(￥)" style="display: none; flex: 0 0 90px; margin-bottom: 0;">
+            </div> `;  
     }
     function saveAll() { 
     // ✨ 自动按时间从近到远排序（最新购买的在最上面）
@@ -2210,7 +2223,7 @@ function openOrderEdit(idx) {
         updateMargin(); 
     }
 
-    function saveOrderEdit() {
+function saveOrderEdit() {
         if(editingOrderIndex === -1) return;
         const r = db[editingOrderIndex];
         
@@ -2247,7 +2260,7 @@ function openOrderEdit(idx) {
     }
 
     // ✨ 智能返回引擎：只关掉编辑框，绝不误杀背后的列表弹窗！
-    function closeOrderEditModal() {
+function closeOrderEditModal() {
         document.getElementById('order-edit-modal').style.display = 'none';
         // 检查背后是不是还有明细弹窗，如果没有，才彻底关掉黑底遮罩
         if (document.getElementById('category-detail-modal').style.display !== 'flex') {
@@ -2997,7 +3010,7 @@ function enableRecordEdit() {
         localStorage.setItem('evan_draft_gu', JSON.stringify(draft));
     }
 
-    function loadFormDraft() {
+        function loadFormDraft() {
         let draftJson = localStorage.getItem('evan_draft_gu');
         if (!draftJson) return;
         
@@ -3010,14 +3023,20 @@ function enableRecordEdit() {
             if (draft.items && draft.items.length > 0) {
                 const box = document.getElementById('manualItemsBox');
                 box.innerHTML = ''; 
-                draft.items.forEach(item => {
+                let isMulti = draft.items.length > 1; // 智能判断：如果只有1件，就是极简模式
+
+                draft.items.forEach((item, idx) => {
                     const row = document.createElement('div');
                     row.className = 'm-item-row';
                     row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px;';
+                    
+                    let priceDisplay = isMulti ? 'block' : 'none';
+                    let crossHtml = idx === 0 ? '' : `<div onclick="removeManualItem(this)" style="width: 42px; height: 42px; line-height: 42px; text-align: center; background: #FF5252; color: white; border-radius: 12px; cursor: pointer; font-weight: bold; flex-shrink: 0;">✕</div>`;
+
                     row.innerHTML = `
-                        <input type="text" class="m-name" placeholder="商品名称" style="flex: 2; margin-bottom: 0;" value="${item.name}">
-                        <input type="number" class="m-price" placeholder="单价(￥)" style="flex: 1; margin-bottom: 0;" value="${item.price}">
-                        <div onclick="this.parentElement.remove(); saveFormDraft();" style="width: 40px; height: 42px; line-height: 42px; text-align: center; background: #FF5252; color: white; border-radius: 12px; cursor: pointer; font-weight: bold;">✕</div>
+                        <input type="text" class="m-name" placeholder="${idx===0?'商品名称 (如:夏彦吧唧)':'随单商品名称'}" style="flex: 1; margin-bottom: 0;" value="${item.name}">
+                        <input type="number" class="m-price" placeholder="单价(￥)" style="display: ${priceDisplay}; flex: 0 0 90px; margin-bottom: 0;" value="${item.price}">
+                        ${crossHtml}
                     `;
                     box.appendChild(row);
                 });
