@@ -1458,10 +1458,12 @@
             </div> `;  
     }
     function saveAll() { 
-    // ✨ 自动按时间从近到远排序（最新购买的在最上面）
+            // ✨ 自动按时间从近到远排序（待转单看买入时间，其他看卖出/操作时间）
         db.sort((a, b) => {
-            let tA = new Date(a.date + 'T' + (a.timeStr || '00:00:00')).getTime();
-            let tB = new Date(b.date + 'T' + (b.timeStr || '00:00:00')).getTime();
+            let dateA = (a.type === '转单' && a.status !== '预售中' && a.sellDate) ? a.sellDate : a.date;
+            let dateB = (b.type === '转单' && b.status !== '预售中' && b.sellDate) ? b.sellDate : b.date;
+            let tA = new Date(dateA + 'T' + (a.timeStr || '00:00:00')).getTime();
+            let tB = new Date(dateB + 'T' + (b.timeStr || '00:00:00')).getTime();
             return tB - tA;
         });
         localStorage.setItem('evan_rabbit_v4', JSON.stringify(db)); 
@@ -1484,8 +1486,10 @@
         let tInc = 0, tExp = 0, tPro = 0; 
         let dayData = {}; 
         db.forEach(r => { 
-            if (r.date && r.date.startsWith(matchStr)) { 
-                if(!dayData[r.date]) dayData[r.date] = { inc:0, exp:0, pro:0, hasMedia: false }; 
+            // 🌟 核心判断：计算利润和大盘时，已卖出的强行归属到卖出日期！
+            let targetDate = (r.type === '转单' && r.status === '已转单' && r.sellDate) ? r.sellDate : r.date;
+            if (targetDate && targetDate.startsWith(matchStr)) { 
+                if(!dayData[targetDate]) dayData[targetDate] = { inc:0, exp:0, pro:0, hasMedia: false }; 
                 if (r.type === '日常') { 
                     if (r.detail === '收入') { tInc += r.amt; dayData[r.date].inc += r.amt; } 
                     if (r.detail === '支出') { tExp += r.amt; dayData[r.date].exp += r.amt; } 
@@ -1522,9 +1526,10 @@
 
         // 2. 遍历账本，把符合这个周期的钱按类目加起来
         db.forEach(r => {
-            if (r.date && r.date.startsWith(matchStr)) {
+            // 🌟 弹窗构成同样归属到卖出日期
+            let targetDate = (r.type === '转单' && r.status === '已转单' && r.sellDate) ? r.sellDate : r.date;
+            if (targetDate && targetDate.startsWith(matchStr)) {
                 let cat = r.category || '未分类';
-                
                 if (type === 'inc' && r.type === '日常' && r.detail === '收入') {
                     titleName = '💰 收入构成'; colorVar = 'var(--inc-color)';
                     let amt = parseFloat(r.amt || 0);
@@ -1605,7 +1610,8 @@
             const pinkPalette = ['#F4B8B8', '#F8BBD0', '#FFCDD2', '#EF9A9A', '#FF8A80']; 
             const greenPalette = ['#A8D5BA', '#C8E6C9', '#B2DFDB', '#80CBC4', '#4DB6AC']; 
             db.forEach(r => { 
-                if (r.date && r.date.startsWith(dataObj.matchStr)) { 
+                let targetDate = (r.type === '转单' && r.status === '已转单' && r.sellDate) ? r.sellDate : r.date;
+                if (targetDate && targetDate.startsWith(dataObj.matchStr)) { 
                     if (currentPieType === 'expense' && r.type === '日常' && r.detail === '支出') { 
                         let cat = r.category || '其他'; catData[cat] = (catData[cat] || 0) + r.amt; 
                     } else if (currentPieType === 'income') { 
@@ -2658,7 +2664,7 @@ function enableRecordEdit() {
             event.target.value = ''; // 清空选择框，方便下次再选同一张图
         }
     }
-    // ✨ 修复：多件打包弹窗 (子明细独占整行，完美分层拒绝挤压)
+        // ✨ 修复：多件打包弹窗 (自带脏数据自动闭合护盾)
     function openBundleDetail(type) {
         const modal = document.getElementById('category-detail-modal');
         const titleEl = document.getElementById('catModalTitle');
@@ -2685,6 +2691,11 @@ function enableRecordEdit() {
                         let rawSubHtml = '<div' + parts.slice(1).join('<div');
                         subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:10px; padding:12px; background:rgba(255,255,255,0.6); border-radius:12px; border:1px solid rgba(255,255,255,0.8);');
                         subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
+                        
+                        // 🌟 神级救命补丁：自动修补老数据的残缺标签，防止把外面的 X 按钮吸进来！
+                        let divCount = (subItemsHtml.match(/<div/gi) || []).length;
+                        let closeCount = (subItemsHtml.match(/<\/div>/gi) || []).length;
+                        if (divCount > closeCount) { subItemsHtml += '</div>'.repeat(divCount - closeCount); }
                     }
                     
                     mainTitle = mainTitle.replace(/<[^>]*>?/gm, '').trim(); 
@@ -2706,12 +2717,12 @@ function enableRecordEdit() {
                                     <div style="font-size:11px; color:var(--text-light); margin-top:8px;">${r.date} | ${r.shop || '未知'}</div>
                                 </div>
                                 <div style="flex-shrink: 0; text-align: right;">
-                                    <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 8px; border-radius:10px; display:inline-block;">已转单</div>
+                                    <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 8px; border-radius:4px; display:inline-block;">已转单</div>
                                     <div style="font-size:11px; color:var(--text-light); margin-top:6px; white-space:nowrap;">买 ￥${r.buy} | 售 ￥${displaySell}</div>
                                     <div style="font-size:14px; color:${profitColor}; font-weight:900; margin-top:4px;">润 ￥${r.profit}</div>
                                 </div>
                             </div>
-                            ${subItemsHtml ? `<div style="width: 100%; margin-top: 12px;">${subItemsHtml}</div>` : ''}
+                            ${subItemsHtml ? `<div style="width: 100%; margin-top: 12px; box-sizing: border-box;">${subItemsHtml}</div>` : ''}
                         </div>
                         <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event); closeTopModals();">✕</div>
                     </div>`;
@@ -2790,7 +2801,7 @@ function enableRecordEdit() {
     }
 
 
-    // ✨ 修复：利润明细弹窗 (子明细独占整行)
+        // ✨ 修复：利润明细弹窗 (自带脏数据自动闭合护盾)
     function openProfitDetail() {
         const listDiv = document.getElementById('catModalList');
         listDiv.innerHTML = '';
@@ -2817,6 +2828,11 @@ function enableRecordEdit() {
                     let rawSubHtml = '<div' + parts.slice(1).join('<div');
                     subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:10px; padding:12px; background:rgba(255,255,255,0.6); border-radius:12px; border:1px solid rgba(255,255,255,0.8);');
                     subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
+                    
+                    // 🌟 神级救命补丁
+                    let divCount = (subItemsHtml.match(/<div/gi) || []).length;
+                    let closeCount = (subItemsHtml.match(/<\/div>/gi) || []).length;
+                    if (divCount > closeCount) { subItemsHtml += '</div>'.repeat(divCount - closeCount); }
                 }
                 
                 mainTitle = mainTitle.replace(/<[^>]*>?/gm, '').trim(); 
@@ -2838,12 +2854,12 @@ function enableRecordEdit() {
                                 <div style="font-size:11px; color:var(--text-light); margin-top:8px;">${r.date} | ${r.shop || '未知'}</div>
                             </div>
                             <div style="flex-shrink: 0; text-align: right;">
-                                <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 8px; border-radius:10px; display:inline-block;">已转单</div>
+                                <div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 8px; border-radius:4px; display:inline-block;">已转单</div>
                                 <div style="font-size:11px; color:var(--text-light); margin-top:6px; white-space:nowrap;">买 ￥${r.buy} | 售 ￥${displaySell}</div>
                                 <div style="font-size:14px; color:${profitColor}; font-weight:900; margin-top:4px;">润 ￥${r.profit}</div>
                             </div>
                         </div>
-                        ${subItemsHtml ? `<div style="width: 100%; margin-top: 12px;">${subItemsHtml}</div>` : ''}
+                        ${subItemsHtml ? `<div style="width: 100%; margin-top: 12px; box-sizing: border-box;">${subItemsHtml}</div>` : ''}
                     </div>
                     <div class="swipe-delete" onclick="triggerDeleteSwipe(${realIdx}, false, event); closeTopModals();">✕</div>
                 </div>`;
@@ -2854,7 +2870,7 @@ function enableRecordEdit() {
         document.getElementById('category-detail-modal').style.display = 'flex';
     }
 
-    // ✨ 修复：品类明细弹窗 (子明细独占整行)
+        // ✨ 修复：品类明细弹窗 (自带脏数据自动闭合护盾)
     function openCatDetail(catName) {
         document.getElementById('catModalTitle').innerText = `🏷️ ${catName} (明细)`;
         const listDiv = document.getElementById('catModalList');
@@ -2881,6 +2897,11 @@ function enableRecordEdit() {
                     let rawSubHtml = '<div' + parts.slice(1).join('<div');
                     subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:10px; padding:12px; background:rgba(255,255,255,0.6); border-radius:12px; border:1px solid rgba(255,255,255,0.8);'); 
                     subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
+                    
+                    // 🌟 神级救命补丁
+                    let divCount = (subItemsHtml.match(/<div/gi) || []).length;
+                    let closeCount = (subItemsHtml.match(/<\/div>/gi) || []).length;
+                    if (divCount > closeCount) { subItemsHtml += '</div>'.repeat(divCount - closeCount); }
                 }
                 
                 mainTitle = mainTitle.replace(/<[^>]*>?/gm, '').trim(); 
@@ -2892,10 +2913,10 @@ function enableRecordEdit() {
                     : 'white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
 
                 let statusBadge = '';
-                if(r.status === '已转单') statusBadge = `<div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 8px; border-radius:10px; display:inline-block;">已转单</div>`;
-                else if(r.status === '预售中') statusBadge = `<div style="font-size:11px; font-weight:bold; color:white; background:#FF8A65; padding:2px 8px; border-radius:10px; display:inline-block;">预售中</div>`;
-                else if(r.status === '已收定金') statusBadge = `<div style="font-size:11px; font-weight:bold; color:white; background:var(--accent-main); padding:2px 8px; border-radius:10px; display:inline-block;">已收定金</div>`;
-                else statusBadge = `<div style="font-size:11px; font-weight:bold; color:white; background:var(--text-light); padding:2px 8px; border-radius:10px; display:inline-block;">已退款</div>`;
+                if(r.status === '已转单') statusBadge = `<div style="font-size:11px; font-weight:bold; color:white; background:var(--inc-color); padding:2px 8px; border-radius:4px; display:inline-block;">已转单</div>`;
+                else if(r.status === '预售中') statusBadge = `<div style="font-size:11px; font-weight:bold; color:white; background:#FF8A65; padding:2px 8px; border-radius:4px; display:inline-block;">预售中</div>`;
+                else if(r.status === '已收定金') statusBadge = `<div style="font-size:11px; font-weight:bold; color:white; background:var(--accent-main); padding:2px 8px; border-radius:4px; display:inline-block;">已收定金</div>`;
+                else statusBadge = `<div style="font-size:11px; font-weight:bold; color:white; background:var(--text-light); padding:2px 8px; border-radius:4px; display:inline-block;">已退款</div>`;
 
                 listDiv.innerHTML += `
                 <div class="swipe-container-x" style="margin-bottom: 16px;">
@@ -2913,7 +2934,7 @@ function enableRecordEdit() {
                                 ${r.status === '已转单' ? `<div style="font-size:14px; color:${profitColor}; font-weight:900; margin-top:4px;">润 ￥${r.profit}</div>` : ''}
                             </div>
                         </div>
-                        ${subItemsHtml ? `<div style="width: 100%; margin-top: 12px;">${subItemsHtml}</div>` : ''}
+                        ${subItemsHtml ? `<div style="width: 100%; margin-top: 12px; box-sizing: border-box;">${subItemsHtml}</div>` : ''}
                     </div>
                     <div class="swipe-delete" onclick="triggerDeleteSwipe(${realIdx}, false, event); closeTopModals();">✕</div>
                 </div>`;
@@ -2929,8 +2950,10 @@ function enableRecordEdit() {
         const listDiv = document.getElementById('dayDetailList'); listDiv.innerHTML = ''; 
         let dayRecords = []; 
         db.forEach((r, idx) => { 
-            if (r.date === dateStr) { 
-                if (type === 'all') dayRecords.push({r, idx});
+            // 🌟 日历点开那一天，卖出的按卖出那天算
+            let targetDate = (r.type === '转单' && r.status === '已转单' && r.sellDate) ? r.sellDate : r.date;
+            if (targetDate === dateStr) { 
+                if (type === 'all') dayRecords.push({r, idx});    
                 else if (r.type === '日常' && type === '收入' && r.detail === '收入') dayRecords.push({r, idx}); 
                 else if (r.type === '日常' && type === '支出' && r.detail === '支出') dayRecords.push({r, idx}); 
                 else if (r.type === '日常' && type === '存款') dayRecords.push({r, idx}); 
