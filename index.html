@@ -1458,13 +1458,13 @@
             </div> `;  
     }
     function saveAll() { 
-            // ✨ 自动按时间从近到远排序（待转单看买入时间，其他看卖出/操作时间）
+        // ✨ 自动按时间从近到远排序（待转单看买入时间，已转单看卖出时间，永远把最新的顶在上面！）
         db.sort((a, b) => {
             let dateA = (a.type === '转单' && a.status !== '预售中' && a.sellDate) ? a.sellDate : a.date;
             let dateB = (b.type === '转单' && b.status !== '预售中' && b.sellDate) ? b.sellDate : b.date;
             let tA = new Date(dateA + 'T' + (a.timeStr || '00:00:00')).getTime();
             let tB = new Date(dateB + 'T' + (b.timeStr || '00:00:00')).getTime();
-            return tB - tA;
+            return tB - tA; // 降序：时间戳越大的（越接近现在），越排在前面
         });
         localStorage.setItem('evan_rabbit_v4', JSON.stringify(db)); 
         rdr(); 
@@ -1473,9 +1473,10 @@
         let analysisPage = document.getElementById('pageAnalysis');
         if(analysisPage && analysisPage.classList.contains('active')) renderCategoryAndShopAnalysis();
     }
+
     function openInteractiveCalendar(type) { renderInteractiveCalendar(type); document.getElementById('overlay').style.display = 'block'; document.getElementById('calendar-modal').style.display = 'block'; }
 
-    // ✨ 热力图数据处理（新增识别日记和图片标记）
+    // ✨ 热力图与统计大屏数据处理（已修复卖出时间脱节 Bug）
     function processStatsData() { 
         const todayStr = getTodayString(); 
         let selected = window.customSelectedValue || todayStr;
@@ -1483,25 +1484,31 @@
         if (currentRange === 'month' && matchStr.length > 7) matchStr = matchStr.slice(0,7);
         if (currentRange === 'year' && matchStr.length > 4) matchStr = matchStr.slice(0,4);
         document.getElementById('currentSelectedText').innerText = matchStr + (currentRange === 'year'?'年':'');
+        
         let tInc = 0, tExp = 0, tPro = 0; 
         let dayData = {}; 
+        
         db.forEach(r => { 
             // 🌟 核心判断：计算利润和大盘时，已卖出的强行归属到卖出日期！
             let targetDate = (r.type === '转单' && r.status === '已转单' && r.sellDate) ? r.sellDate : r.date;
+
             if (targetDate && targetDate.startsWith(matchStr)) { 
                 if(!dayData[targetDate]) dayData[targetDate] = { inc:0, exp:0, pro:0, hasMedia: false }; 
+                
                 if (r.type === '日常') { 
-                    if (r.detail === '收入') { tInc += r.amt; dayData[r.date].inc += r.amt; } 
-                    if (r.detail === '支出') { tExp += r.amt; dayData[r.date].exp += r.amt; } 
-                    // 只要有图片或者写了字，就打上日记标记！
-                    if (r.diaryText || r.imageBase64) dayData[r.date].hasMedia = true;
+                    // 👇 就是这里！之前忘改了，现在全部统一成 targetDate！
+                    if (r.detail === '收入') { tInc += r.amt; dayData[targetDate].inc += r.amt; } 
+                    if (r.detail === '支出') { tExp += r.amt; dayData[targetDate].exp += r.amt; } 
+                    if (r.diaryText || r.imageBase64) dayData[targetDate].hasMedia = true;
                 } else if (r.type === '转单' && r.status === '已转单') { 
                     const prof = parseFloat(r.profit || 0); 
                     tPro += prof; 
-                    dayData[r.date].pro += prof; 
+                    // 👇 利润也正确放入对应的时间盒子里
+                    dayData[targetDate].pro += prof; 
                 } 
             } 
         }); 
+        
         document.getElementById('statInc').innerText = '￥' + tInc.toFixed(2); 
         document.getElementById('statExp').innerText = '￥' + tExp.toFixed(2); 
         document.getElementById('statPro').innerText = '￥' + tPro.toFixed(2); 
