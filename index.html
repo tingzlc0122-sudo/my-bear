@@ -2348,23 +2348,42 @@ function renderCategoryAndShopAnalysis() {
                 }
                 let c = r.category || '未分类';
 
-                if(!catStats[c]) catStats[c] = { buy: 0, profit: 0, count: 0 };
+                if(!catStats[c]) catStats[c] = { buy: 0, profit: 0, count: 0, soldCost: 0, soldCount: 0, holdDays: 0 };
                 catStats[c].buy += parseFloat(r.buy || 0); 
-                if(r.status === '已转单') catStats[c].profit += parseFloat(r.profit || 0); 
                 catStats[c].count++; 
 
                 // 3. 店铺与IP分析计算
                 let s = r.shop || '未知店铺';
                 let ipName = r.ip || '其他IP';
-                if(!shopStats[s]) shopStats[s] = { buy: 0, profit: 0, count: 0, ips: {} };
+                if(!shopStats[s]) shopStats[s] = { buy: 0, profit: 0, count: 0, ips: {}, soldCost: 0, soldCount: 0, holdDays: 0 };
                 shopStats[s].buy += parseFloat(r.buy || 0);
-                if(r.status === '已转单') shopStats[s].profit += parseFloat(r.profit || 0);
                 shopStats[s].count++;
                 
-                if(!shopStats[s].ips[ipName]) shopStats[s].ips[ipName] = { buy: 0, profit: 0, count: 0 };
+                if(!shopStats[s].ips[ipName]) shopStats[s].ips[ipName] = { buy: 0, profit: 0, count: 0, soldCost: 0, soldCount: 0, holdDays: 0 };
                 shopStats[s].ips[ipName].buy += parseFloat(r.buy || 0);
-                if(r.status === '已转单') shopStats[s].ips[ipName].profit += parseFloat(r.profit || 0);
                 shopStats[s].ips[ipName].count++;
+
+                // 🌟 核心：只有已转单的，才核算周转率和年化利润
+                if(r.status === '已转单') {
+                    let profit = parseFloat(r.profit || 0);
+                    let buy = parseFloat(r.buy || 0);
+                    let hDays = parseFloat(r.holdDays || 0);
+
+                    catStats[c].profit += profit; 
+                    catStats[c].soldCost += buy;
+                    catStats[c].soldCount++;
+                    catStats[c].holdDays += hDays;
+
+                    shopStats[s].profit += profit;
+                    shopStats[s].soldCost += buy;
+                    shopStats[s].soldCount++;
+                    shopStats[s].holdDays += hDays;
+
+                    shopStats[s].ips[ipName].profit += profit;
+                    shopStats[s].ips[ipName].soldCost += buy;
+                    shopStats[s].ips[ipName].soldCount++;
+                    shopStats[s].ips[ipName].holdDays += hDays;
+                }
             }
         });
 
@@ -2444,7 +2463,7 @@ function renderCategoryAndShopAnalysis() {
             bundleList.innerHTML = bundleHtml;
         }
 
-        // 🏷️ 渲染品类列表 (绝对保留)
+        // 🏷️ 渲染品类列表 (增加年化胶囊)
         let catHtml = '';
         let sortedCats = Object.entries(catStats).sort((a,b) => b[1].buy - a[1].buy);
         if(sortedCats.length === 0) {
@@ -2454,12 +2473,27 @@ function renderCategoryAndShopAnalysis() {
                 let pColor = data.profit > 0 ? 'var(--exp-color)' : (data.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                 let proSign = data.profit > 0 ? '+' : '';
                 let avgMargin = data.buy > 0 ? (data.profit / data.buy * 100).toFixed(1) : 0;
+                
+                // 🌟 年化计算及胶囊生成
+                let annualizedBadge = '';
+                if (data.soldCount > 0) {
+                    let avgDays = data.holdDays / data.soldCount;
+                    let roi = data.soldCost > 0 ? (data.profit / data.soldCost * 100) : 0;
+                    let annualized = avgDays > 0 ? (roi * 365 / avgDays) : 0;
+                    
+                    let badgeStyle = annualized > 0 
+                        ? 'background: rgba(255, 138, 101, 0.15); color: #FF8A65; border: 1px solid rgba(255, 138, 101, 0.4);' 
+                        : 'background: rgba(0, 0, 0, 0.04); color: var(--text-light); border: 1px solid rgba(0, 0, 0, 0.05);';
+                    annualizedBadge = `<div style="${badgeStyle} padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-top: 6px; font-weight: bold; display: inline-block;">年化 ${annualized.toFixed(0)}%</div>`;
+                }
+
                 catHtml += `
                 <div onclick="openCatDetail('${name}')" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.5); cursor:pointer;">
                     <div style="flex:1;">
-                        <div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">
-                            ${name} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span>
+                        <div style="font-weight:bold; color:var(--accent-dark); font-size:15px; display:flex; align-items:center;">
+                            ${name} <span style="font-size:12px; color:var(--text-light); font-weight:normal; margin-left:6px;">(共 ${data.count} 件)</span>
                         </div>
+                        ${annualizedBadge}
                     </div>
                     <div style="text-align:right;">
                         <div style="font-size:12px; color:var(--text-light);">总本金 ￥${data.buy.toFixed(2)}</div>
@@ -2473,7 +2507,7 @@ function renderCategoryAndShopAnalysis() {
         }
         catList.innerHTML = catHtml;
 
-        // 🏪 渲染店铺与IP列表 (绝对保留)
+        // 🏪 渲染店铺与IP列表 (增加年化胶囊)
         let shopHtml = '';
         let sortedShops = Object.entries(shopStats).sort((a,b) => b[1].buy - a[1].buy);
         if(sortedShops.length === 0) {
@@ -2485,13 +2519,27 @@ function renderCategoryAndShopAnalysis() {
                 let hasMultipleIPs = Object.keys(data.ips).length > 0;
                 let avgMargin = data.buy > 0 ? (data.profit / data.buy * 100).toFixed(1) : 0;
                 
+                // 🌟 年化计算及胶囊生成 (店铺级)
+                let annualizedBadge = '';
+                if (data.soldCount > 0) {
+                    let avgDays = data.holdDays / data.soldCount;
+                    let roi = data.soldCost > 0 ? (data.profit / data.soldCost * 100) : 0;
+                    let annualized = avgDays > 0 ? (roi * 365 / avgDays) : 0;
+                    
+                    let badgeStyle = annualized > 0 
+                        ? 'background: rgba(255, 138, 101, 0.15); color: #FF8A65; border: 1px solid rgba(255, 138, 101, 0.4);' 
+                        : 'background: rgba(0, 0, 0, 0.04); color: var(--text-light); border: 1px solid rgba(0, 0, 0, 0.05);';
+                    annualizedBadge = `<div style="${badgeStyle} padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-top: 6px; font-weight: bold; display: inline-block;">年化 ${annualized.toFixed(0)}%</div>`;
+                }
+
                 shopHtml += `
                 <div style="border-bottom:1px dashed rgba(255,255,255,0.5);">
                     <div onclick="if(${hasMultipleIPs}) { let el = document.getElementById('ipList_${idx}'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; cursor:${hasMultipleIPs ? 'pointer' : 'default'};">
                         <div style="flex:1;">
-                            <div style="font-weight:bold; color:var(--accent-dark); font-size:15px;">
-                                ${shopName} ${hasMultipleIPs ? '▼' : ''} <span style="font-size:12px; color:var(--text-light); font-weight:normal;">(共 ${data.count} 件)</span>
+                            <div style="font-weight:bold; color:var(--accent-dark); font-size:15px; display:flex; align-items:center;">
+                                ${shopName} ${hasMultipleIPs ? '▼' : ''} <span style="font-size:12px; color:var(--text-light); font-weight:normal; margin-left:6px;">(共 ${data.count} 件)</span>
                             </div>
+                            ${annualizedBadge}
                         </div>
                         <div style="text-align:right;">
                             <div style="font-size:12px; color:var(--text-light);">总本金 ￥${data.buy.toFixed(2)}</div>
@@ -2509,11 +2557,23 @@ function renderCategoryAndShopAnalysis() {
                         let ipPColor = ipData.profit > 0 ? 'var(--exp-color)' : (ipData.profit < 0 ? '#4DB6AC' : 'var(--text-light)');
                         let ipProSign = ipData.profit > 0 ? '+' : '';
                         let ipAvgMargin = ipData.buy > 0 ? (ipData.profit / ipData.buy * 100).toFixed(1) : 0;
+                        
+                        // 🌟 IP级的迷你胶囊
+                        let ipBadge = '';
+                        if (ipData.soldCount > 0) {
+                            let ipAvgDays = ipData.holdDays / ipData.soldCount;
+                            let ipRoi = ipData.soldCost > 0 ? (ipData.profit / ipData.soldCost * 100) : 0;
+                            let ipAnn = ipAvgDays > 0 ? (ipRoi * 365 / ipAvgDays) : 0;
+                            ipBadge = ipAnn > 0 ? `<span style="background:rgba(255,138,101,0.15); color:#FF8A65; padding:1px 6px; border-radius:8px; font-size:9px; margin-left:6px; font-weight:bold;">年化 ${ipAnn.toFixed(0)}%</span>` : '';
+                        }
+
                         shopHtml += `
-                            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:12px;">
-                                <div style="color:var(--text-main); font-weight:bold;">↳ ${ip} (${ipData.count}件)</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; font-size:12px;">
+                                <div style="color:var(--text-main); font-weight:bold; display:flex; align-items:center;">
+                                    ↳ ${ip} (${ipData.count}件) ${ipBadge}
+                                </div>
                                 <div style="text-align:right; color:var(--text-light);">
-                                    本 ￥${ipData.buy.toFixed(2)} | <span style="color:${ipPColor}; font-weight:bold;">润 ￥${ipProSign}${ipData.profit.toFixed(2)} (${ipAvgMargin}%)</span>
+                                    本 ￥${ipData.buy.toFixed(2)} | <span style="color:${ipPColor}; font-weight:bold;">润 ￥${ipProSign}${ipData.profit.toFixed(2)}</span>
                                 </div>
                             </div>`;
                     });
