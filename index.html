@@ -1036,7 +1036,6 @@
                 if(gl) gl.innerHTML += `
                 <div class="swipe-container-x" style="margin-bottom: 16px;">
                     <div class="swipe-content" onclick="${clickEvent}" style="background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.65) 100%); border: 2px dashed var(--inc-color); border-radius: 22px; box-shadow: 0 8px 20px rgba(168, 213, 186, 0.15); display: block; padding: 16px 15px; box-sizing: border-box;">
-                        
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                             <div style="display: flex; flex: 1; min-width: 0; padding-right: 15px;">
                                 ${checkboxHtml}
@@ -1054,9 +1053,9 @@
                                 <div style="font-size:14px; color:${profitColor}; font-weight:900; margin-top:4px;">润 ￥${r.profit}</div>
                             </div>
                         </div>
-
-                        ${subItemsHtml ? `<div style="width: 100%; margin-top: 12px; box-sizing: border-box;">${subItemsHtml.replace(/miHoYo/gi, '').trim()}</div>` : ''}     
+                        ${subItemsHtml ? `<div style="width: 100%; margin-top: 12px; box-sizing: border-box;">${subItemsHtml.replace(/miHoYo/gi, '').trim()}</div>` : ''}
                     </div>
+                    
                     <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
                 </div>`;
             }
