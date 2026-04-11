@@ -1022,7 +1022,7 @@
 
                 let depositBadge = (r.status === '已收定金' && r.deposit > 0) ? `<div style="font-size:10px; color:var(--accent-main); font-weight:bold; margin-top:4px;">已回定金 ￥${r.deposit}</div>` : '';
 
-            // 🚀 终极排版美化：子明细独占整行，右侧“买|售”平行排布对齐好图！
+                // 🚀 终极排版美化：子明细独占整行，删除按钮绝对锁死在隐藏左滑车道！
                 let titleWrapStyle = subItemsHtml === '' 
                     ? 'display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-all;' 
                     : 'white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
@@ -1036,6 +1036,7 @@
                 if(gl) gl.innerHTML += `
                 <div class="swipe-container-x" style="margin-bottom: 16px;">
                     <div class="swipe-content" onclick="${clickEvent}" style="background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.65) 100%); border: 2px dashed var(--inc-color); border-radius: 22px; box-shadow: 0 8px 20px rgba(168, 213, 186, 0.15); display: block; padding: 16px 15px; box-sizing: border-box;">
+                        
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                             <div style="display: flex; flex: 1; min-width: 0; padding-right: 15px;">
                                 ${checkboxHtml}
@@ -1053,7 +1054,8 @@
                                 <div style="font-size:14px; color:${profitColor}; font-weight:900; margin-top:4px;">润 ￥${r.profit}</div>
                             </div>
                         </div>
-                        ${subItemsHtml ? `<div style="width: 100%; margin-top: 12px;">${subItemsHtml.replace(/miHoYo/gi, '').trim()}</div>` : ''}
+
+                        ${subItemsHtml ? `<div style="width: 100%; margin-top: 12px; box-sizing: border-box;">${subItemsHtml.replace(/miHoYo/gi, '').trim()}</div>` : ''}     
                     </div>
                     <div class="swipe-delete" onclick="triggerDeleteSwipe(${idx}, false, event)">✕</div>
                 </div>`;
@@ -1814,7 +1816,7 @@ function resetCSS() {
         location.reload();
     }
 }
-// 7. 搜索代码功能 (防输入法弹窗版)
+// 7. 搜索代码功能 (防键盘弹窗 + 完美保留高亮选中)
 let lastSearchTerm = '', lastSearchIndex = -1;
 function findInCSS() {
     const searchTerm = searchInput.value.trim();
@@ -1828,12 +1830,10 @@ function findInCSS() {
     const nextIndex = text.toLowerCase().indexOf(searchTerm.toLowerCase(), lastSearchIndex + 1);
     
     if (nextIndex !== -1) {
-        // ✨ 核心魔法 1：强行收起你搜索框里的键盘
-        document.activeElement.blur(); 
+        // ✨ 核心魔法 1：临时告诉手机“不需要软键盘”
+        cssInput.setAttribute('inputmode', 'none');
         
-        // ✨ 核心魔法 2：给代码框套上“只读护盾”，手机就不会弹键盘了
-        cssInput.setAttribute('readonly', 'true'); 
-        
+        // ✨ 核心魔法 2：正常获取焦点并选中文字（这回高亮绝对不会丢了！）
         cssInput.focus();
         cssInput.setSelectionRange(nextIndex, nextIndex + searchTerm.length);
         lastSearchIndex = nextIndex;
@@ -1841,10 +1841,14 @@ function findInCSS() {
         // 自动滚动到对应位置
         cssInput.scrollTop = (nextIndex / text.length) * cssInput.scrollHeight - 50;
         
-        // ✨ 核心魔法 3：延迟 0.3 秒偷偷撤销护盾，不影响你之后手动点进去改代码
-        setTimeout(() => {
-            cssInput.removeAttribute('readonly');
-        }, 300);
+        // ✨ 核心魔法 3：当你找到想要的代码，手指点上去准备修改时，瞬间唤醒键盘！
+        const restoreKeyboard = () => {
+            cssInput.removeAttribute('inputmode');
+            cssInput.removeEventListener('touchstart', restoreKeyboard);
+            cssInput.removeEventListener('click', restoreKeyboard);
+        };
+        cssInput.addEventListener('touchstart', restoreKeyboard);
+        cssInput.addEventListener('click', restoreKeyboard);
         
     } else {
         alert('没找到了🐰');
