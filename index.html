@@ -1043,7 +1043,9 @@
                                     <div style="font-weight:bold; color:var(--accent-dark); font-size:15px; line-height:1.4; ${titleWrapStyle}">
                                         ${mainTitle.replace(/miHoYo/gi, '').trim()}${hasMediaIcon}
                                     </div>
-                                    <div style="font-size:11px; color:var(--text-light); margin-top:8px;">${r.date} | ${r.category}</div>
+                                 <div style="font-size:11px; color:var(--text-light); margin-top:8px;">
+                                        ${(r.status === '已转单' && r.sellDate) ? `<span style="color:var(--exp-color); font-weight:bold;">${r.sellDate} 售</span>` : `${r.date} 买`} | ${r.category}
+                                    </div>
                                     ${depositBadge}
                                 </div>
                             </div>
