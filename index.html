@@ -998,6 +998,12 @@
                     subItemsHtml = rawSubHtml.replace(/display:\s*none;?/g, 'display:block; margin-top:6px; background:rgba(255,255,255,0.7);');
                     // ✨ 子商品裁剪：太长变省略号
                     subItemsHtml = subItemsHtml.replace(/flex:1;/g, 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;');
+                    
+                    // 🌟 核心救命补丁：把弹窗里成功的“DOM自动平衡”逻辑复制过来！
+                    // 彻底防止历史脏数据缺 </div> 导致把外面的 X 按钮吸进卡片内部
+                    let divCount = (subItemsHtml.match(/<div/gi) || []).length;
+                    let closeCount = (subItemsHtml.match(/<\/div>/gi) || []).length;
+                    if (divCount > closeCount) { subItemsHtml += '</div>'.repeat(divCount - closeCount); }
                 }
 
                 // 洗掉毒瘤标签 & 修复箱子图标
@@ -1517,71 +1523,104 @@
         return { timeline: dayData, matchStr: matchStr }; 
     }
 
-    // ✨ 全新：当前周期收支利润明细拆解弹窗
+        // ✨ 全新：当前周期收支利润明细拆解弹窗 (带点击展开二级明细)
     function openStatDetail(type) {
         const listDiv = document.getElementById('catModalList');
         listDiv.innerHTML = '';
 
-        // 1. 获取当前选中的时间周期 (今天/本月/本年)
+        // 1. 获取当前选中的时间周期
         let selected = window.customSelectedValue || getTodayString();
         let matchStr = selected;
         if (currentRange === 'month' && matchStr.length > 7) matchStr = matchStr.slice(0,7);
         if (currentRange === 'year' && matchStr.length > 4) matchStr = matchStr.slice(0,4);
 
-        let catSums = {};
+        let catData = {};
         let totalAmt = 0;
         let titleName = '';
         let colorVar = '';
 
-        // 2. 遍历账本，把符合这个周期的钱按类目加起来
-        db.forEach(r => {
-            // 🌟 弹窗构成同样归属到卖出日期
+        // 2. 遍历账本，把数据按类目装进带明细的盒子里
+        db.forEach((r, realIdx) => {
+            // 🌟 利润核算以卖出时间为准
             let targetDate = (r.type === '转单' && r.status === '已转单' && r.sellDate) ? r.sellDate : r.date;
+            
             if (targetDate && targetDate.startsWith(matchStr)) {
                 let cat = r.category || '未分类';
+                
                 if (type === 'inc' && r.type === '日常' && r.detail === '收入') {
                     titleName = '💰 收入构成'; colorVar = 'var(--inc-color)';
                     let amt = parseFloat(r.amt || 0);
-                    catSums[cat] = (catSums[cat] || 0) + amt;
+                    if(!catData[cat]) catData[cat] = { total: 0, items: [] };
+                    catData[cat].total += amt;
+                    catData[cat].items.push({ r, realIdx, amt });
                     totalAmt += amt;
                 } else if (type === 'exp' && r.type === '日常' && r.detail === '支出') {
                     titleName = '💸 支出构成'; colorVar = 'var(--exp-color)';
                     let amt = parseFloat(r.amt || 0);
-                    catSums[cat] = (catSums[cat] || 0) + amt;
+                    if(!catData[cat]) catData[cat] = { total: 0, items: [] };
+                    catData[cat].total += amt;
+                    catData[cat].items.push({ r, realIdx, amt });
                     totalAmt += amt;
                 } else if (type === 'pro' && r.type === '转单' && r.status === '已转单') {
                     titleName = '✨ 转单利润构成'; colorVar = 'var(--accent-main)';
                     let amt = parseFloat(r.profit || 0);
-                    catSums[cat] = (catSums[cat] || 0) + amt;
+                    if(!catData[cat]) catData[cat] = { total: 0, items: [] };
+                    catData[cat].total += amt;
+                    catData[cat].items.push({ r, realIdx, amt });
                     totalAmt += amt;
                 }
             }
         });
 
         // 3. 按金额大小从高到低排序
-        let sortedCats = Object.entries(catSums).sort((a, b) => b[1] - a[1]);
+        let sortedCats = Object.entries(catData).sort((a, b) => b[1].total - a[1].total);
 
         let html = '';
         if (sortedCats.length === 0) {
             html = '<div style="text-align:center; padding:30px; color:var(--text-light); font-weight:bold;">当前周期没有记录哦 🐰</div>';
         } else {
-            sortedCats.forEach(([cat, val]) => {
+            sortedCats.forEach(([cat, data], idx) => {
+                let val = data.total;
                 let absTotal = Math.abs(totalAmt);
-                // 自动计算百分比占比
                 let percent = absTotal > 0 ? Math.abs((val / absTotal) * 100).toFixed(1) : 0;
                 
                 let displayColor = (type === 'pro' && val < 0) ? '#4DB6AC' : colorVar;
                 let sign = (type === 'pro' && val > 0) ? '+' : '';
 
+                // 🌟 构建子明细折叠列表
+                let subItemsHtml = `<div id="statSubList_${idx}" style="display:none; margin-top:12px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.4);">`;
+                
+                data.items.sort((a,b) => b.amt - a.amt).forEach(item => {
+                    let itemName = item.r.remark || item.r.title || '未知';
+                    itemName = itemName.split('<div')[0].replace(/<[^>]+>/g, '').trim(); // 去除多余代码，保持干净
+                    if (itemName.length > 15) itemName = itemName.substring(0, 14) + '...';
+
+                    let itemDisplayColor = (type === 'pro' && item.amt < 0) ? '#4DB6AC' : displayColor;
+                    let itemSign = (type === 'pro' && item.amt > 0) ? '+' : '';
+                    
+                    // 智能跳转：日常跳日常编辑，转单跳转单编辑
+                    let clickFn = type === 'pro' ? `openOrderEdit(${item.realIdx})` : `openRecordEdit(${item.realIdx})`;
+                    
+                    subItemsHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; cursor:pointer; transition:0.2s;" onclick="event.stopPropagation(); closeTopModals(); ${clickFn};">
+                        <div style="flex:1; font-size:12px; color:var(--text-main);">• ${itemName}</div>
+                        <div style="font-weight:bold; font-size:13px; color:${itemDisplayColor}; margin-left:10px;">${itemSign}￥${item.amt.toFixed(2)}</div>
+                    </div>`;
+                });
+                subItemsHtml += `</div>`;
+
                 html += `
-                <div class="glass-panel" style="padding:15px; margin-bottom:12px; border-radius:18px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.8);">
-                    <div style="display:flex; align-items:center;">
-                        <div style="font-weight:bold; color:var(--text-main); font-size:14px;">${cat}</div>
-                        <div style="font-size:11px; color:var(--text-light); margin-left:8px; background:rgba(255,255,255,0.5); padding:2px 6px; border-radius:8px;">${percent}%</div>
+                <div class="glass-panel" onclick="let el = document.getElementById('statSubList_${idx}'); el.style.display = el.style.display === 'none' ? 'block' : 'none';" style="padding:15px; margin-bottom:12px; border-radius:18px; border:1px solid rgba(255,255,255,0.8); cursor:pointer;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center;">
+                            <div style="font-weight:bold; color:var(--text-main); font-size:14px;">${cat} <span style="font-size:10px; color:var(--text-light); margin-left:4px;">▼</span></div>
+                            <div style="font-size:11px; color:var(--text-light); margin-left:8px; background:rgba(255,255,255,0.5); padding:2px 6px; border-radius:8px;">${percent}%</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:900; color:${displayColor}; font-size:16px;">${sign}￥${val.toFixed(2)}</div>
+                        </div>
                     </div>
-                    <div style="text-align:right;">
-                        <div style="font-weight:900; color:${displayColor}; font-size:16px;">${sign}￥${val.toFixed(2)}</div>
-                    </div>
+                    ${subItemsHtml}
                 </div>`;
             });
         }
@@ -1591,6 +1630,7 @@
         document.getElementById('overlay-top').style.display = 'block';
         document.getElementById('category-detail-modal').style.display = 'flex';
     }
+
     
     // ✨ 这是一个关键补丁：确保你选完日期后，数据会立刻跳动更新
     function updateStatsUI() {
@@ -1888,7 +1928,7 @@ function copyCSS() {
     }
 }
     // --- ✨ 灵感一键导出功能 (顺序版) ---
-    function exportNovels() {
+function exportNovels() {
         if(novels.length === 0) {
             alert('🐰 你的灵感库还是空的哦，先去记录一点吧！');
             return;
@@ -3126,7 +3166,7 @@ function enableRecordEdit() {
         localStorage.setItem('evan_draft_gu', JSON.stringify(draft));
     }
 
-        function loadFormDraft() {
+    function loadFormDraft() {
         let draftJson = localStorage.getItem('evan_draft_gu');
         if (!draftJson) return;
         
@@ -3170,8 +3210,8 @@ function enableRecordEdit() {
              
 </script>
 <div id="anchoredDropdown" class="frosted-dropdown" style="display:none;"></div>
-<div id="category-detail-modal" class="glass-panel" style="display:none; position:fixed; top:15%; left:6%; right:6%; max-height:70%; z-index:306; padding:20px; border-radius:25px; flex-direction:column; overflow:hidden;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:2px dashed rgba(255,255,255,0.6); padding-bottom:10px;">
+<div id="category-detail-modal" class="glass-panel" style="display:none; position:fixed; top:50%; left:6%; right:6%; transform:translateY(-50%); max-height:75%; z-index:306; padding:20px; border-radius:25px; flex-direction:column; overflow:hidden;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:2px dashed rgba(255,255,255,0.6); padding-bottom:10px;">
             <h3 style="margin:0; color:var(--accent-dark); font-weight:900;" id="catModalTitle">🏷️ 品类明细</h3>
             <span onclick="document.getElementById('category-detail-modal').style.display='none'; document.getElementById('overlay-top').style.display='none';" style="color:var(--text-light); font-weight:bold; cursor:pointer; font-size:18px;">✕</span>
         </div>
