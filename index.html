@@ -570,7 +570,7 @@
     <div id="record-edit-modal" class="glass-panel" style="display: none; position: fixed; top: 8%; left: 5%; right: 5%; max-height: 84%; border-radius: 30px; z-index: 305; padding: 20px; overflow-y: auto; animation: popIn 0.2s; flex-direction: column;">
         <div class="cal-modal-header" style="padding-bottom:5px; margin-bottom: 15px;">
             <h3 class="cal-modal-title">🏷️ 明细与手账</h3>
-            <div class="cal-modal-close" onclick="closeTopModals()">✕</div>
+            <div class="cal-modal-close" onclick="closeRecordEditModal()">✕</div>
         </div>
 
     <div id="recordReadContainer" style="display: flex; flex-direction: column; flex: 1;">
@@ -1602,7 +1602,7 @@
                     let clickFn = type === 'pro' ? `openOrderEdit(${item.realIdx})` : `openRecordEdit(${item.realIdx})`;
                     
                     subItemsHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; cursor:pointer; transition:0.2s;" onclick="event.stopPropagation(); closeTopModals(); ${clickFn};">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; cursor:pointer; transition:0.2s;" onclick="event.stopPropagation();  ${clickFn};">
                         <div style="flex:1; font-size:12px; color:var(--text-main);">• ${itemName}</div>
                         <div style="font-weight:bold; font-size:13px; color:${itemDisplayColor}; margin-left:10px;">${itemSign}￥${item.amt.toFixed(2)}</div>
                     </div>`;
@@ -2338,11 +2338,21 @@ function saveOrderEdit() {
         closeOrderEditModal();
     }
 
-    // ✨ 智能返回引擎：只关掉编辑框，绝不误杀背后的列表弹窗！
-function closeOrderEditModal() {
+    // ✨ 智能关闭：转单编辑面板
+    function closeOrderEditModal() {
         document.getElementById('order-edit-modal').style.display = 'none';
-        // 检查背后是不是还有明细弹窗，如果没有，才彻底关掉黑底遮罩
-        if (document.getElementById('category-detail-modal').style.display !== 'flex') {
+        // 如果背后还有“大盘列表”或“日常列表”开着，就绝对不关掉黑色的背景遮罩！
+        if (document.getElementById('category-detail-modal').style.display !== 'flex' && 
+            document.getElementById('day-detail-modal').style.display !== 'block') {
+            document.getElementById('overlay-top').style.display = 'none';
+        }
+    }
+
+    // ✨ 智能关闭：日常编辑面板
+    function closeRecordEditModal() {
+        document.getElementById('record-edit-modal').style.display = 'none';
+        if (document.getElementById('category-detail-modal').style.display !== 'flex' && 
+            document.getElementById('day-detail-modal').style.display !== 'block') {
             document.getElementById('overlay-top').style.display = 'none';
         }
     }
@@ -2680,7 +2690,9 @@ function openRecordEdit(idx) {
         document.getElementById('recordEditContainer').style.display = 'none';
 
         document.getElementById('overlay-top').style.display = 'block'; 
-        document.getElementById('record-edit-modal').style.display = 'flex'; 
+        const rModal = document.getElementById('record-edit-modal');
+        rModal.style.zIndex = "400"; // 🌟 绝对镇压一切底层弹窗
+        rModal.style.display = 'flex'; 
     }
 
     // ✨ 点击“修改”按钮：翻转到编辑模式
@@ -3097,7 +3109,7 @@ function enableRecordEdit() {
                 }
                 
                 listDiv.innerHTML += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.6); cursor:pointer;" onclick="openRecordEdit(${item.idx}); document.getElementById('day-detail-modal').style.display='none';">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed rgba(255,255,255,0.6); cursor:pointer;" onclick="openRecordEdit(${item.idx}); ">
                     <div style="flex:1; min-width:0; padding-right:10px;">
                         <div style="font-weight:bold; color:var(--accent-dark); font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                             ${remark}${hasMediaIcon}
