@@ -3274,16 +3274,17 @@ function enableRecordEdit() {
         applyShield('order-edit-modal', 'openOrderEdit', 'saveOrder', 'evan_order_draft_v2');
     })();
 
-    // ✨ 沉浸式灵感辅助台：字数统计 & 专注计时 (灵光一闪专属·精准绑定版)
-    (function initInspirationStats() {
+        // ✨ 小说家创作大屏：字数、时长、创作速率 (灵光一闪精准版)
+    (function initAuthorStudio() {
         let timerInterval = null;
         let seconds = 0;
         let statsBarAdded = false;
 
         function formatTime(sec) {
-            let m = Math.floor(sec / 60).toString().padStart(2, '0');
+            let h = Math.floor(sec / 3600);
+            let m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
             let s = (sec % 60).toString().padStart(2, '0');
-            return `${m}:${s}`;
+            return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
         }
 
         if (typeof window.openRecordEdit === 'function') {
@@ -3294,50 +3295,56 @@ function enableRecordEdit() {
                 const modal = document.getElementById('record-edit-modal');
                 if (!modal) return;
                 
-                // 🎯 绝对精准狙击：只找真正的“多行文本框(textarea)”，坚决不碰日常收支的普通输入框！
+                // 🎯 精准绑定灵感写作框
                 const textArea = modal.querySelector('textarea'); 
                 if (!textArea) return;
 
-                // 🌟 动态插入高颜值仪表盘
+                // 🌟 动态生成小说家仪表盘
                 if (!statsBarAdded) {
                     const statsBar = document.createElement('div');
-                    statsBar.id = 'inspStatsBar';
-                    statsBar.style.cssText = "display:flex; justify-content:flex-end; gap:15px; font-size:12px; color:var(--text-light); margin-top:8px; font-weight:bold; letter-spacing: 0.5px;";
+                    statsBar.id = 'authorStatsBar';
+                    statsBar.style.cssText = "display:flex; justify-content:space-between; font-size:11px; color:var(--text-light); margin-top:10px; padding:0 5px; font-weight:bold; opacity:0.8;";
                     statsBar.innerHTML = `
-                        <span>⏳ 专注: <span id="inspTimer" style="color:var(--accent-main);">00:00</span></span>
-                        <span>✍️ 字数: <span id="inspWordCount" style="color:var(--accent-main);">0</span></span>
+                        <div style="display:flex; gap:12px;">
+                            <span>⏳ 耗时: <span id="authTimer" style="color:var(--accent-main);">00:00</span></span>
+                            <span>✍️ 字数: <span id="authWords" style="color:var(--accent-main);">0</span></span>
+                        </div>
+                        <div id="authSpeed" style="color:var(--inc-color); font-style:italic;">平均速率: --s/字</div>
                     `;
-                    // 将仪表盘紧贴在灵感框下方
                     textArea.parentNode.insertBefore(statsBar, textArea.nextSibling);
                     
-                    textArea.addEventListener('input', () => {
-                        let countEl = document.getElementById('inspWordCount');
-                        if(countEl) countEl.innerText = textArea.value.length;
-                    });
-                    
+                    textArea.addEventListener('input', updateStats);
                     statsBarAdded = true;
                 }
 
-                // 🌟 瞬间清空并重置
+                function updateStats() {
+                    const words = textArea.value.length;
+                    document.getElementById('authWords').innerText = words;
+                    const speedEl = document.getElementById('authSpeed');
+                    if (words > 0 && seconds > 0) {
+                        const sPerWord = (seconds / words).toFixed(1);
+                        speedEl.innerText = `平均速率: ${sPerWord}s/字`;
+                    } else {
+                        speedEl.innerText = `平均速率: --s/字`;
+                    }
+                }
+
+                // 🌟 状态重置与秒表逻辑
                 clearInterval(timerInterval);
                 seconds = 0;
-                let timerEl = document.getElementById('inspTimer');
-                let countEl = document.getElementById('inspWordCount');
-                if(timerEl) timerEl.innerText = "00:00";
-                if(countEl) countEl.innerText = textArea.value.length || 0;
+                document.getElementById('authTimer').innerText = "00:00";
+                updateStats();
                 
-                // 🌟 智能计时器：自带“视觉绑定”逻辑
                 timerInterval = setInterval(() => {
-                    let statsBar = document.getElementById('inspStatsBar');
-                    // 检查灵感输入框是不是被藏起来了（比如你切到了“支出/收入”标签）
+                    const bar = document.getElementById('authorStatsBar');
+                    // 仅在灵感编辑界面显示时跳动
                     if (textArea.offsetParent === null) {
-                        if (statsBar) statsBar.style.display = 'none'; // 仪表盘自动隐身，不去碍眼
-                        // 处于隐藏状态时不增加秒数，为你暂停时间
+                        if (bar) bar.style.display = 'none';
                     } else {
-                        if (statsBar) statsBar.style.display = 'flex'; // 切回灵感，重新出现
+                        if (bar) bar.style.display = 'flex';
                         seconds++;
-                        let tEl = document.getElementById('inspTimer');
-                        if(tEl) tEl.innerText = formatTime(seconds);
+                        document.getElementById('authTimer').innerText = formatTime(seconds);
+                        updateStats(); // 实时刷新速率
                     }
                 }, 1000);
             };
@@ -3345,7 +3352,6 @@ function enableRecordEdit() {
 
         // 停止计时的安全锁
         function stopTimer() { clearInterval(timerInterval); }
-        
         if (typeof window.saveRecord === 'function') {
             const originalSave = window.saveRecord;
             window.saveRecord = function() { originalSave(); stopTimer(); };
