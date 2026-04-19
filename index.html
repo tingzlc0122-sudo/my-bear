@@ -3212,13 +3212,133 @@ function enableRecordEdit() {
         } catch (e) {}
     }
 
-    // 只要有任何打字输入，立马悄悄存草稿
-    document.addEventListener('input', saveFormDraft);
-    // 每次点击屏幕，也顺手存一下
-    document.addEventListener('click', saveFormDraft);
+        // ✨ 终极草稿箱护盾 (防丢失黑科技)
+    (function initDraftShield() {
+        function applyShield(modalId, openFnName, saveFnName, draftKey) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
 
-    // 页面每次加载完毕后，延迟一点点恢复草稿
-    setTimeout(loadFormDraft, 300);
+            // 1. 监听打字，毫秒级自动存草稿
+            modal.addEventListener('input', function() {
+                // 如果是修改旧账单，绝对不触发草稿机制，保护原始数据
+                if (window[`_isNew_${modalId}`] === false) return; 
+                let inputs = modal.querySelectorAll('input, textarea, select');
+                let draftData = {};
+                inputs.forEach(input => {
+                    // 避开日期字段，日期永远用当天的就行
+                    if (input.id && !input.id.toLowerCase().includes('date')) { 
+                        draftData[input.id] = input.value;
+                    }
+                });
+                localStorage.setItem(draftKey, JSON.stringify(draftData));
+            });
+
+            // 2. 黑客级拦截：打开弹窗时自动注入草稿
+            if (typeof window[openFnName] === 'function') {
+                const originalOpen = window[openFnName];
+                window[openFnName] = function(idx) {
+                    originalOpen(idx); // 先让原系统把表单无情清空
+                    window[`_isNew_${modalId}`] = (idx === -1 || idx === undefined || idx === null);
+                    
+                    // 原系统清空完之后，如果是新建状态，我们立刻把草稿塞进去！
+                    if (window[`_isNew_${modalId}`]) {
+                        let draftStr = localStorage.getItem(draftKey);
+                        if (draftStr) {
+                            try {
+                                let draft = JSON.parse(draftStr);
+                                for (let id in draft) {
+                                    let el = document.getElementById(id);
+                                    if (el && draft[id]) el.value = draft[id];
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                };
+            }
+
+            // 3. 黑客级拦截：保存成功后自动撕毁草稿
+            if (typeof window[saveFnName] === 'function') {
+                const originalSave = window[saveFnName];
+                window[saveFnName] = function() {
+                    originalSave(); // 执行原来的保存动作
+                    // 只有在【新增模式】且【保存成功（弹窗消失）】的情况下，才清空草稿
+                    if (modal.style.display === 'none' && window[`_isNew_${modalId}`]) {
+                        localStorage.removeItem(draftKey);
+                    }
+                };
+            }
+        }
+
+        // 🛡️ 给【日常/灵感】和【谷子转单】同时穿上防弹衣！
+        applyShield('record-edit-modal', 'openRecordEdit', 'saveRecord', 'evan_daily_draft_v2');
+        applyShield('order-edit-modal', 'openOrderEdit', 'saveOrder', 'evan_order_draft_v2');
+    })();
+
+        // ✨ 沉浸式灵感辅助台：字数统计 & 专注计时
+    (function initInspirationStats() {
+        // 1. 智能寻找灵感输入框
+        const modal = document.getElementById('record-edit-modal');
+        if (!modal) return;
+        const textArea = modal.querySelector('textarea'); 
+        if (!textArea) return;
+
+        // 2. 动态生成精美的统计状态条（紧贴在输入框下方）
+        const statsBar = document.createElement('div');
+        statsBar.style.cssText = "display:flex; justify-content:flex-end; gap:15px; font-size:12px; color:var(--text-light); margin-top:8px; font-weight:bold; letter-spacing: 0.5px;";
+        statsBar.innerHTML = `
+            <span>⏳ 专注: <span id="inspTimer" style="color:var(--accent-main);">00:00</span></span>
+            <span>✍️ 字数: <span id="inspWordCount" style="color:var(--accent-main);">0</span></span>
+        `;
+        // 将状态条无痕插入
+        textArea.parentNode.insertBefore(statsBar, textArea.nextSibling);
+
+        // 3. 实时字数感应神经
+        textArea.addEventListener('input', () => {
+            document.getElementById('inspWordCount').innerText = textArea.value.length;
+        });
+
+        // 4. 计时器核心逻辑
+        let timerInterval = null;
+        let seconds = 0;
+
+        function formatTime(sec) {
+            let m = Math.floor(sec / 60).toString().padStart(2, '0');
+            let s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // 黑客级拦截：每次点开面板，自动重置并启动你的专属时钟
+        if (typeof window.openRecordEdit === 'function') {
+            const originalOpen = window.openRecordEdit;
+            window.openRecordEdit = function(idx) {
+                originalOpen(idx); // 执行系统原本的打开动作
+                
+                // 瞬间清空并重置仪表盘
+                clearInterval(timerInterval);
+                seconds = 0;
+                document.getElementById('inspTimer').innerText = "00:00";
+                document.getElementById('inspWordCount').innerText = textArea.value.length || 0;
+                
+                // 伴随你打开面板的瞬间，秒表开始跳动
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    document.getElementById('inspTimer').innerText = formatTime(seconds);
+                }, 1000);
+            };
+        }
+
+        // 黑客级拦截：当你保存或关闭面板时，贴心地为你停止计时
+        function stopTimer() { clearInterval(timerInterval); }
+        
+        if (typeof window.saveRecord === 'function') {
+            const originalSave = window.saveRecord;
+            window.saveRecord = function() { originalSave(); stopTimer(); };
+        }
+        if (typeof window.closeRecordEditModal === 'function') {
+            const originalClose = window.closeRecordEditModal;
+            window.closeRecordEditModal = function() { originalClose(); stopTimer(); };
+        }
+    })();
              
 </script>
 <div id="anchoredDropdown" class="frosted-dropdown" style="display:none;"></div>
