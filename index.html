@@ -3274,7 +3274,7 @@ function enableRecordEdit() {
         applyShield('order-edit-modal', 'openOrderEdit', 'saveOrder', 'evan_order_draft_v2');
     })();
 
-    // ✨ 小说家创作大屏：字数、时长、创作速率 (完全兼容版)
+        // ✨ 小说家创作大屏：字数、时长、创作速率 (绝对终极破案版)
     (function initAuthorStudio() {
         let timerInterval = null;
         let seconds = 0;
@@ -3290,13 +3290,11 @@ function enableRecordEdit() {
         if (typeof window.openRecordEdit === 'function') {
             const originalOpen = window.openRecordEdit;
             window.openRecordEdit = function(idx) {
-                originalOpen(idx); // 执行系统原本的打开动作
+                originalOpen(idx); 
                 
-                // 🎯 破案了！精准锁定共享的备注输入框，不再盲目找 textarea
                 const textArea = document.getElementById('recordRemark'); 
                 if (!textArea) return;
 
-                // 🌟 动态生成小说家仪表盘
                 if (!statsBarAdded) {
                     const statsBar = document.createElement('div');
                     statsBar.id = 'authorStatsBar';
@@ -3316,41 +3314,40 @@ function enableRecordEdit() {
 
                 function updateStats() {
                     const words = textArea.value.length;
-                    document.getElementById('authWords').innerText = words;
+                    let wordsEl = document.getElementById('authWords');
+                    if(wordsEl) wordsEl.innerText = words;
+                    
                     const speedEl = document.getElementById('authSpeed');
                     if (words > 0 && seconds > 0) {
                         const sPerWord = (seconds / words).toFixed(1);
-                        speedEl.innerText = `平均速率: ${sPerWord}s/字`;
+                        if(speedEl) speedEl.innerText = `平均速率: ${sPerWord}s/字`;
                     } else {
-                        speedEl.innerText = `平均速率: --s/字`;
+                        if(speedEl) speedEl.innerText = `平均速率: --s/字`;
                     }
                 }
 
-                // 🌟 状态重置与秒表逻辑
                 clearInterval(timerInterval);
                 seconds = 0;
-                document.getElementById('authTimer').innerText = "00:00";
+                let tEl = document.getElementById('authTimer');
+                if(tEl) tEl.innerText = "00:00";
                 updateStats();
                 
                 timerInterval = setInterval(() => {
                     const bar = document.getElementById('authorStatsBar');
-                    // 智能判断：获取当前顶部选中的是哪个分类
-                    const currentTypeRadio = document.querySelector('input[name="recordType"]:checked');
-                    
-                    // 只有当选中“灵感”且弹窗确实开着的时候，才显示并计时
-                    if (currentTypeRadio && currentTypeRadio.value === '灵感' && document.getElementById('record-edit-modal').style.display !== 'none') {
+                    // 🚨 破案关键：直接读取你系统的 currentRecordTab 变量！
+                    if (window.currentRecordTab === '灵感' && document.getElementById('record-edit-modal').style.display !== 'none') {
                         if (bar) bar.style.display = 'flex';
                         seconds++;
-                        document.getElementById('authTimer').innerText = formatTime(seconds);
+                        let timeEl = document.getElementById('authTimer');
+                        if(timeEl) timeEl.innerText = formatTime(seconds);
                         updateStats();
                     } else {
-                        if (bar) bar.style.display = 'none'; // 切到收支时立刻隐身
+                        if (bar) bar.style.display = 'none'; // 切回日常账单时立刻隐身
                     }
                 }, 1000);
             };
         }
 
-        // 停止计时的安全锁
         function stopTimer() { clearInterval(timerInterval); }
         if (typeof window.saveRecord === 'function') {
             const originalSave = window.saveRecord;
